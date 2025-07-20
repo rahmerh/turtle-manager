@@ -44,6 +44,7 @@ local function updateDisplay()
 end
 
 local function handleTouch(_, x, y)
+    monitor.write("Touched!");
     local id = buttonMap[y]
     if id then
         rednet.send(id, textutils.serialize({
@@ -52,6 +53,8 @@ local function handleTouch(_, x, y)
         }))
     end
 end
+
+updateDisplay()
 
 while true do
     local e = { os.pullEvent() }
