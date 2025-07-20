@@ -44,9 +44,9 @@ local function updateDisplay()
 end
 
 local function handleTouch(_, x, y)
-    monitor.write("Touched!");
     local id = buttonMap[y]
     if id then
+        monitor.write("Sent message");
         rednet.send(id, textutils.serialize({
             type = "command",
             command = "step"
