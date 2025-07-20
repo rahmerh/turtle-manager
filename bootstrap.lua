@@ -33,7 +33,7 @@ end
 
 -- ⬇️ Download fresh files
 for dest, src in pairs(selected) do
-    local url = base .. "/" .. src
+    local url = base .. "/" .. src .. "?ts=" .. tostring(math.random())
     print("Downloading " .. src .. " → " .. dest)
 
     local res = http.get(url)

@@ -52,17 +52,14 @@ local function updateDisplay()
 end
 
 local function handleTouch(_, x, y)
+    x = tonumber(x)
+    y = tonumber(y)
+
     print("Touch at:", x, y)
-    monitor.setCursorPos(1, 20)
-    monitor.clearLine()
-    monitor.write("Touch at: " .. x .. ", " .. y)
 
     for _, btn in ipairs(buttonMap) do
         if x >= btn.x1 and x <= btn.x2 and y == btn.y1 then
             print("Button hit for turtle: " .. btn.id)
-            monitor.setCursorPos(1, 21)
-            monitor.clearLine()
-            monitor.write("Sent to: " .. btn.id)
             rednet.send(btn.id, textutils.serialize({
                 type = "command",
                 command = "step"
@@ -71,9 +68,7 @@ local function handleTouch(_, x, y)
         end
     end
 
-    monitor.setCursorPos(1, 21)
-    monitor.clearLine()
-    monitor.write("No button hit")
+    print("No button hit")
 end
 
 updateDisplay()
@@ -89,6 +84,7 @@ while true do
             updateDisplay()
         end
     elseif e[1] == "monitor_touch" then
+        monitor.write(table.unpack(e))
         handleTouch(table.unpack(e))
     end
 end
