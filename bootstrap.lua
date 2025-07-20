@@ -6,8 +6,7 @@ if #args == 0 then
     return
 end
 
-local role = args[1] or "turtle"
-
+local role = args[1]
 local base = "https://raw.githubusercontent.com/rahmerh/turtle-manager/main"
 
 local files = {
