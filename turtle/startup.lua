@@ -1,42 +1,55 @@
+local excavator = require("excavator")
+
 local modem = peripheral.find("modem") or error("No modem found")
 rednet.open(peripheral.getName(modem))
-local id = os.getComputerID()
 
-if turtle.getFuelLevel() == 0 then
-    for i = 1, 16 do
-        turtle.select(i)
-        if turtle.refuel(1) then
-            print("Refueled from slot " .. i)
-            break
+local dashboards = {}
+
+rednet.broadcast(textutils.serialize({
+    type = "hello",
+    role = "turtle",
+    id = os.getComputerID()
+}), "turtle-handshake")
+
+local timeout = os.clock() + 2
+while os.clock() < timeout do
+    local sender, msg, proto = rednet.receive("dashboard-handshake", 0.5)
+    if msg then
+        local data = textutils.unserialize(msg)
+        if data and data.type == "hello_ack" then
+            dashboards[sender] = true
         end
     end
 end
 
 local function sendStatus(msg)
-    local status = {
-        type = "status",
-        message = msg,
-        fuel = turtle.getFuelLevel(),
-        id = id,
-        position = gps.locate(2)
-    }
-    rednet.send(1, textutils.serialize(status))
+    for id in pairs(dashboards) do
+        rednet.send(id, textutils.serialize({
+            type = "status",
+            from = os.getComputerID(),
+            fuel = turtle.getFuelLevel(),
+            message = msg,
+        }))
+    end
 end
-
-sendStatus("Online")
 
 while true do
     sendStatus("Idle")
-    local senderId, msg = rednet.receive(5)
 
-    if msg then
-        local cmd = textutils.unserialize(msg)
-        if cmd and cmd.type == "command" and cmd.command == "step" then
-            if turtle.forward() then
-                sendStatus("Stepped forward")
-            else
-                sendStatus("Blocked")
-            end
-        end
+    local _, msg = rednet.receive(1)
+
+    if msg == nil then goto continue end
+
+    local cmd = textutils.unserialize(msg)
+
+    print("Got command: " .. cmd.command)
+
+    if cmd.command == "excavate" and cmd.args then
+        local x = tonumber(cmd.args.x)
+        local y = tonumber(cmd.args.y)
+        local z = tonumber(cmd.args.z)
+        excavator.excavate(x, y, z)
     end
+
+    ::continue::
 end

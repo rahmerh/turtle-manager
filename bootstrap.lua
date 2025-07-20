@@ -12,6 +12,7 @@ local base = "https://raw.githubusercontent.com/rahmerh/turtle-manager/main"
 local files = {
     turtle = {
         ["startup.lua"] = "turtle/startup.lua",
+        ["excavator.lua"] = "turtle/excavator.lua",
     },
     dashboard = {
         ["startup.lua"] = "dashboard/startup.lua",

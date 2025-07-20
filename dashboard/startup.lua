@@ -4,22 +4,32 @@ local monitor = peripheral.find("monitor") or error("No monitor found")
 rednet.open(peripheral.getName(modem))
 monitor.setTextScale(0.5)
 
+local heartbeat = os.startTimer(1)
+
 local turtles = {}
 local buttonMap = {}
 
 local function drawButton(id, y)
-    local label = "[Step]"
+    local label = " Excavate "
+    y = y + 1
     local x = 25
+    local width = #label
+
+    monitor.setBackgroundColor(colors.lime)
+    monitor.setTextColor(colors.black)
     monitor.setCursorPos(x, y)
-    monitor.setTextColor(colors.lime)
+    monitor.write(string.rep(" ", width))
+    monitor.setCursorPos(x, y)
     monitor.write(label)
+
+    monitor.setBackgroundColor(colors.black)
     monitor.setTextColor(colors.white)
 
     table.insert(buttonMap, {
         id = id,
         x1 = x,
-        y1 = y,
         x2 = x + #label - 1,
+        y1 = y,
         y2 = y
     })
 end
@@ -30,41 +40,27 @@ local function updateDisplay()
     buttonMap = {}
 
     for id, data in pairs(turtles) do
-        if data.lastSeen and (os.clock() - data.lastSeen > 5) then
-            turtles[id] = nil
-            updateDisplay()
-        end
-
         local y = select(2, monitor.getCursorPos())
         monitor.write("Turtle " .. id .. ":")
         monitor.setCursorPos(1, y + 1)
-        monitor.write("  Status: " .. (data.message or "unknown"))
-        monitor.setCursorPos(1, y + 2)
-        monitor.write("  Fuel: " .. tostring(data.fuel))
-        monitor.setCursorPos(1, y + 3)
 
-        if data.position then
-            local p = data.position
-            monitor.write(string.format("  Pos: (%d,%d,%d)", p.x, p.y, p.z))
-            monitor.setCursorPos(1, y + 4)
-        else
-            monitor.write("  Pos: Unknown")
-            monitor.setCursorPos(1, y + 4)
-        end
+        monitor.write("  Status: " .. data.message)
+        drawButton(id, y)
+        monitor.setCursorPos(1, y + 1)
 
-        drawButton(id, y + 5)
         monitor.setCursorPos(1, y + 6)
     end
 end
 
 local function handleTouch(x, y)
     for _, btn in ipairs(buttonMap) do
-        if x >= btn.x1 and x <= btn.x2 and y == btn.y1 then
+        if x >= btn.x1 and x <= btn.x2 and y >= btn.y1 and y <= btn.y2 then
             rednet.send(btn.id, textutils.serialize({
                 type = "command",
-                command = "step"
+                command = "excavate",
+                args = { x = 5, y = 5, z = 5 }
             }))
-            return
+            break
         end
     end
 end
@@ -76,14 +72,30 @@ while true do
     local event = eventData[1]
 
     if event == "rednet_message" then
-        local senderId, msg = eventData[2], eventData[3]
+        local senderId, msg, protocol = eventData[2], eventData[3], eventData[4]
         local data = textutils.unserialize(msg)
-        if data and data.type == "status" then
+
+        if protocol == "turtle-handshake" and data and data.type == "hello" then
+            print("Handshake from turtle " .. senderId)
+            rednet.send(senderId, textutils.serialize({
+                type = "hello_ack",
+                role = "dashboard"
+            }), "dashboard-handshake")
+        elseif data and data.type == "status" then
             turtles[senderId] = data
             turtles[senderId].lastSeen = os.clock()
             updateDisplay()
         end
     elseif event == "monitor_touch" then
         handleTouch(eventData[3], eventData[4])
+    elseif event == "timer" and eventData[2] == heartbeat then
+        for id, data in pairs(turtles) do
+            if data.lastSeen and (os.clock() - data.lastSeen > 5) then
+                turtles[id] = nil
+                updateDisplay()
+            end
+        end
+
+        heartbeat = os.startTimer(1)
     end
 end
