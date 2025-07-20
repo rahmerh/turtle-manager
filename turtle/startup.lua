@@ -2,6 +2,16 @@ local modem = peripheral.find("modem") or error("No modem found")
 rednet.open(peripheral.getName(modem))
 local id = os.getComputerID()
 
+if turtle.getFuelLevel() == 0 then
+    for i = 1, 16 do
+        turtle.select(i)
+        if turtle.refuel(1) then
+            print("Refueled from slot " .. i)
+            break
+        end
+    end
+end
+
 local function sendStatus(msg)
     local status = {
         type = "status",
@@ -17,7 +27,7 @@ sendStatus("Online")
 
 while true do
     sendStatus("Idle")
-    local senderId, msg = rednet.receive(5) -- 5s timeout for periodic updates
+    local senderId, msg = rednet.receive(5)
 
     if msg then
         local cmd = textutils.unserialize(msg)

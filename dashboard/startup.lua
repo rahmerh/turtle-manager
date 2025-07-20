@@ -1,5 +1,6 @@
 local modem = peripheral.find("modem") or error("No modem found")
 local monitor = peripheral.find("monitor") or error("No monitor found")
+
 rednet.open(peripheral.getName(modem))
 monitor.setTextScale(0.5)
 
@@ -29,6 +30,11 @@ local function updateDisplay()
     buttonMap = {}
 
     for id, data in pairs(turtles) do
+        if data.lastSeen and (os.clock() - data.lastSeen > 5) then
+            turtles[id] = nil
+            updateDisplay()
+        end
+
         local y = select(2, monitor.getCursorPos())
         monitor.write("Turtle " .. id .. ":")
         monitor.setCursorPos(1, y + 1)
@@ -51,15 +57,9 @@ local function updateDisplay()
     end
 end
 
-local function handleTouch(_, x, y)
-    x = tonumber(x)
-    y = tonumber(y)
-
-    print("Touch at:", x, y)
-
+local function handleTouch(x, y)
     for _, btn in ipairs(buttonMap) do
         if x >= btn.x1 and x <= btn.x2 and y == btn.y1 then
-            print("Button hit for turtle: " .. btn.id)
             rednet.send(btn.id, textutils.serialize({
                 type = "command",
                 command = "step"
@@ -67,24 +67,23 @@ local function handleTouch(_, x, y)
             return
         end
     end
-
-    print("No button hit")
 end
 
 updateDisplay()
 
 while true do
-    local e = { os.pullEvent() }
+    local eventData = { os.pullEvent() }
+    local event = eventData[1]
 
-    if e[1] == "rednet_message" then
-        local senderId, msg = e[2], e[3]
+    if event == "rednet_message" then
+        local senderId, msg = eventData[2], eventData[3]
         local data = textutils.unserialize(msg)
         if data and data.type == "status" then
             turtles[senderId] = data
+            turtles[senderId].lastSeen = os.clock()
             updateDisplay()
         end
-    elseif e[1] == "monitor_touch" then
-        monitor.write(table.unpack(e))
-        handleTouch(table.unpack(e))
+    elseif event == "monitor_touch" then
+        handleTouch(eventData[3], eventData[4])
     end
 end
