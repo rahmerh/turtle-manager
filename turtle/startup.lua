@@ -1,31 +1,32 @@
 local modem = peripheral.find("modem") or error("No modem found")
 rednet.open(peripheral.getName(modem))
+local id = os.getComputerID()
 
-local DASHBOARD_ID = 1 -- Replace if dashboard has a different ID, or use rednet.broadcast
-
--- Optional: if you want to include position
-local function getPosition()
-    local x, y, z = gps.locate(2)
-    if x then
-        return { x = x, y = y, z = z }
-    else
-        return nil
-    end
-end
-
-local function sendStatus()
+local function sendStatus(msg)
     local status = {
         type = "status",
-        message = "Idle",
+        message = msg,
         fuel = turtle.getFuelLevel(),
-        id = os.getComputerID(),
-        position = getPosition()
+        id = id,
+        position = gps.locate(2)
     }
-
-    rednet.send(DASHBOARD_ID, textutils.serialize(status))
+    rednet.send(1, textutils.serialize(status))
 end
 
+sendStatus("Online")
+
 while true do
-    sendStatus()
-    sleep(5)
+    sendStatus("Idle")
+    local senderId, msg = rednet.receive(5) -- 5s timeout for periodic updates
+
+    if msg then
+        local cmd = textutils.unserialize(msg)
+        if cmd and cmd.type == "command" and cmd.command == "step" then
+            if turtle.forward() then
+                sendStatus("Stepped forward")
+            else
+                sendStatus("Blocked")
+            end
+        end
+    end
 end
