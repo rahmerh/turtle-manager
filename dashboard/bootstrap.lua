@@ -1,7 +1,7 @@
 local base = "https://raw.githubusercontent.com/rahmerh/turtle-manager/main"
 
 local files = {
-    ["startup.lua"] = "turtle/startup.lua",
+    ["startup.lua"] = "dashboard/startup.lua",
 }
 
 for dest, src in pairs(files) do
