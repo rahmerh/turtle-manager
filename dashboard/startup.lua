@@ -8,11 +8,19 @@ local buttonMap = {}
 
 local function drawButton(id, y)
     local label = "[Step]"
-    monitor.setCursorPos(25, y)
+    local x = 25
+    monitor.setCursorPos(x, y)
     monitor.setTextColor(colors.lime)
     monitor.write(label)
     monitor.setTextColor(colors.white)
-    buttonMap[y] = id
+
+    table.insert(buttonMap, {
+        id = id,
+        x1 = x,
+        y1 = y,
+        x2 = x + #label - 1,
+        y2 = y
+    })
 end
 
 local function updateDisplay()
@@ -44,14 +52,28 @@ local function updateDisplay()
 end
 
 local function handleTouch(_, x, y)
-    local id = buttonMap[y]
-    if id then
-        monitor.write("Sent message");
-        rednet.send(id, textutils.serialize({
-            type = "command",
-            command = "step"
-        }))
+    print("Touch at:", x, y)
+    monitor.setCursorPos(1, 20)
+    monitor.clearLine()
+    monitor.write("Touch at: " .. x .. ", " .. y)
+
+    for _, btn in ipairs(buttonMap) do
+        if x >= btn.x1 and x <= btn.x2 and y == btn.y1 then
+            print("Button hit for turtle: " .. btn.id)
+            monitor.setCursorPos(1, 21)
+            monitor.clearLine()
+            monitor.write("Sent to: " .. btn.id)
+            rednet.send(btn.id, textutils.serialize({
+                type = "command",
+                command = "step"
+            }))
+            return
+        end
     end
+
+    monitor.setCursorPos(1, 21)
+    monitor.clearLine()
+    monitor.write("No button hit")
 end
 
 updateDisplay()
