@@ -1,4 +1,11 @@
 local args = { ... }
+
+if #args == 0 then
+    print("Error: No role provided. Usage:")
+    print("  lua bootstrap.lua <turtle|dashboard>")
+    return
+end
+
 local role = args[1] or "turtle"
 
 local base = "https://raw.githubusercontent.com/rahmerh/turtle-manager/main"
@@ -18,6 +25,14 @@ if not selected then
     return
 end
 
+for dest, _ in pairs(selected) do
+    if fs.exists(dest) then
+        print("Deleting old " .. dest)
+        fs.delete(dest)
+    end
+end
+
+-- ⬇️ Download fresh files
 for dest, src in pairs(selected) do
     local url = base .. "/" .. src
     print("Downloading " .. src .. " → " .. dest)
@@ -34,4 +49,4 @@ for dest, src in pairs(selected) do
     end
 end
 
-print("Update complete.")
+print("✓ Update complete.")
