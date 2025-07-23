@@ -1,15 +1,15 @@
 local printer = require("printer")
 
-local startX, startZ, startY, depth, width = tonumber(arg[1]), tonumber(arg[2]), tonumber(arg[3]),
-    tonumber(arg[4]), tonumber(arg[5])
+local startX, startY, startZ, depth, width = tonumber(arg[1]), tonumber(arg[2]), tonumber(arg[3]), tonumber(arg[4]),
+    tonumber(arg[5])
 if not startX or not startZ or not startY or not depth or not width then
-    printer.print_error("Usage: prepare.lua <start_x> <start_z> <start_y> <forward> <right>")
+    printer.print_error("Usage: prepare.lua <start_x> <start_y> <start_z> <forward> <right>")
     return
 end
 
-local progress_file = "quarry-progress"
-if fs.exists(progress_file) then
-    local file = fs.open(progress_file, "r")
+local job_file = "quarry-job"
+if fs.exists(job_file) then
+    local file = fs.open(job_file, "r")
     local firstLine = file.readLine()
     file.close()
 
@@ -24,7 +24,7 @@ if fs.exists(progress_file) then
             return
         end
 
-        fs.delete(progress_file)
+        fs.delete(job_file)
     end
 end
 
@@ -35,15 +35,14 @@ for dz = 0, depth - 1 do
     end
 end
 
-local progress = {
-    start_pos = { x = startX, y = startY, z = startZ },
-    quarry_dimensions = {},
+local job = {
+    boundaries = { start_pos = { x = startX, y = startY, z = startZ }, width = width, depth = depth },
     current_layer = startY,
     layer_coords = coords
 }
 
-local f = fs.open(progress_file, "w")
-f.write(textutils.serialize(progress))
+local f = fs.open(job_file, "w")
+f.write(textutils.serialize(job))
 f.close()
 
 printer.print_success("Initialized job.")
