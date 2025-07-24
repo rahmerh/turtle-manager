@@ -97,8 +97,11 @@ end
 local target = progress.boundaries.start_pos
 
 printer.print_info("Moving to X: " .. target.x .. " Y: " .. target.y .. " Z: " .. target.z)
-mover.move_to(target.x, target.y + 1, target.z)
-mover.face_dir(mover.determine_direction(), "north")
+if not mover.move_to(target.x, target.y + 1, target.z) then
+    printer.print_error("Could not move to starting point.")
+    return
+end
+mover.turn_to_direction("north")
 printer.print_success("Arrived at destination, starting quarry.")
 
 local layers = math.floor((progress.boundaries.start_pos.y + 58) / 3)
@@ -124,4 +127,4 @@ turtle.turnLeft()
 printer.print_success("Job completed!")
 
 mover.move_to(target.x, target.y + 1, target.z)
-mover.face_dir(mover.determine_direction(), "north")
+mover.turn_to_direction("north")

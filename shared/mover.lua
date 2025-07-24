@@ -3,7 +3,23 @@ local locator = require("locator")
 
 local mover = {}
 
-local TURN_MAP = {
+local MAX_UNSTUCK_ATTEMPTS = 500
+
+local LEFT_ROTATION = {
+    north = "west",
+    west = "south",
+    south = "east",
+    east = "north"
+}
+
+local RIGHT_ROTATION = {
+    north = "east",
+    east = "south",
+    south = "west",
+    west = "north"
+}
+
+local ORIENTATION_TO_DIRECTION_MAP = {
     north = { north = nil, east = "right", south = "around", west = "left" },
     east  = { north = "left", east = nil, south = "right", west = "around" },
     south = { north = "around", east = "left", south = nil, west = "right" },
@@ -11,6 +27,31 @@ local TURN_MAP = {
 }
 
 local turtle_state = {}
+
+local function sort_axis(delta)
+    local list = {}
+    for axis, value in pairs(delta) do
+        table.insert(list, { axis = axis, value = value })
+    end
+
+    table.sort(list, function(a, b)
+        return math.abs(a.value) > math.abs(b.value)
+    end)
+
+    return list
+end
+
+local function turn_left()
+    local current_orientation = mover.determine_orientation()
+    turtle.turnLeft()
+    turtle_state.orientation = LEFT_ROTATION[current_orientation]
+end
+
+local function turn_right()
+    local current_orientation = mover.determine_orientation()
+    turtle.turnRight()
+    turtle_state.orientation = RIGHT_ROTATION[current_orientation]
+end
 
 mover.refuel = function()
     if turtle.getFuelLevel() > 0 then return true end
@@ -27,10 +68,9 @@ mover.refuel = function()
     return turtle.refuel(1)
 end
 
-
-mover.determine_direction = function()
-    if turtle_state.dir then
-        return turtle_state.dir
+mover.determine_orientation = function()
+    if turtle_state.orientation then
+        return turtle_state.orientation
     end
 
     local x1, _, z1 = gps.locate(2)
@@ -44,7 +84,6 @@ mover.determine_direction = function()
             if not turtle.up() then
                 turtle.down()
             end
-            unstuck_turns = 0
         end
     end
 
@@ -64,86 +103,48 @@ mover.determine_direction = function()
     else
         direction = "unknown"
     end
-    turtle_state.dir = direction
+    turtle_state.orientation = direction
+    mover.turn_to_direction(direction)
 
     return direction
 end
 
-mover.face_dir = function(current, target)
-    local turn = TURN_MAP[current][target]
-
-    if not turn then return end
+mover.turn_to_direction = function(target_direction)
+    local current_orientation = mover.determine_orientation()
+    if not current_orientation or current_orientation == target_direction then
+        return
+    end
+    local turn = ORIENTATION_TO_DIRECTION_MAP[current_orientation][target_direction]
 
     if turn == "left" then
-        turtle.turnLeft()
+        turn_left()
     elseif turn == "right" then
-        turtle.turnRight()
+        turn_right()
     elseif turn == "around" then
-        turtle.turnLeft()
-        turtle.turnLeft()
+        if math.random(1, 2) == 1 then
+            turn_left()
+            turn_left()
+        else
+            turn_right()
+            turn_right()
+        end
+    elseif turn == nil then
+        return
     else
         error("Invalid turn direction: " .. tostring(turn))
     end
 
-    turtle_state.dir = target
-
-    return target
-end
-
-local function try_step(direction)
-    if direction == "up" then
-        return turtle.up()
-    elseif direction == "down" then
-        return turtle.down()
-    else
-        return turtle.forward()
-    end
-end
-
-local function get_sorted_deltas(delta)
-    local list = {}
-    for axis, value in pairs(delta) do
-        table.insert(list, { axis = axis, value = value })
-    end
-
-    table.sort(list, function(a, b)
-        return math.abs(a.value) > math.abs(b.value)
-    end)
-
-    return list
-end
-
-local function delta_to_direction(axis, value)
-    if axis == "dx" then
-        return value > 0 and "east" or "west"
-    elseif axis == "dz" then
-        return value > 0 and "south" or "north"
-    elseif axis == "dy" then
-        return value > 0 and "up" or "down"
-    else
-        error("Invalid axis: " .. tostring(axis))
-    end
-end
-
-local function determine_new_direction_to_turn_left(current)
-    for k, v in pairs(TURN_MAP[current]) do
-        if v == "left" then
-            return k
-        end
-    end
-    return nil
+    turtle_state.orientation = target_direction
 end
 
 mover.move_to = function(x, y, z)
-    local last_axis
     while true do
         if not mover.refuel() then
             printer.print_error("Could not refuel, sleeping for 10s...")
             os.sleep(10)
             goto continue
         end
-
-        local current_direction = mover.determine_direction()
+        local current_direction = mover.determine_orientation()
 
         local pos = locator.get_pos()
         local delta = {
@@ -153,33 +154,88 @@ mover.move_to = function(x, y, z)
         }
 
         if delta.dx == 0 and delta.dy == 0 and delta.dz == 0 then
-            break
+            return true
         end
 
-        local ordered_deltas = get_sorted_deltas(delta)
+        local ordered_deltas = sort_axis(delta)
         local axis = ordered_deltas[1].axis
         local value = ordered_deltas[1].value
-        local direction = delta_to_direction(axis, value)
 
-        -- Turtle is stuck, try to go up or back to get out of whatever is blocking it.
-        if last_axis == axis and not try_step("up") then
-            if not turtle.back() then
-                local new_direction = determine_new_direction_to_turn_left(current_direction)
-                mover.face_dir(current_direction, new_direction)
-            end
-            goto continue
+        local direction
+        if axis == "dx" then
+            direction = value > 0 and "east" or "west"
+        elseif axis == "dz" then
+            direction = value > 0 and "south" or "north"
+        elseif axis == "dy" then
+            direction = value > 0 and "up" or "down"
         end
 
-        last_axis = axis
+        if turtle_state.stuck then
+            turtle_state.unstuck_attempt = 0
+
+            local preferred_direction = direction
+            while true do
+                turtle_state.unstuck_attempt = turtle_state.unstuck_attempt + 1
+
+                if turtle.detect() and turtle.detectDown() and not turtle.detectUp() then
+                    while turtle.detect() and not turtle.detectUp() do
+                        turtle.up()
+                        turtle.forward()
+                    end
+                    turtle_state.stuck = false
+                    turtle_state.unstuck_attempt = 0
+                    goto continue
+                end
+
+                local blocking_blocks = {}
+                for _ = 1, 4 do
+                    if turtle.detect() then
+                        blocking_blocks[turtle_state.orientation] = true
+                    end
+                    turn_left()
+                end
+
+                local left_rotation = LEFT_ROTATION[preferred_direction]
+                local right_rotation = RIGHT_ROTATION[preferred_direction]
+                local amount_of_steps = math.random(1, 5)
+                if not blocking_blocks[left_rotation] then
+                    mover.turn_to_direction(left_rotation)
+                    for _ = 1, amount_of_steps do
+                        turtle.forward()
+                    end
+                    turtle_state.stuck = false
+                    turtle_state.unstuck_attempt = 0
+                    goto continue
+                elseif not blocking_blocks[right_rotation] then
+                    mover.turn_to_direction(right_rotation)
+                    for _ = 1, amount_of_steps do
+                        turtle.forward()
+                    end
+                    turtle_state.stuck = false
+                    turtle_state.unstuck_attempt = 0
+                    goto continue
+                end
+
+                if turtle_state.unstuck_attempt > MAX_UNSTUCK_ATTEMPTS then
+                    error("Turtle is stuck and can't get out, please help.")
+                end
+            end
+
+            turtle_state.stuck = false
+            turtle_state.unstuck_attempt = 0
+        end
 
         if current_direction ~= direction and current_direction ~= "up" and current_direction ~= "down" then
-            mover.face_dir(current_direction, direction)
+            mover.turn_to_direction(direction)
         end
 
         for _ = 1, math.abs(value) do
-            local ok = try_step(direction)
-            if not ok then
-                printer.print_warning("Blocked while moving " .. direction)
+            if direction == "up" then
+                turtle.up()
+            elseif direction == "down" then
+                turtle.down()
+            elseif not turtle.forward() then
+                turtle_state.stuck = true
                 break
             end
         end

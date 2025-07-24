@@ -4,7 +4,7 @@ local printer = require("printer")
 local startX, startY, startZ, depth, width = tonumber(arg[1]), tonumber(arg[2]), tonumber(arg[3]), tonumber(arg[4]),
     tonumber(arg[5])
 if not startX or not startZ or not startY or not depth or not width then
-    printer.print_error("Usage: prepare.lua <start_x> <start_y> <start_z> <forward> <right>")
+    printer.print_error("Usage: prepare.lua <start_x> <start_y> <start_z> <depth> <width>")
     return
 end
 
