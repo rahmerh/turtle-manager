@@ -22,6 +22,17 @@ if not selected then
     return
 end
 
+local shared_files = {
+    ["fueler.lua"] = "shared/fueler.lua",
+    ["locator.lua"] = "shared/locator.lua",
+    ["mover.lua"] = "shared/mover.lua",
+    ["printer.lua"] = "shared/printer.lua",
+}
+
+for name, path in pairs(shared_files) do
+    selected[name] = path
+end
+
 for dest, _ in pairs(selected) do
     if fs.exists(dest) then
         fs.delete(dest)

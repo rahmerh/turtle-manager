@@ -1,5 +1,6 @@
 local printer = require("printer")
 local locator = require("locator")
+local fueler = require("fueler")
 
 local mover = {}
 
@@ -41,32 +42,18 @@ local function sort_axis(delta)
     return list
 end
 
-local function turn_left()
+mover.turn_left = function()
     local current_orientation = mover.determine_orientation()
     turtle.turnLeft()
     turtle_state.orientation = LEFT_ROTATION[current_orientation]
 end
 
-local function turn_right()
+mover.turn_right = function()
     local current_orientation = mover.determine_orientation()
     turtle.turnRight()
     turtle_state.orientation = RIGHT_ROTATION[current_orientation]
 end
 
-mover.refuel = function()
-    if turtle.getFuelLevel() > 0 then return true end
-
-    turtle.select(1)
-    if turtle.refuel(1) then return true end
-    for slot = 2, 16 do
-        turtle.select(slot)
-        if turtle.refuel(0) then
-            turtle.transferTo(1)
-        end
-    end
-    turtle.select(1)
-    return turtle.refuel(1)
-end
 
 mover.determine_orientation = function()
     if turtle_state.orientation then
@@ -78,7 +65,7 @@ mover.determine_orientation = function()
     local unstuck_turns = 0
     while not turtle.forward() do
         unstuck_turns = unstuck_turns + 1
-        turtle.turnLeft()
+        turtle.turnLeft() -- This has to be the native turtle turn, will cause recursion otherwise.
 
         if unstuck_turns > 3 then
             if not turtle.up() then
@@ -104,7 +91,6 @@ mover.determine_orientation = function()
         direction = "unknown"
     end
     turtle_state.orientation = direction
-    mover.turn_to_direction(direction)
 
     return direction
 end
@@ -117,16 +103,16 @@ mover.turn_to_direction = function(target_direction)
     local turn = ORIENTATION_TO_DIRECTION_MAP[current_orientation][target_direction]
 
     if turn == "left" then
-        turn_left()
+        mover.turn_left()
     elseif turn == "right" then
-        turn_right()
+        mover.turn_right()
     elseif turn == "around" then
         if math.random(1, 2) == 1 then
-            turn_left()
-            turn_left()
+            mover.turn_left()
+            mover.turn_left()
         else
-            turn_right()
-            turn_right()
+            mover.turn_right()
+            mover.turn_right()
         end
     elseif turn == nil then
         return
@@ -139,7 +125,7 @@ end
 
 mover.move_to = function(x, y, z)
     while true do
-        if not mover.refuel() then
+        if not fueler.refuel() then
             printer.print_error("Could not refuel, sleeping for 10s...")
             os.sleep(10)
             goto continue
@@ -170,29 +156,34 @@ mover.move_to = function(x, y, z)
             direction = value > 0 and "up" or "down"
         end
 
-        if turtle_state.stuck then
+        while turtle_state.stuck do
             turtle_state.unstuck_attempt = 0
 
             local preferred_direction = direction
             while true do
+                if turtle_state.unstuck_attempt > MAX_UNSTUCK_ATTEMPTS then
+                    error("Turtle is stuck and can't get out, please help.")
+                end
+
                 turtle_state.unstuck_attempt = turtle_state.unstuck_attempt + 1
 
+                -- Try some common ways to either duck or climb over stuff
                 if turtle.detect() and turtle.detectDown() and not turtle.detectUp() then
                     while turtle.detect() and not turtle.detectUp() do
                         turtle.up()
                         turtle.forward()
                     end
                     turtle_state.stuck = false
-                    turtle_state.unstuck_attempt = 0
-                    goto continue
+                    break
                 end
 
+                -- Scan for non blocking paths
                 local blocking_blocks = {}
                 for _ = 1, 4 do
                     if turtle.detect() then
                         blocking_blocks[turtle_state.orientation] = true
                     end
-                    turn_left()
+                    mover.turn_left()
                 end
 
                 local left_rotation = LEFT_ROTATION[preferred_direction]
@@ -204,25 +195,16 @@ mover.move_to = function(x, y, z)
                         turtle.forward()
                     end
                     turtle_state.stuck = false
-                    turtle_state.unstuck_attempt = 0
-                    goto continue
+                    break
                 elseif not blocking_blocks[right_rotation] then
                     mover.turn_to_direction(right_rotation)
                     for _ = 1, amount_of_steps do
                         turtle.forward()
                     end
                     turtle_state.stuck = false
-                    turtle_state.unstuck_attempt = 0
-                    goto continue
-                end
-
-                if turtle_state.unstuck_attempt > MAX_UNSTUCK_ATTEMPTS then
-                    error("Turtle is stuck and can't get out, please help.")
+                    break
                 end
             end
-
-            turtle_state.stuck = false
-            turtle_state.unstuck_attempt = 0
         end
 
         if current_direction ~= direction and current_direction ~= "up" and current_direction ~= "down" then
@@ -231,11 +213,23 @@ mover.move_to = function(x, y, z)
 
         for _ = 1, math.abs(value) do
             if direction == "up" then
-                turtle.up()
+                if not turtle.up() then
+                    if turtle.detectUp() then
+                        turtle_state.stuck = true
+                    end
+                    break
+                end
             elseif direction == "down" then
-                turtle.down()
+                if not turtle.down() then
+                    if turtle.detectDown() then
+                        turtle_state.stuck = true
+                    end
+                    break
+                end
             elseif not turtle.forward() then
-                turtle_state.stuck = true
+                if turtle.detect() then
+                    turtle_state.stuck = true
+                end
                 break
             end
         end

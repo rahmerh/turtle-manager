@@ -1,6 +1,6 @@
 local mover = require("mover")
 local printer = require("printer")
-local locator = require("locator")
+local fueler = require("fueler")
 
 -- === Progress functions ===
 local progress_file = "job-file"
@@ -35,7 +35,7 @@ local function start_new_layer()
 end
 
 local function mine_next_column()
-    mover.refuel()
+    fueler.refuel()
 
     while turtle.detect() do
         turtle.dig()
@@ -74,13 +74,13 @@ local function mine_layer(progress)
 
         if i < amount_of_rows then
             if progress.current_row % 2 == 0 then
-                turtle.turnLeft()
+                mover.turn_left()
                 mine_next_column()
-                turtle.turnLeft()
+                mover.turn_left()
             else
-                turtle.turnRight()
+                mover.turn_right()
                 mine_next_column()
-                turtle.turnRight()
+                mover.turn_right()
             end
         end
     end
@@ -97,34 +97,56 @@ end
 local target = progress.boundaries.start_pos
 
 printer.print_info("Moving to X: " .. target.x .. " Y: " .. target.y .. " Z: " .. target.z)
-if not mover.move_to(target.x, target.y + 1, target.z) then
+if not mover.move_to(target.x, target.y, target.z) then
     printer.print_error("Could not move to starting point.")
     return
 end
-mover.turn_to_direction("north")
 printer.print_success("Arrived at destination, starting quarry.")
 
-local layers = math.floor((progress.boundaries.start_pos.y + 58) / 3)
-for _ = 1, layers do
+printer.print_info("Preparing unloading area")
+mover.turn_to_direction("south")
+
+local success, data = turtle.inspect()
+if success and data.name:match("chest") then
+    print("That's a chest!")
+end
+
+for _ = 1, 5 do
+
+end
+
+mover.turn_to_direction("north")
+
+printer.print_info("Mining " .. progress.total_layers .. " layers.")
+progress.current_layer = progress.total_layers
+
+turtle.digDown()
+turtle.down()
+turtle.digDown()
+for _ = 0, progress.total_layers - 1 do
     mine_layer(progress)
 
     if progress.boundaries.width % 2 == 0 then
-        turtle.turnRight()
+        mover.turn_right()
     else
-        turtle.turnLeft()
-        turtle.turnLeft()
+        mover.turn_left()
+        mover.turn_left()
     end
 
-    start_new_layer()
-    progress.current_layer = progress.current_layer - 1
+    if progress.current_layer > 1 then
+        start_new_layer()
+        progress.current_layer = progress.current_layer - 1
+        save_progress(progress)
+    end
 end
 
-turtle.turnLeft()
-turtle.turnLeft()
-turtle.turnLeft()
-turtle.turnLeft()
+for _ = 1, 4 do
+    mover.turn_left()
+end
 
 printer.print_success("Job completed!")
 
-mover.move_to(target.x, target.y + 1, target.z)
+mover.turn_to_direction("north")
+printer.print_info("Returning to X: " .. target.x .. " Y: " .. target.y .. " Z: " .. target.z)
+mover.move_to(target.x, target.y, target.z)
 mover.turn_to_direction("north")
