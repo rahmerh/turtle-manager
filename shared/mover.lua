@@ -1,4 +1,5 @@
 local printer = require("printer")
+local locator = require("locator")
 
 local mover = {}
 
@@ -11,7 +12,7 @@ local TURN_MAP = {
 
 local turtle_state = {}
 
-local function refuel()
+mover.refuel = function()
     if turtle.getFuelLevel() > 0 then return true end
 
     turtle.select(1)
@@ -26,13 +27,8 @@ local function refuel()
     return turtle.refuel(1)
 end
 
-local function get_pos()
-    local x, y, z = gps.locate(2)
-    if not x then error("GPS failed") end
-    return { x = x, y = y, z = z }
-end
 
-local function determine_direction()
+mover.determine_direction = function()
     if turtle_state.dir then
         return turtle_state.dir
     end
@@ -73,7 +69,7 @@ local function determine_direction()
     return direction
 end
 
-local function face_dir(current, target)
+mover.face_dir = function(current, target)
     local turn = TURN_MAP[current][target]
 
     if not turn then return end
@@ -139,19 +135,17 @@ local function determine_new_direction_to_turn_left(current)
 end
 
 mover.move_to = function(x, y, z)
-    printer.print_info("Moving to X: " .. x .. " Y: " .. y .. " Z: " .. z)
-
     local last_axis
     while true do
-        if not refuel() then
+        if not mover.refuel() then
             printer.print_error("Could not refuel, sleeping for 10s...")
             os.sleep(10)
             goto continue
         end
 
-        local current_direction = determine_direction()
+        local current_direction = mover.determine_direction()
 
-        local pos = get_pos()
+        local pos = locator.get_pos()
         local delta = {
             dx = x - pos.x,
             dy = y - pos.y,
@@ -159,7 +153,6 @@ mover.move_to = function(x, y, z)
         }
 
         if delta.dx == 0 and delta.dy == 0 and delta.dz == 0 then
-            face_dir(current_direction, "north")
             break
         end
 
@@ -172,7 +165,7 @@ mover.move_to = function(x, y, z)
         if last_axis == axis and not try_step("up") then
             if not turtle.back() then
                 local new_direction = determine_new_direction_to_turn_left(current_direction)
-                face_dir(current_direction, new_direction)
+                mover.face_dir(current_direction, new_direction)
             end
             goto continue
         end
@@ -180,7 +173,7 @@ mover.move_to = function(x, y, z)
         last_axis = axis
 
         if current_direction ~= direction and current_direction ~= "up" and current_direction ~= "down" then
-            face_dir(current_direction, direction)
+            mover.face_dir(current_direction, direction)
         end
 
         for _ = 1, math.abs(value) do
@@ -192,8 +185,6 @@ mover.move_to = function(x, y, z)
         end
         ::continue::
     end
-
-    printer.print_success("Arrived at destination.")
 end
 
 return mover

@@ -1,5 +1,6 @@
 local printer = require("printer")
 
+
 local startX, startY, startZ, depth, width = tonumber(arg[1]), tonumber(arg[2]), tonumber(arg[3]), tonumber(arg[4]),
     tonumber(arg[5])
 if not startX or not startZ or not startY or not depth or not width then
@@ -7,7 +8,7 @@ if not startX or not startZ or not startY or not depth or not width then
     return
 end
 
-local job_file = "quarry-job"
+local job_file = "job-file"
 if fs.exists(job_file) then
     local file = fs.open(job_file, "r")
     local firstLine = file.readLine()
@@ -28,17 +29,9 @@ if fs.exists(job_file) then
     end
 end
 
-local coords = {}
-for dz = 0, depth - 1 do
-    for dx = 0, width - 1 do
-        table.insert(coords, { startX + dx, startZ + dz })
-    end
-end
-
 local job = {
     boundaries = { start_pos = { x = startX, y = startY, z = startZ }, width = width, depth = depth },
     current_layer = startY,
-    layer_coords = coords
 }
 
 local f = fs.open(job_file, "w")
