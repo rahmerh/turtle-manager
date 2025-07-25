@@ -1,6 +1,8 @@
 local mover = require("mover")
 local printer = require("printer")
 local fueler = require("fueler")
+local unloader = require("unloader")
+local locator = require("locator")
 
 -- === Progress functions ===
 local progress_file = "job-file"
@@ -25,7 +27,7 @@ end
 
 -- === Quarrying ===
 local function start_new_layer()
-    for _ = 1, 3 do
+    for _ = 1, 2 do
         if turtle.detectDown() then
             turtle.digDown()
         end
@@ -41,7 +43,7 @@ local function mine_next_column()
         turtle.dig()
     end
 
-    turtle.forward()
+    mover.move_forward()
 
     while turtle.detectUp() do
         turtle.digUp()
@@ -53,15 +55,6 @@ local function mine_next_column()
 end
 
 local function mine_layer(progress)
-    if not progress.current_row then
-        progress.current_row = 0
-        save_progress(progress)
-    else
-        -- TODO: Resume to current_row in progress
-        progress.current_row = 0
-        save_progress(progress)
-    end
-
     local amount_of_rows = progress.boundaries.width
     for i = 1, amount_of_rows do
         -- We do -1 here since we assume the turtle already is in the start pos of that layer.
@@ -86,6 +79,18 @@ local function mine_layer(progress)
     end
 end
 
+local function resume_quarry(progress)
+    mover.move_to_x(progress.boundaries.start_pos.x)
+    mover.move_to_z(progress.boundaries.start_pos.z)
+
+    local pos = locator.get_pos()
+
+    local layer_diff = progress.total_layers - progress.current_layer
+    local target_y = progress.boundaries.start_pos.y - (layer_diff * 3)
+
+    mover.move_to_y(target_y)
+end
+
 -- === Main ===
 local progress = load_progress()
 
@@ -94,36 +99,40 @@ if not progress then
     return
 end
 
+local chest_detail = turtle.getItemDetail(2)
+if not chest_detail or chest_detail.count < 4 or not chest_detail.name:lower():match("chest") then
+    printer.print_error("Slot 2 must contain at least 4 chests.")
+    return
+end
+
 local target = progress.boundaries.start_pos
 
 printer.print_info("Moving to X: " .. target.x .. " Y: " .. target.y .. " Z: " .. target.z)
+
 if not mover.move_to(target.x, target.y, target.z) then
     printer.print_error("Could not move to starting point.")
     return
 end
+
 printer.print_success("Arrived at destination, starting quarry.")
 
 printer.print_info("Preparing unloading area")
-mover.turn_to_direction("south")
 
-local success, data = turtle.inspect()
-if success and data.name:match("chest") then
-    print("That's a chest!")
-end
-
-for _ = 1, 5 do
-
-end
-
-mover.turn_to_direction("north")
+unloader.create_unloading_area(target.x, target.y, target.z)
 
 printer.print_info("Mining " .. progress.total_layers .. " layers.")
 progress.current_layer = progress.total_layers
 
-turtle.digDown()
-turtle.down()
-turtle.digDown()
+mover.turn_to_direction("north")
+
 for _ = 0, progress.total_layers - 1 do
+    progress.current_row = 0
+    if progress.current_layer > 1 then
+        start_new_layer()
+        progress.current_layer = progress.current_layer - 1
+        save_progress(progress)
+    end
+
     mine_layer(progress)
 
     if progress.boundaries.width % 2 == 0 then
@@ -133,10 +142,12 @@ for _ = 0, progress.total_layers - 1 do
         mover.turn_left()
     end
 
-    if progress.current_layer > 1 then
-        start_new_layer()
-        progress.current_layer = progress.current_layer - 1
-        save_progress(progress)
+    -- Assume correct position for next layer.
+    turtle.down()
+
+    if progress.current_layer % 2 == 0 then
+        unloader.unload_at_chest(1)
+        resume_quarry(progress)
     end
 end
 
@@ -146,7 +157,6 @@ end
 
 printer.print_success("Job completed!")
 
-mover.turn_to_direction("north")
 printer.print_info("Returning to X: " .. target.x .. " Y: " .. target.y .. " Z: " .. target.z)
 mover.move_to(target.x, target.y, target.z)
 mover.turn_to_direction("north")

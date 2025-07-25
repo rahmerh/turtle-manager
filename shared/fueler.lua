@@ -6,7 +6,7 @@ fueler.refuel = function()
     if turtle.getFuelLevel() > 0 then return true end
 
     turtle.select(1)
-    if turtle.refuel(1) then return true end
+    if turtle.refuel(5) then return true end
     for slot = 2, 16 do
         turtle.select(slot)
         if turtle.refuel(0) then

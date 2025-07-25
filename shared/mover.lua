@@ -63,7 +63,7 @@ mover.determine_orientation = function()
     local x1, _, z1 = gps.locate(2)
 
     local unstuck_turns = 0
-    while not turtle.forward() do
+    while not mover.move_forward() do
         unstuck_turns = unstuck_turns + 1
         turtle.turnLeft() -- This has to be the native turtle turn, will cause recursion otherwise.
 
@@ -123,6 +123,86 @@ mover.turn_to_direction = function(target_direction)
     turtle_state.orientation = target_direction
 end
 
+mover.move_forward = function()
+    while not fueler.refuel() do
+        printer.print_error("Could not refuel, sleeping for 10s...")
+        os.sleep(10)
+    end
+
+    return turtle.forward()
+end
+
+mover.move_to_x = function(x)
+    while not fueler.refuel() do
+        printer.print_error("Could not refuel, sleeping for 10s...")
+        os.sleep(10)
+    end
+
+    local pos = locator.get_pos()
+    local delta = x - pos.x
+
+    if delta > 0 then
+        mover.turn_to_direction("east")
+    else
+        mover.turn_to_direction("west")
+    end
+
+    for _ = 1, math.abs(delta) do
+        if not mover.move_forward() then
+            printer.print_error("Got blocked while trying to move to X: " .. x)
+            return
+        end
+    end
+end
+
+mover.move_to_y = function(y)
+    while not fueler.refuel() do
+        printer.print_error("Could not refuel, sleeping for 10s...")
+        os.sleep(10)
+    end
+
+    local pos = locator.get_pos()
+    local delta = y - pos.y
+
+    for _ = 1, math.abs(delta) do
+        local success = true
+
+        if delta > 0 then
+            success = turtle.up()
+        else
+            success = turtle.down()
+        end
+
+        if not success then
+            printer.print_error("Got blocked while trying to move to Y: " .. y)
+            return
+        end
+    end
+end
+
+mover.move_to_z = function(z)
+    while not fueler.refuel() do
+        printer.print_error("Could not refuel, sleeping for 10s...")
+        os.sleep(10)
+    end
+
+    local pos = locator.get_pos()
+    local delta = z - pos.z
+
+    if delta > 0 then
+        mover.turn_to_direction("south")
+    else
+        mover.turn_to_direction("north")
+    end
+
+    for _ = 1, math.abs(delta) do
+        if not mover.move_forward() then
+            printer.print_error("Got blocked while trying to move to Z: " .. z)
+            return
+        end
+    end
+end
+
 mover.move_to = function(x, y, z)
     while true do
         if not fueler.refuel() then
@@ -171,7 +251,7 @@ mover.move_to = function(x, y, z)
                 if turtle.detect() and turtle.detectDown() and not turtle.detectUp() then
                     while turtle.detect() and not turtle.detectUp() do
                         turtle.up()
-                        turtle.forward()
+                        mover.move_forward()
                     end
                     turtle_state.stuck = false
                     break
@@ -192,14 +272,14 @@ mover.move_to = function(x, y, z)
                 if not blocking_blocks[left_rotation] then
                     mover.turn_to_direction(left_rotation)
                     for _ = 1, amount_of_steps do
-                        turtle.forward()
+                        mover.move_forward()
                     end
                     turtle_state.stuck = false
                     break
                 elseif not blocking_blocks[right_rotation] then
                     mover.turn_to_direction(right_rotation)
                     for _ = 1, amount_of_steps do
-                        turtle.forward()
+                        mover.move_forward()
                     end
                     turtle_state.stuck = false
                     break
@@ -226,7 +306,7 @@ mover.move_to = function(x, y, z)
                     end
                     break
                 end
-            elseif not turtle.forward() then
+            elseif not mover.move_forward() then
                 if turtle.detect() then
                     turtle_state.stuck = true
                 end
