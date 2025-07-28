@@ -54,7 +54,6 @@ mover.turn_right = function()
     turtle_state.orientation = RIGHT_ROTATION[current_orientation]
 end
 
-
 mover.determine_orientation = function()
     if turtle_state.orientation then
         return turtle_state.orientation
@@ -95,6 +94,10 @@ mover.determine_orientation = function()
     return direction
 end
 
+mover.opposite_orientation_of = function(orientation)
+    return LEFT_ROTATION[LEFT_ROTATION[orientation]]
+end
+
 mover.turn_to_direction = function(target_direction)
     local current_orientation = mover.determine_orientation()
     if not current_orientation or current_orientation == target_direction then
@@ -132,7 +135,27 @@ mover.move_forward = function()
     return turtle.forward()
 end
 
-mover.move_to_x = function(x)
+mover.move_up = function()
+    while not fueler.refuel() do
+        printer.print_error("Could not refuel, sleeping for 10s...")
+        os.sleep(10)
+    end
+
+    return turtle.up()
+end
+
+mover.move_down = function()
+    while not fueler.refuel() do
+        printer.print_error("Could not refuel, sleeping for 10s...")
+        os.sleep(10)
+    end
+
+    return turtle.down()
+end
+
+mover.move_to_x = function(x, dig)
+    dig = dig or false
+
     while not fueler.refuel() do
         printer.print_error("Could not refuel, sleeping for 10s...")
         os.sleep(10)
@@ -141,6 +164,8 @@ mover.move_to_x = function(x)
     local pos = locator.get_pos()
     local delta = x - pos.x
 
+    if delta == 0 then return end
+
     if delta > 0 then
         mover.turn_to_direction("east")
     else
@@ -148,6 +173,12 @@ mover.move_to_x = function(x)
     end
 
     for _ = 1, math.abs(delta) do
+        if dig then
+            while turtle.detect() do
+                turtle.dig()
+            end
+        end
+
         if not mover.move_forward() then
             printer.print_error("Got blocked while trying to move to X: " .. x)
             return
@@ -155,7 +186,9 @@ mover.move_to_x = function(x)
     end
 end
 
-mover.move_to_y = function(y)
+mover.move_to_y = function(y, dig)
+    dig = dig or false
+
     while not fueler.refuel() do
         printer.print_error("Could not refuel, sleeping for 10s...")
         os.sleep(10)
@@ -164,13 +197,27 @@ mover.move_to_y = function(y)
     local pos = locator.get_pos()
     local delta = y - pos.y
 
+    if delta == 0 then return end
+
     for _ = 1, math.abs(delta) do
         local success = true
 
         if delta > 0 then
-            success = turtle.up()
+            if dig then
+                while turtle.detectUp() do
+                    turtle.digUp()
+                end
+            end
+
+            success = mover.move_up()
         else
-            success = turtle.down()
+            if dig then
+                while turtle.detectDown() do
+                    turtle.digDown()
+                end
+            end
+
+            success = mover.move_down()
         end
 
         if not success then
@@ -180,7 +227,9 @@ mover.move_to_y = function(y)
     end
 end
 
-mover.move_to_z = function(z)
+mover.move_to_z = function(z, dig)
+    dig = dig or false
+
     while not fueler.refuel() do
         printer.print_error("Could not refuel, sleeping for 10s...")
         os.sleep(10)
@@ -188,6 +237,8 @@ mover.move_to_z = function(z)
 
     local pos = locator.get_pos()
     local delta = z - pos.z
+
+    if delta == 0 then return end
 
     if delta > 0 then
         mover.turn_to_direction("south")

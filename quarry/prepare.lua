@@ -27,10 +27,12 @@ if fs.exists(job_file) then
     end
 end
 
-local layers = math.floor((startY + 58) / 3)
+local layers = math.floor((startY + 59) / 3)
 local job = {
     boundaries = { start_pos = { x = startX, y = startY, z = startZ }, width = width, depth = depth },
-    total_layers = layers
+    total_layers = layers,
+    resumable = true,
+    unloading_chests = {}
 }
 
 local total_fuel = fueler.calculate_fuel_for_quarry(width, depth, layers)
