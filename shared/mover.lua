@@ -126,8 +126,17 @@ mover.turn_to_direction = function(target_direction)
     turtle_state.orientation = target_direction
 end
 
+mover.move_back = function()
+    while not fueler.refuel_from_inventory() do
+        printer.print_error("Could not refuel, sleeping for 10s...")
+        os.sleep(10)
+    end
+
+    return turtle.back()
+end
+
 mover.move_forward = function()
-    while not fueler.refuel() do
+    while not fueler.refuel_from_inventory() do
         printer.print_error("Could not refuel, sleeping for 10s...")
         os.sleep(10)
     end
@@ -136,7 +145,7 @@ mover.move_forward = function()
 end
 
 mover.move_up = function()
-    while not fueler.refuel() do
+    while not fueler.refuel_from_inventory() do
         printer.print_error("Could not refuel, sleeping for 10s...")
         os.sleep(10)
     end
@@ -145,7 +154,7 @@ mover.move_up = function()
 end
 
 mover.move_down = function()
-    while not fueler.refuel() do
+    while not fueler.refuel_from_inventory() do
         printer.print_error("Could not refuel, sleeping for 10s...")
         os.sleep(10)
     end
@@ -156,7 +165,7 @@ end
 mover.move_to_x = function(x, dig)
     dig = dig or false
 
-    while not fueler.refuel() do
+    while not fueler.refuel_from_inventory() do
         printer.print_error("Could not refuel, sleeping for 10s...")
         os.sleep(10)
     end
@@ -189,7 +198,7 @@ end
 mover.move_to_y = function(y, dig)
     dig = dig or false
 
-    while not fueler.refuel() do
+    while not fueler.refuel_from_inventory() do
         printer.print_error("Could not refuel, sleeping for 10s...")
         os.sleep(10)
     end
@@ -230,7 +239,7 @@ end
 mover.move_to_z = function(z, dig)
     dig = dig or false
 
-    while not fueler.refuel() do
+    while not fueler.refuel_from_inventory() do
         printer.print_error("Could not refuel, sleeping for 10s...")
         os.sleep(10)
     end
@@ -247,6 +256,12 @@ mover.move_to_z = function(z, dig)
     end
 
     for _ = 1, math.abs(delta) do
+        if dig then
+            while turtle.detect() do
+                turtle.dig()
+            end
+        end
+
         if not mover.move_forward() then
             printer.print_error("Got blocked while trying to move to Z: " .. z)
             return
@@ -256,7 +271,7 @@ end
 
 mover.move_to = function(x, y, z)
     while true do
-        if not fueler.refuel() then
+        if not fueler.refuel_from_inventory() then
             printer.print_error("Could not refuel, sleeping for 10s...")
             os.sleep(10)
             goto continue
@@ -344,14 +359,14 @@ mover.move_to = function(x, y, z)
 
         for _ = 1, math.abs(value) do
             if direction == "up" then
-                if not turtle.up() then
+                if not mover.move_up() then
                     if turtle.detectUp() then
                         turtle_state.stuck = true
                     end
                     break
                 end
             elseif direction == "down" then
-                if not turtle.down() then
+                if not mover.move_down() then
                     if turtle.detectDown() then
                         turtle_state.stuck = true
                     end

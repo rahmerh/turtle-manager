@@ -47,11 +47,21 @@ unloader.create_initial_unloading_area = function(start_x, start_y, start_z)
         turtle.select(2)
         turtle.placeDown()
 
+        -- Make it a double
         mover.turn_right()
         mover.move_forward()
         mover.turn_left()
         turtle.select(2)
         turtle.placeDown()
+
+        -- Place refueling chest
+        mover.turn_right()
+        mover.move_forward()
+        mover.turn_right()
+        mover.move_forward()
+        mover.turn_left()
+        turtle.placeDown()
+
         turtle.select(1)
     end
 
@@ -61,29 +71,24 @@ unloader.create_initial_unloading_area = function(start_x, start_y, start_z)
     return 1, unloading_pos
 end
 
-unloader.unload_at_chest = function(chest_number, progress)
-    local chest = progress.unloading_chests[chest_number]
-    if not chest then
-        error("Could not determine unloading chest")
-    end
-
-    mover.move_to_y(chest.y)
-    mover.move_to_x(chest.x)
-    mover.move_to_z(chest.z)
-
-    mover.turn_to_direction("east")
-
-    for _ = 1, chest_number - 1 do
-        turtle.up()
-    end
+function unloader.unload()
+    mover.move_back()
+    mover.move_up()
+    turtle.select(2)
+    turtle.placeDown()
 
     for i = 3, 16 do
-        if turtle.getItemCount(i) > 0 then
-            turtle.select(i)
-            turtle.drop()
+        turtle.select(i)
+        local item = turtle.getItemDetail()
+        if item and not item.name:lower():match("coal") then
+            turtle.dropDown()
         end
     end
+
     turtle.select(1)
+
+    mover.move_forward()
+    mover.move_down()
 end
 
 unloader.should_unload = function()

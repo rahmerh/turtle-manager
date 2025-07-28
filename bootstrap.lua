@@ -13,6 +13,8 @@ local files = {
     quarry = {
         ["quarry.lua"] = "quarry/quarry.lua",
         ["prepare.lua"] = "quarry/prepare.lua",
+        ["startup.lua"] = "quarry/startup.lua",
+        ["job.lua"] = "quarry/job.lua",
     },
 }
 

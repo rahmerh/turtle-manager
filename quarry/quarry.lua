@@ -2,39 +2,20 @@ local mover = require("mover")
 local printer = require("printer")
 local fueler = require("fueler")
 local unloader = require("unloader")
-local locator = require("locator")
+local job = require("job")
 
--- === Progress functions ===
-local progress_file = "job-file"
-local function load_progress()
-    if not fs.exists(progress_file) then
-        return
-    end
-
-    local f = fs.open(progress_file, "r")
-    local data = textutils.unserialize(f.readAll())
-    f.close()
-
-    return data
-end
-
-local function save_progress(progress)
-    local f = fs.open(progress_file, "w")
-    f.write(textutils.serialize(progress))
-    f.close()
-end
-
--- === Quarrying ===
 local function start_new_layer()
     for _ = 1, 2 do
         turtle.digDown()
         mover.move_down()
         turtle.digDown()
     end
+
+    job.next_layer()
 end
 
 local function mine_next_column()
-    fueler.refuel()
+    fueler.refuel_from_inventory()
 
     while turtle.detect() do
         turtle.dig()
@@ -60,16 +41,15 @@ local function get_row_direction_for_layer(width, layer)
     end
 end
 
-local function mine_amount_of_rows(amount, length, progress)
-    local turn_right = (progress.boundaries.width - amount) % 2 == 0
+local function mine_amount_of_rows(amount, length)
+    local turn_right = job.current_row() % 2 == 0
     for i = 1, amount do
         -- We do -1 here since we assume the turtle already is in the start pos of that row
         for _ = 1, length - 1 do
             mine_next_column()
 
             if unloader.should_unload() then
-                unloader.unload_at_chest(1, progress)
-                return false
+                unloader.unload()
             end
         end
 
@@ -87,56 +67,53 @@ local function mine_amount_of_rows(amount, length, progress)
 
         turn_right = not turn_right
 
-        progress.current_row = progress.current_row + 1
-        save_progress(progress)
+        job.increment_row()
     end
-
-    return true
 end
 
-local function move_to_current_row_in_progress(progress)
-    local start_x = progress.boundaries.start_pos.x
-    local start_y = progress.boundaries.start_pos.y
-    local start_z = progress.boundaries.start_pos.z
+local function move_to_current_row_in_progress()
+    local boundaries = job.get_boundaries()
+    local current_layer = job.current_layer()
+    local current_row = job.current_row()
 
-    local current_layer_row_direction = get_row_direction_for_layer(progress.boundaries.width, progress.current_layer)
+    local current_layer_row_direction = get_row_direction_for_layer(boundaries.width, current_layer)
 
-    local even_row = progress.current_row % 2 == 0
+    local even_row = current_row % 2 == 0
     local to_move_x
     local to_move_z
     if current_layer_row_direction == "north" then
-        to_move_x = progress.current_row
+        to_move_x = current_row
 
         if even_row then
             to_move_z = 0
         else
-            to_move_z = progress.boundaries.depth - 1
+            to_move_z = boundaries.depth - 1
         end
     elseif current_layer_row_direction == "east" then
-        to_move_z = progress.boundaries.depth - (progress.current_row + 1)
+        to_move_z = boundaries.depth - (current_row + 1)
         if even_row then
             to_move_x = 0
         else
-            to_move_x = progress.boundaries.width - 1
+            to_move_x = boundaries.width - 1
         end
     elseif current_layer_row_direction == "south" then
-        to_move_x = progress.boundaries.width - (progress.current_row + 1)
+        to_move_x = boundaries.width - (current_row + 1)
         if even_row then
-            to_move_z = progress.boundaries.depth - 1
+            to_move_z = boundaries.depth - 1
         else
             to_move_z = 0
         end
     elseif current_layer_row_direction == "west" then
-        to_move_z = progress.current_row
+        to_move_z = current_row
         if even_row then
-            to_move_x = progress.boundaries.width - 1
+            to_move_x = boundaries.width - 1
         else
             to_move_x = 0
         end
     end
 
-    mover.move_to_z(start_z - to_move_z, true)
-    mover.move_to_x(start_x + to_move_x, true)
+    mover.move_to_z(boundaries.start_pos.z - to_move_z, true)
+    mover.move_to_x(boundaries.start_pos.x + to_move_x, true)
 
     local orientation_to_face
     if even_row then
@@ -147,9 +124,9 @@ local function move_to_current_row_in_progress(progress)
     mover.turn_to_direction(orientation_to_face)
 
     -- +2 here since we have to account for the movements down before starting the first layer.
-    local steps_to_move_down = (progress.total_layers - progress.current_layer) * 3 + 2
+    local steps_to_move_down = (boundaries.layers - current_layer) * 3 + 2
 
-    local layer_y = start_y - steps_to_move_down
+    local layer_y = boundaries.start_pos.y - steps_to_move_down
     mover.move_to_y(layer_y, true)
 
     if turtle.detectDown() then
@@ -157,14 +134,14 @@ local function move_to_current_row_in_progress(progress)
     end
 end
 
-
 -- === Main ===
-local progress = load_progress()
-
-if not progress then
-    printer.print_error("Job file missing, please run prepare before starting a new quarry.")
+local success, msg = job.load()
+if not success then
+    printer.print_error(msg)
     return
 end
+
+job.starting()
 
 local chest_detail = turtle.getItemDetail(2)
 if not chest_detail or chest_detail.count < 4 or not chest_detail.name:lower():match("chest") then
@@ -172,79 +149,120 @@ if not chest_detail or chest_detail.count < 4 or not chest_detail.name:lower():m
     return
 end
 
-::restart::
+local boundaries = job.get_boundaries()
 
-local target = progress.boundaries.start_pos
-if progress.current_row and progress.resumable then
-    move_to_current_row_in_progress(progress)
-
-    local left_over_rows = progress.boundaries.width - progress.current_row
-    if not mine_amount_of_rows(left_over_rows, progress.boundaries.depth, progress) then
-        goto restart
-    end
-
-    progress.current_layer = progress.current_layer - 1
-    save_progress(progress)
-
-    if progress.boundaries.width % 2 == 0 then
-        mover.turn_right()
-    else
-        mover.turn_left()
-        mover.turn_left()
-    end
-
-    mover.move_down()
-else
-    printer.print_info("Moving to X: " .. target.x .. " Y: " .. target.y .. " Z: " .. target.z)
-    if not mover.move_to(target.x, target.y, target.z) then
-        printer.print_error("Could not move to starting point.")
-        return
-    end
-    printer.print_success("Arrived at destination, starting quarry.")
-
-    printer.print_info("Preparing unloading area")
-    local key, value = unloader.create_initial_unloading_area(target.x, target.y, target.z)
-    progress.unloading_chests[key] = value
-    save_progress(progress)
-
-    printer.print_info("Mining " .. progress.total_layers + 1 .. " layers.")
-    if not progress.current_layer then
-        progress.current_layer = progress.total_layers
-        save_progress(progress)
-    end
-
-    mover.turn_to_direction("north")
+printer.print_info("Moving to X: " ..
+    boundaries.start_pos.x .. " Y: " .. boundaries.start_pos.y .. " Z: " .. boundaries.start_pos.z)
+if not mover.move_to(boundaries.start_pos.x, boundaries.start_pos.y, boundaries.start_pos.z) then
+    printer.print_error("Could not move to starting point.")
+    return
 end
-
-while progress.current_layer >= 0 do
-    start_new_layer()
-
-    progress.current_row = 0
-    if not mine_amount_of_rows(progress.boundaries.width, progress.boundaries.depth, progress) then
-        move_to_current_row_in_progress(progress)
-        goto restart
-    end
-
-    progress.current_row = nil
-
-    if progress.boundaries.width % 2 == 0 then
-        mover.turn_right()
-    else
-        mover.turn_left()
-        mover.turn_left()
-    end
-
-    -- Assume correct position for next layer.
-    mover.move_down()
-
-    progress.current_layer = progress.current_layer - 1
-    save_progress(progress)
-end
-
-for _ = 1, 4 do
-    mover.turn_left()
-end
-
-unloader.unload_at_chest(1, progress)
-mover.move_to(target.x, target.y, target.z)
 mover.turn_to_direction("north")
+printer.print_success("Arrived at destination, starting quarry.")
+
+local function run_quarry()
+    job.start()
+    while job.current_layer() >= 0 do
+        start_new_layer()
+
+        mine_amount_of_rows(boundaries.width, boundaries.depth)
+
+        if boundaries.width % 2 == 0 then
+            mover.turn_right()
+        else
+            mover.turn_left()
+            mover.turn_left()
+        end
+
+        -- Assume correct position for next layer.
+        mover.move_down()
+
+        job.next_layer()
+    end
+end
+
+local function kill_switch()
+    printer.print_info("Press enter to stop")
+    repeat
+        local _, key = os.pullEvent("key")
+    until key == keys.enter
+end
+
+parallel.waitForAny(run_quarry, kill_switch)
+
+printer.print_success("Done.")
+job.complete()
+
+-- if job.is_in_progress() then
+--     move_to_current_row_in_progress()
+--
+--     local left_over_rows = progress.boundaries.width - progress.current_row
+--     if not mine_amount_of_rows(left_over_rows, progress.boundaries.depth, progress) then
+--         goto restart
+--     end
+--
+--     progress.current_layer = progress.current_layer - 1
+--     save_progress(progress)
+--
+--     if progress.boundaries.width % 2 == 0 then
+--         mover.turn_right()
+--     else
+--         mover.turn_left()
+--         mover.turn_left()
+--     end
+--
+--     mover.move_down()
+-- else
+--     printer.print_info("Moving to X: " .. target.x .. " Y: " .. target.y .. " Z: " .. target.z)
+--     if not mover.move_to(target.x, target.y, target.z) then
+--         printer.print_error("Could not move to starting point.")
+--         return
+--     end
+--     printer.print_success("Arrived at destination, starting quarry.")
+--
+--     printer.print_info("Preparing unloading area")
+--     local key, value = unloader.create_initial_unloading_area(target.x, target.y, target.z)
+--     progress.unloading_chests[key] = value
+--     save_progress(progress)
+--
+--     printer.print_info("Mining " .. progress.total_layers + 1 .. " layers.")
+--     if not progress.current_layer then
+--         progress.current_layer = progress.total_layers
+--         save_progress(progress)
+--     end
+--
+--     mover.turn_to_direction("north")
+-- end
+--
+-- while progress.current_layer >= 0 do
+--     start_new_layer()
+--
+--     progress.current_row = 0
+--     if not mine_amount_of_rows(progress.boundaries.width, progress.boundaries.depth, progress) then
+--         move_to_current_row_in_progress(progress)
+--         goto restart
+--     end
+--
+--     progress.current_row = nil
+--
+--     if progress.boundaries.width % 2 == 0 then
+--         mover.turn_right()
+--     else
+--         mover.turn_left()
+--         mover.turn_left()
+--     end
+--
+--     -- Assume correct position for next layer.
+--     mover.move_down()
+--
+--     progress.current_layer = progress.current_layer - 1
+--     save_progress(progress)
+-- end
+--
+-- for _ = 1, 4 do
+--     mover.turn_left()
+-- end
+--
+-- unloader.unload_at_chest(1, progress)
+-- mover.move_to(target.x, target.y, target.z)
+-- mover.turn_to_direction("north")

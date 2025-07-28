@@ -20,4 +20,12 @@ From there on, check usage below for each role
 
 ## Usage
 
-WIP
+### Quarry
+
+First you have to prepare the job:
+
+```sh
+prepare <start_pos_x> <start_pos_y> <start_pos_z> <width> <depth>
+```
+
+When the job is created you can then simply start the quarry with: `quarry`
