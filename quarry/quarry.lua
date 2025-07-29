@@ -3,16 +3,7 @@ local printer = require("printer")
 local fueler = require("fueler")
 local unloader = require("unloader")
 local job = require("job")
-
-local function start_new_layer()
-    for _ = 1, 2 do
-        turtle.digDown()
-        mover.move_down()
-        turtle.digDown()
-    end
-
-    job.next_layer()
-end
+local wireless = require("wireless")
 
 local function mine_next_column()
     fueler.refuel_from_inventory()
@@ -45,7 +36,7 @@ local function mine_amount_of_rows(amount, length)
     local turn_right = job.current_row() % 2 == 0
     for i = 1, amount do
         -- We do -1 here since we assume the turtle already is in the start pos of that row
-        for _ = 1, length - 1 do
+        for y = 1, length - 1 do
             mine_next_column()
 
             if unloader.should_unload() then
@@ -71,7 +62,7 @@ local function mine_amount_of_rows(amount, length)
     end
 end
 
-local function move_to_current_row_in_progress()
+local function move_to_current_row()
     local boundaries = job.get_boundaries()
     local current_layer = job.current_layer()
     local current_row = job.current_row()
@@ -141,128 +132,100 @@ if not success then
     return
 end
 
-job.starting()
-
-local chest_detail = turtle.getItemDetail(2)
-if not chest_detail or chest_detail.count < 4 or not chest_detail.name:lower():match("chest") then
-    printer.print_error("Slot 2 must contain at least 4 chests.")
+local manager_id = wireless.register_new_turtle("quarry")
+if not manager_id then
+    printer.print_error("No manager found, is there a manager instance running?")
     return
 end
-
-local boundaries = job.get_boundaries()
-
-printer.print_info("Moving to X: " ..
-    boundaries.start_pos.x .. " Y: " .. boundaries.start_pos.y .. " Z: " .. boundaries.start_pos.z)
-if not mover.move_to(boundaries.start_pos.x, boundaries.start_pos.y, boundaries.start_pos.z) then
-    printer.print_error("Could not move to starting point.")
-    return
-end
-mover.turn_to_direction("north")
-printer.print_success("Arrived at destination, starting quarry.")
 
 local function run_quarry()
-    job.start()
-    while job.current_layer() >= 0 do
-        start_new_layer()
+    local boundaries = job.get_boundaries()
 
-        mine_amount_of_rows(boundaries.width, boundaries.depth)
+    if job.is_in_progress() then
+        job.starting()
+        move_to_current_row()
 
-        if boundaries.width % 2 == 0 then
-            mover.turn_right()
+        printer.print_success("Resuming quarry.")
+
+        job.start()
+
+        local direction = get_row_direction_for_layer(boundaries.width, job.current_layer())
+
+        local rows, length
+        if direction == "north" or direction == "south" then
+            rows = boundaries.width
+            length = boundaries.depth
         else
-            mover.turn_left()
-            mover.turn_left()
+            rows = boundaries.depth
+            length = boundaries.width
         end
 
-        -- Assume correct position for next layer.
-        mover.move_down()
+        mine_amount_of_rows(rows - job.current_row(), length)
+        job.next_layer()
+        move_to_current_row()
+    else
+        job.starting()
+        local chest_detail = turtle.getItemDetail(2)
+        if not chest_detail or chest_detail.count < 4 or not chest_detail.name:lower():match("chest") then
+            printer.print_error("Slot 2 must contain at least 4 chests.")
+            return
+        end
+
+        printer.print_info("Moving to X: " ..
+            boundaries.start_pos.x .. " Y: " .. boundaries.start_pos.y .. " Z: " .. boundaries.start_pos.z)
+        if not mover.move_to(boundaries.start_pos.x, boundaries.start_pos.y, boundaries.start_pos.z) then
+            printer.print_error("Could not move to starting point.")
+            return
+        end
+        mover.turn_to_direction("north")
+        printer.print_success("Arrived at destination, starting quarry.")
+    end
+
+    job.start()
+    while job.current_layer() >= 0 do
+        move_to_current_row()
+
+        local direction = get_row_direction_for_layer(boundaries.width, job.current_layer())
+
+        local rows, length
+        if direction == "north" or direction == "south" then
+            rows = boundaries.width
+            length = boundaries.depth
+        else
+            rows = boundaries.depth
+            length = boundaries.width
+        end
+
+        mine_amount_of_rows(rows, length)
 
         job.next_layer()
     end
 end
 
 local function kill_switch()
-    printer.print_info("Press enter to stop")
-    repeat
-        local _, key = os.pullEvent("key")
-    until key == keys.enter
+    while true do
+        local _, id_to_kill, _ = wireless.receive(5, "kill")
+        if id_to_kill == os.getComputerID() then
+            printer.print_warning("Received kill command, exiting.")
+            break
+        end
+    end
 end
 
-parallel.waitForAny(run_quarry, kill_switch)
+local function heartbeat()
+    while true do
+        local metadata = {
+            status = job.status(),
+            current_layer = job.current_layer() + 1,
+            total_layers = job.get_boundaries().layers + 1
+        }
+        if not wireless.heartbeat(manager_id, metadata) then
+            error("Could not locate manager.")
+        end
+        sleep(5)
+    end
+end
+
+parallel.waitForAny(run_quarry, kill_switch, heartbeat)
 
 printer.print_success("Done.")
-job.complete()
-
--- if job.is_in_progress() then
---     move_to_current_row_in_progress()
---
---     local left_over_rows = progress.boundaries.width - progress.current_row
---     if not mine_amount_of_rows(left_over_rows, progress.boundaries.depth, progress) then
---         goto restart
---     end
---
---     progress.current_layer = progress.current_layer - 1
---     save_progress(progress)
---
---     if progress.boundaries.width % 2 == 0 then
---         mover.turn_right()
---     else
---         mover.turn_left()
---         mover.turn_left()
---     end
---
---     mover.move_down()
--- else
---     printer.print_info("Moving to X: " .. target.x .. " Y: " .. target.y .. " Z: " .. target.z)
---     if not mover.move_to(target.x, target.y, target.z) then
---         printer.print_error("Could not move to starting point.")
---         return
---     end
---     printer.print_success("Arrived at destination, starting quarry.")
---
---     printer.print_info("Preparing unloading area")
---     local key, value = unloader.create_initial_unloading_area(target.x, target.y, target.z)
---     progress.unloading_chests[key] = value
---     save_progress(progress)
---
---     printer.print_info("Mining " .. progress.total_layers + 1 .. " layers.")
---     if not progress.current_layer then
---         progress.current_layer = progress.total_layers
---         save_progress(progress)
---     end
---
---     mover.turn_to_direction("north")
--- end
---
--- while progress.current_layer >= 0 do
---     start_new_layer()
---
---     progress.current_row = 0
---     if not mine_amount_of_rows(progress.boundaries.width, progress.boundaries.depth, progress) then
---         move_to_current_row_in_progress(progress)
---         goto restart
---     end
---
---     progress.current_row = nil
---
---     if progress.boundaries.width % 2 == 0 then
---         mover.turn_right()
---     else
---         mover.turn_left()
---         mover.turn_left()
---     end
---
---     -- Assume correct position for next layer.
---     mover.move_down()
---
---     progress.current_layer = progress.current_layer - 1
---     save_progress(progress)
--- end
---
--- for _ = 1, 4 do
---     mover.turn_left()
--- end
---
--- unloader.unload_at_chest(1, progress)
--- mover.move_to(target.x, target.y, target.z)
--- mover.turn_to_direction("north")

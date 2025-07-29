@@ -16,6 +16,9 @@ local files = {
         ["startup.lua"] = "quarry/startup.lua",
         ["job.lua"] = "quarry/job.lua",
     },
+    manager = {
+        ["startup.lua"] = "manager/startup.lua"
+    }
 }
 
 local selected = files[role]
@@ -29,6 +32,7 @@ local shared_files = {
     ["locator.lua"] = "shared/locator.lua",
     ["mover.lua"] = "shared/mover.lua",
     ["printer.lua"] = "shared/printer.lua",
+    ["wireless.lua"] = "shared/wireless.lua"
 }
 
 for name, path in pairs(shared_files) do

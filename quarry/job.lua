@@ -20,7 +20,7 @@ local function validate(data)
     data.current_row = data.current_row or 0
     data.unloading_chests = data.unloading_chests or {}
     data.resumable = data.resumable == nil and true or data.resumable
-    data.status = STATUS_IDLE
+    data.status = data.status or STATUS_IDLE
 
     return true
 end
@@ -80,6 +80,10 @@ end
 
 function job.start()
     set_status(STATUS_IN_PROGRESS)
+end
+
+function job.status()
+    return job._data.status
 end
 
 function job.increment_row()

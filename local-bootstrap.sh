@@ -4,7 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CACHE_FILE="$SCRIPT_DIR/.latest-save"
-ROLES=("quarry")
+ROLES=("quarry" "manager")
 
 if [[ "${1:-}" == "--set-save" ]]; then
     NEW_ROOT="$2"

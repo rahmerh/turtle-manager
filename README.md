@@ -14,11 +14,16 @@ wget https://raw.githubusercontent.com/rahmerh/turtle-manager/refs/heads/main/bo
 
 Next bootstrap the device, you can select from the following roles:
 
+- Manager `bootstrap manager`
 - Quarry `bootstrap quarry`
 
-From there on, check usage below for each role
-
 ## Usage
+
+### Manager
+
+This is the central computer and should always be running. Because of this, you don't need to run anything, simply attach a modem to a computer and reboot.
+
+If you want to see the current turtles, attach a monitor (minimum 2x2).
 
 ### Quarry
 
@@ -28,4 +33,15 @@ First you have to prepare the job:
 prepare <start_pos_x> <start_pos_y> <start_pos_z> <width> <depth>
 ```
 
-When the job is created you can then simply start the quarry with: `quarry`
+This will create a file called `job-file` which contains the quarry's boundaries and progress. By default a quarry is resumable but this and other data can be edited manually.
+
+When the job is created you can then simply start the quarry with: `quarry`. When the turtle restarts (because of starting a new game or it gets unloaded/loaded) it will also resume the quarry by running that command.
+
+The turtle doesn't go back up to the surface, it will send a pickup command to the manager which will send a runner to retrieve the items. This saves both fuel and time of the quarrying turtle.
+
+## TODO
+
+- ""Pathfinding"" improvements
+- Runner turtle
+- Storage manager
+- Manager commands (recall)
