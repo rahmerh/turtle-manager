@@ -1,9 +1,18 @@
 local MAX_WIDTH = 30
 
-local display = {}
+local display = {
+    display_order = {},
+    blocks = {}
+}
 
 local monitor = peripheral.find("monitor")
 if not monitor then error("No monitor found") end
+
+local width, height = monitor.getSize()
+display.size = {
+    width = width,
+    height = height
+}
 
 monitor.setTextScale(0.5)
 
@@ -20,7 +29,34 @@ local function next_line(x, amount)
     monitor.setCursorPos(x, y + amount)
 end
 
-function display.display_block(id, lines, bg_colour, fg_colour)
+local function get_block_pos(id)
+    local x = 1
+    local y = 1
+    local col_height = 0
+
+    for _, block_id in ipairs(display.display_order) do
+        local block = display.blocks[block_id]
+        local block_height = #block.lines + 3
+
+        -- If this block doesn't fit in current column
+        if col_height + block_height > display.size.height then
+            -- Move to next column
+            x = x + MAX_WIDTH + 2
+            y = 1
+            col_height = 0
+        end
+
+        if block_id == id then
+            return x, y
+        end
+
+        -- Prepare y for the next block
+        y = y + block_height
+        col_height = col_height + block_height
+    end
+end
+
+local function write_block(lines, bg_colour, fg_colour)
     bg_colour = bg_colour or colours.white
     fg_colour = fg_colour or colours.black
 
@@ -30,10 +66,9 @@ function display.display_block(id, lines, bg_colour, fg_colour)
     monitor.setBackgroundColour(bg_colour)
     monitor.setTextColour(fg_colour)
 
-    local start_x, start_y = monitor.getCursorPos()
-
+    local x, _ = monitor.getCursorPos()
     monitor.write(string.rep(" ", MAX_WIDTH))
-    next_line()
+    next_line(x)
     for i = 1, #lines do
         local line = "  " .. lines[i]
 
@@ -44,35 +79,63 @@ function display.display_block(id, lines, bg_colour, fg_colour)
 
         local padded = line .. string.rep(" ", MAX_WIDTH - #line)
         monitor.write(padded)
-        next_line()
+        next_line(x)
     end
     monitor.write(string.rep(" ", MAX_WIDTH))
 
-    local end_x, end_y = monitor.getCursorPos()
-
     monitor.setBackgroundColour(prev_bg_colour)
     monitor.setTextColour(prev_fg_colour)
+end
 
+function display.add_or_update_block(id, lines)
+    if not display.blocks[id] then
+        table.insert(display.display_order, id)
+    end
     display.blocks[id] = {
-        start_x = start_x,
-        start_y = start_y,
-        end_x = end_x,
-        end_y = end_y
+        lines = lines
     }
 end
 
-function display.turtles(turtles)
-    clear()
-    for id, data in pairs(turtles) do
-        local lines = {
-            ("ID: %s (%s)"):format(id, data.role),
-            ("Status: %s"):format(data.status),
-            ("Mining layer %d of %d"):format(data.current_layer, data.total_layers),
-            ("Last seen at: %s"):format(os.date("%H:%M:%S", data.last_seen))
-        }
-        display.display_block(id, lines, colours.white, colours.black)
-        next_line(_, 2)
+function display.remove_block(id)
+    display.blocks[id] = nil
+
+    for i = #display.display_order, 1, -1 do
+        if display.display_order[i] == id then
+            table.remove(display.display_order, i)
+            break
+        end
     end
+end
+
+function display.render()
+    clear()
+    for i = 1, #display.display_order do
+        local id_to_display = display.display_order[i]
+        local block = display.blocks[id_to_display]
+
+        local x, y = get_block_pos(id_to_display)
+        if x and y then
+            monitor.setCursorPos(x, y)
+            write_block(block.lines)
+        end
+    end
+end
+
+function display.quarry_lines(turtle)
+    return {
+        ("ID: %s (%s)"):format(turtle.id, turtle.role),
+        ("Status: %s"):format(turtle.status),
+        ("Mining layer %d of %d"):format(turtle.current_layer, turtle.total_layers),
+        ("Last seen at: %s"):format(os.date("%H:%M:%S", turtle.last_seen))
+    }
+end
+
+function display.runner_lines(turtle)
+    return {
+        ("ID: %s (%s)"):format(turtle.id, turtle.role),
+        ("Status: %s"):format(turtle.status),
+        ("Last seen at: %s"):format(os.date("%H:%M:%S", turtle.last_seen))
+    }
 end
 
 return display

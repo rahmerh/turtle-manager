@@ -5,6 +5,12 @@ local unloader = require("unloader")
 local job = require("job")
 local wireless = require("wireless")
 
+local manager_id = wireless.register_new_turtle("quarry")
+if not manager_id then
+    printer.print_error("No manager found, is there a manager instance running?")
+    return
+end
+
 local function mine_next_column()
     fueler.refuel_from_inventory()
 
@@ -36,11 +42,12 @@ local function mine_amount_of_rows(amount, length)
     local turn_right = job.current_row() % 2 == 0
     for i = 1, amount do
         -- We do -1 here since we assume the turtle already is in the start pos of that row
-        for y = 1, length - 1 do
+        for _ = 1, length - 1 do
             mine_next_column()
 
             if unloader.should_unload() then
-                unloader.unload()
+                local chest_pos = unloader.unload()
+                wireless.send(manager_id, chest_pos, "pickup")
             end
         end
 
@@ -132,11 +139,6 @@ if not success then
     return
 end
 
-local manager_id = wireless.register_new_turtle("quarry")
-if not manager_id then
-    printer.print_error("No manager found, is there a manager instance running?")
-    return
-end
 
 local function run_quarry()
     local boundaries = job.get_boundaries()
@@ -164,12 +166,13 @@ local function run_quarry()
         job.next_layer()
         move_to_current_row()
     else
-        job.starting()
         local chest_detail = turtle.getItemDetail(2)
         if not chest_detail or chest_detail.count < 4 or not chest_detail.name:lower():match("chest") then
             printer.print_error("Slot 2 must contain at least 4 chests.")
             return
         end
+
+        job.starting()
 
         printer.print_info("Moving to X: " ..
             boundaries.start_pos.x .. " Y: " .. boundaries.start_pos.y .. " Z: " .. boundaries.start_pos.z)
@@ -177,6 +180,7 @@ local function run_quarry()
             printer.print_error("Could not move to starting point.")
             return
         end
+
         mover.turn_to_direction("north")
         printer.print_success("Arrived at destination, starting quarry.")
     end
@@ -222,7 +226,7 @@ local function heartbeat()
         if not wireless.heartbeat(manager_id, metadata) then
             error("Could not locate manager.")
         end
-        sleep(5)
+        sleep(1)
     end
 end
 

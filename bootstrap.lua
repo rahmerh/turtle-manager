@@ -61,4 +61,7 @@ for dest, src in pairs(selected) do
     end
 end
 
+-- Disable motd
+shell.run("set motd.enable false")
+
 print("Update complete.")

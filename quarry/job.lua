@@ -126,7 +126,7 @@ function job.get_boundaries()
 end
 
 function job.is_in_progress()
-    return job._data.status ~= STATUS_IDLE
+    return job._data.status == STATUS_IN_PROGRESS
 end
 
 return job
