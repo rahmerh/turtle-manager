@@ -9,6 +9,11 @@ unloader.get_unloading_chests = function(progress)
 end
 
 function unloader.unload()
+    local chest_detail = turtle.getItemDetail(2)
+    if not chest_detail or chest_detail.count <= 1 or not chest_detail.name:lower():match("chest") then
+        return nil
+    end
+
     mover.move_back()
     mover.move_up()
 

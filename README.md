@@ -37,11 +37,13 @@ This will create a file called `job-file` which contains the quarry's boundaries
 
 When the job is created you can then simply start the quarry with: `quarry`. When the turtle restarts (because of starting a new game or it gets unloaded/loaded) it will also resume the quarry by running that command.
 
-The turtle doesn't go back up to the surface, it will send a pickup command to the manager which will send a runner to retrieve the items. This saves both fuel and time of the quarrying turtle.
+The turtle doesn't go back up to the surface to unload, it will send a pickup command to the manager which will send a runner to retrieve the items. This saves both fuel and time of the quarrying turtle.
+
+### Runner
+
+A runner is a very general helper role which assists others. When a quarry turtle sends a pickup request, a runner will come and retrieve it. When a turtle is out of fuel or chests, a runner will go and rescue it.
 
 ## TODO
 
-- ""Pathfinding"" improvements
-- Runner turtle
-- Storage manager
-- Manager commands (recall)
+- Runner refueling/rescue
+- Display interactivity

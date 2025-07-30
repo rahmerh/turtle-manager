@@ -11,21 +11,38 @@ if not manager_id then
     return
 end
 
+local UNBREAKABLE = {
+  ["minecraft:bedrock"] = true,
+  ["minecraft:end_portal"] = true,
+  ["minecraft:end_portal_frame"] = true,
+  ["minecraft:barrier"] = true,
+}
+
 local function mine_next_column()
     fueler.refuel_from_inventory()
 
-    while turtle.detect() do
-        turtle.dig()
+    local ok, metadata = turtle.inspect()
+    if ok and metadata and not UNBREAKABLE[metadata.name] then
+
+        while turtle.detect() do
+            turtle.dig()
+        end
     end
 
     mover.move_forward()
 
-    while turtle.detectUp() do
-        turtle.digUp()
+    local up_ok, up_metadata = turtle.inspectUp()
+    if up_ok and up_metadata and not UNBREAKABLE[up_metadata.name] then
+        while turtle.detectUp() do
+            turtle.digUp()
+        end
     end
 
-    while turtle.detectDown() do
-        turtle.digDown()
+    local down_ok, down_metadata = turtle.inspectDown()
+    if down_ok and down_metadata and not UNBREAKABLE[down_metadata.name] then
+        while turtle.detectDown() do
+            turtle.digDown()
+        end
     end
 end
 
@@ -47,6 +64,14 @@ local function mine_amount_of_rows(amount, length)
 
             if unloader.should_unload() then
                 local chest_pos = unloader.unload()
+
+                while not chest_pos do
+                    printer.print_error("Not enough chests in slot 2, can't unload, sleeping for 10 seconds...")
+                    sleep(10)
+
+                    chest_pos = unloader.unload()
+                end
+
                 wireless.request_pickup(manager_id, chest_pos)
             end
         end
@@ -186,7 +211,7 @@ local function run_quarry()
     end
 
     job.start()
-    while job.current_layer() >= 0 do
+    while job.current_layer() > 0 do
         move_to_current_row()
 
         local direction = get_row_direction_for_layer(boundaries.width, job.current_layer())
@@ -204,6 +229,13 @@ local function run_quarry()
 
         job.next_layer()
     end
+
+    mover.move_to(boundaries.start_pos.x , boundaries.start_pos.y ,boundaries.start_pos.z)
+    
+    local chest_pos = unloader.unload()
+    wireless.request_pickup(manager_id, chest_pos)
+
+    job.complete()
 end
 
 local function kill_switch()
@@ -233,3 +265,4 @@ end
 parallel.waitForAny(run_quarry, kill_switch, heartbeat)
 
 printer.print_success("Done.")
+

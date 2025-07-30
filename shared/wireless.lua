@@ -56,7 +56,7 @@ function wireless.send_runner_task(receiver, pos, task_type)
     local sender, message, protocol = rednet.receive(protocols.runner_tasks, default_receive_timeout)
 
     if not sender then
-        return nil, "Turtle didn't confirm message received in time."
+        return nil, "Turtle " .. receiver .. " didn't confirm message received in time."
     end
 
     return sender, message, protocol

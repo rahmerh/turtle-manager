@@ -42,7 +42,7 @@ local function run_task()
         status = "Running (" .. task.type .. ")"
 
         printer.print_info(utils.timestamp() .. " Running task '" ..
-            task.type .. "' at: " .. task.pos.x .. "/" .. task.pos.y .. "/" .. task.pos.z)
+            task.type .. "' at: " .. task.pos.x .. "/" .. task.pos.y .. "/" .. task.pos.z .. "\n")
 
         if task_handlers[task.type] then
             task_handlers[task.type](task)
