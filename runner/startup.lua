@@ -1,8 +1,7 @@
 local wireless = require("wireless")
 local printer = require("printer")
-local mover = require("mover")
-local locator = require("locator")
 local task_store = require("task_store")
+local utils = require("utils")
 
 printer.print_info("Starting runner #" .. os.getComputerID())
 
@@ -13,21 +12,20 @@ if not manager_id then
 end
 
 local status = "Idle"
+local task_handlers = {
+    pickup = require("pickup")
+}
 
 local queue = task_store.new()
 
 local function receive_task()
     while true do
-        local sender, msg, _ = wireless.receive(1, "runner_pool")
+        local sender, msg = wireless.receive_runner_task()
 
-        if msg and sender == manager_id then
-            printer.print_info("Recieved '" .. msg.type .. "' task from manager.")
-            wireless.send(sender, "ack", "runner_pool_ack")
+        if msg and msg.type and sender == manager_id then
+            printer.print_info(utils.timestamp() .. " Received '" .. msg.type .. "' task from manager.\n")
+            wireless.confirm_task_received(sender)
             queue:enqueue(msg.pos, msg.type)
-        end
-
-        if queue:size() > 10000 then
-            queue:compact()
         end
     end
 end
@@ -41,27 +39,19 @@ local function run_task()
             goto continue
         end
 
-        status = "Running (pickup)"
-        local current_pos = locator.get_pos()
+        status = "Running (" .. task.type .. ")"
 
-        mover.move_to(task.pos.x, task.pos.y, task.pos.z)
+        printer.print_info(utils.timestamp() .. " Running task '" ..
+            task.type .. "' at: " .. task.pos.x .. "/" .. task.pos.y .. "/" .. task.pos.z)
 
-        -- TODO: Move this to pickup task
-        turtle.digDown()
-
-        mover.move_to(current_pos.x, current_pos.y, current_pos.z)
-        mover.turn_to_direction("south")
-
-        for i = 2, 16 do
-            local item = turtle.getItemDetail(i)
-            if item and item.count > 0 then
-                turtle.select(i)
-                turtle.drop()
-            end
+        if task_handlers[task.type] then
+            task_handlers[task.type](task)
+        else
+            printer.print_warning("Unsupported task: " .. task.type)
         end
-        turtle.select(1)
 
-        wireless.send(manager_id, "complete", "pickup")
+        wireless.task_completed(manager_id, task.type)
+
         queue:ack()
         status = "Idle"
 
@@ -75,7 +65,7 @@ local function heartbeat()
             status = status,
             queued_tasks = queue:size()
         }
-        if not wireless.heartbeat(manager_id, metadata) then
+        if not wireless.send_heartbeat(manager_id, metadata) then
             error("Could not locate manager.")
         end
         sleep(1)
@@ -84,7 +74,7 @@ end
 
 local function kill_switch()
     while true do
-        local _, id_to_kill, _ = wireless.receive(5, "kill")
+        local _, id_to_kill = wireless.receive_kill()
         if id_to_kill == os.getComputerID() then
             printer.print_warning("Received kill command, exiting.")
             break

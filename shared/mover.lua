@@ -4,8 +4,6 @@ local fueler = require("fueler")
 
 local mover = {}
 
-local MAX_UNSTUCK_ATTEMPTS = 500
-
 local LEFT_ROTATION = {
     north = "west",
     west = "south",
@@ -332,7 +330,7 @@ mover.move_to = function(x, y, z)
         local moved = move_on_axis(axis, value)
 
         if not moved then
-            for i = 1, #ordered_deltas do
+            for i = 2, #ordered_deltas do
                 axis = ordered_deltas[i].axis
                 value = ordered_deltas[i].value
 

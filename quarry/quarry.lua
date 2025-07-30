@@ -47,7 +47,7 @@ local function mine_amount_of_rows(amount, length)
 
             if unloader.should_unload() then
                 local chest_pos = unloader.unload()
-                wireless.send(manager_id, chest_pos, "pickup")
+                wireless.request_pickup(manager_id, chest_pos)
             end
         end
 
@@ -208,7 +208,7 @@ end
 
 local function kill_switch()
     while true do
-        local _, id_to_kill, _ = wireless.receive(5, "kill")
+        local _, id_to_kill = wireless.receive_kill()
         if id_to_kill == os.getComputerID() then
             printer.print_warning("Received kill command, exiting.")
             break
@@ -223,7 +223,7 @@ local function heartbeat()
             current_layer = job.current_layer() + 1,
             total_layers = job.get_boundaries().layers + 1
         }
-        if not wireless.heartbeat(manager_id, metadata) then
+        if not wireless.send_heartbeat(manager_id, metadata) then
             error("Could not locate manager.")
         end
         sleep(1)

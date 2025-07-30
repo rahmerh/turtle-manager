@@ -1,56 +1,44 @@
-local printer = require("printer")
+local protocols = {
+    heartbeat = "heartbeat",
+    announce = "announce",
+    runner_tasks = "runner_tasks",
+    task_completed = "task_completed",
+    kill = "kill",
+    request_pickup = "request_pickup"
+}
+
+local default_receive_timeout = 5
 
 local wireless = {}
 
-local RETRY_DELAY_IN_SECONDS = 10
 if not rednet.isOpen() then
-    for _ = 1, 5 do
-        for _, side in ipairs(peripheral.getNames()) do
-            if peripheral.getType(side) == "modem" then
-                rednet.open(side)
-                if rednet.isOpen() then
-                    break
-                end
-            end
+    for _, side in ipairs(peripheral.getNames()) do
+        if peripheral.getType(side) ~= "modem" then
+            goto continue
         end
 
-        if rednet.isOpen() then
-            break
+        rednet.open(side)
+
+        if not rednet.isOpen() then
+            error("No modem found for rednet communication", 0)
         end
 
-        printer.print_warning("No modem found, retrying in " .. RETRY_DELAY_IN_SECONDS .. " seconds.")
-        sleep(RETRY_DELAY_IN_SECONDS)
-    end
-
-    if not rednet.isOpen() then
-        error("No modem found for rednet communication", 0)
+        ::continue::
     end
 end
 
-function wireless.broadcast(message, protocol)
-    return rednet.broadcast(message, protocol)
+function wireless.receive_any()
+    return rednet.receive(nil, default_receive_timeout)
 end
 
-function wireless.receive(timeout, protocol)
-    local sender, msg, proto = rednet.receive(protocol, timeout)
-    if not sender then return nil end
-    return sender, msg, proto
+function wireless.send_heartbeat(receiver, metadata)
+    return rednet.send(receiver, metadata, protocols.heartbeat)
 end
 
-function wireless.send(receiver, msg, protocol)
-    return rednet.send(receiver, msg, protocol)
-end
+function wireless.register_new_turtle(role)
+    rednet.broadcast(role, protocols.announce)
 
-function wireless.heartbeat(receiver, metadata)
-    return rednet.send(receiver, metadata, "heartbeat")
-end
-
-function wireless.register_new_turtle(role, timeout)
-    timeout = timeout or 10
-
-    wireless.broadcast(role, "announce")
-
-    local sender, msg, _ = wireless.receive(timeout, "announce")
+    local sender, msg, _ = rednet.receive(protocols.announce, default_receive_timeout)
     if sender and msg == "ack" then
         return sender
     end
@@ -58,8 +46,44 @@ function wireless.register_new_turtle(role, timeout)
     return nil, "No manager found."
 end
 
+function wireless.acknowledge_announcement(receiver)
+    rednet.send(receiver, "ack", protocols.announce)
+end
+
+function wireless.send_runner_task(receiver, pos, task_type)
+    rednet.send(receiver, { pos = pos, type = task_type }, protocols.runner_tasks)
+
+    local sender, message, protocol = rednet.receive(protocols.runner_tasks, default_receive_timeout)
+
+    if not sender then
+        return nil, "Turtle didn't confirm message received in time."
+    end
+
+    return sender, message, protocol
+end
+
+function wireless.receive_runner_task()
+    return rednet.receive(protocols.runner_tasks, default_receive_timeout)
+end
+
+function wireless.confirm_task_received(receiver)
+    rednet.send(receiver, "ack", protocols.runner_tasks)
+end
+
+function wireless.task_completed(receiver, task_type)
+    rednet.send(receiver, task_type, protocols.task_completed)
+end
+
 function wireless.kill(id)
-    wireless.send(id, id, "kill")
+    rednet.send(id, id, protocols.kill)
+end
+
+function wireless.receive_kill()
+    return rednet.receive(protocols.kill, default_receive_timeout)
+end
+
+function wireless.request_pickup(receiver, pos)
+    rednet.send(receiver, pos, protocols.request_pickup)
 end
 
 return wireless

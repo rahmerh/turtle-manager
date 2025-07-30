@@ -1,5 +1,6 @@
 local turtle_store = require("turtle_store")
 local wireless = require("wireless")
+local printer = require("printer")
 
 local function find_least_queued(turtles)
     local result = nil
@@ -14,28 +15,22 @@ local function find_least_queued(turtles)
     return result
 end
 
-return function(sender, msg)
+return function(_, msg)
     local runners = turtle_store.get_by_role("runner")
-
     if not runners then
-        error("Replace with retry later")
-    end
-
-    if msg == "complete" then
-        local runner = turtle_store.get(sender)
-        runner.status = "Idle"
-        turtle_store.upsert(sender, runner)
-        return
+        error("No runners registered.")
     end
 
     local task_is_received = false
     while not task_is_received do
         for _, runner in ipairs(runners) do
             if runner.status == "Idle" then
-                wireless.send(runner.id, { pos = msg, type = "pickup" }, "runner_pool")
-                wireless.receive(10, "runner_pool_ack")
+                local sender, confirmation = wireless.send_runner_task(runner.id, msg, "pickup")
 
-                -- Task has been picked up.
+                if not sender then
+                    printer.print_warning(confirmation)
+                    break
+                end
 
                 task_is_received = true
                 break
@@ -47,15 +42,19 @@ return function(sender, msg)
             local runner = find_least_queued(runners)
 
             if not runner then
-                error("TODO fill in")
+                printer.print_warning("No runners available.")
+                return
             end
 
-            wireless.send(runner.id, { pos = msg, type = "pickup" }, "runner_pool")
+            local sender, confirmation = wireless.send_runner_task(runner.id, msg, "pickup")
 
-            wireless.receive(10, "runner_pool_ack")
+            if not sender then
+                printer.print_warning(confirmation)
+                break
+            end
+
             task_is_received = true
-
-            -- Task has been picked up.
+            break
         end
     end
 end

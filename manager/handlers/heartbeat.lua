@@ -7,7 +7,6 @@ return function(sender, msg)
     local turtle = turtle_store.get(sender)
 
     if not turtle then
-        print("Killed " .. sender)
         wireless.kill(sender)
         return
     end

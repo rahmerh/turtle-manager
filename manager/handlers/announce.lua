@@ -1,10 +1,9 @@
 local turtle_store = require("turtle_store")
-local display = require("display")
 local utils = require("utils")
 local wireless = require("wireless")
 
 return function(sender, msg)
-    wireless.send(sender, "ack", "announce")
+    wireless.acknowledge_announcement(sender)
 
     local turtle = {
         id = sender,

@@ -134,7 +134,7 @@ function display.status_lines_for(turtle)
         lines = {
             ("ID: %s (%s)"):format(turtle.id, turtle.role),
             ("Status: %s"):format(turtle.status),
-            ("Queued tasks: %s"):format(turtle.queued_tasks),
+            ("Current tasks: %d out of %s"):format((turtle.status == "Idle") and 0 or 1, turtle.queued_tasks),
             ("Last seen at: %s"):format(os.date("%H:%M:%S", turtle.last_seen))
         }
     end
