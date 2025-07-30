@@ -13,6 +13,6 @@ end
 
 local jobfile = load_jobfile()
 
-if jobfile.resumable and jobfile.current_row then
+if jobfile and jobfile.resumable and jobfile.current_row then
     shell.run("quarry")
 end

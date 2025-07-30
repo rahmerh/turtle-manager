@@ -15,11 +15,25 @@ function unloader.unload()
     turtle.select(2)
     turtle.placeDown()
 
+    -- Refuel first
+    for i = 3, 16 do
+        local item = turtle.getItemDetail(i)
+        if item and item.name:lower():match("coal") then
+            turtle.select(i)
+            turtle.transferTo(1)
+        end
+
+        if turtle.getItemCount(1) == 64 then
+            break
+        end
+    end
+
+    -- Unload inventory
     local pos = locator.get_pos()
     for i = 3, 16 do
-        turtle.select(i)
-        local item = turtle.getItemDetail()
-        if item and not item.name:lower():match("coal") then
+        local item = turtle.getItemDetail(i)
+        if item and item.count > 0 then
+            turtle.select(i)
             turtle.dropDown()
         end
     end

@@ -1,7 +1,18 @@
 local turtle_store = require("turtle_store")
 local wireless = require("wireless")
-local display = require("display")
-local utils = require("utils")
+
+local function find_least_queued(turtles)
+    local result = nil
+
+    for _, t in pairs(turtles) do
+        local amount_of_tasks = tonumber(t.queued_tasks) or 0
+        if not result or amount_of_tasks < result.queued_tasks then
+            result = t
+        end
+    end
+
+    return result
+end
 
 return function(sender, msg)
     local runners = turtle_store.get_by_role("runner")
@@ -17,35 +28,34 @@ return function(sender, msg)
         return
     end
 
-    local found_runner = false
-    while not found_runner do
+    local task_is_received = false
+    while not task_is_received do
         for _, runner in ipairs(runners) do
             if runner.status == "Idle" then
-                print("Preparing pickup task for " .. runner.id)
+                wireless.send(runner.id, { pos = msg, type = "pickup" }, "runner_pool")
+                wireless.receive(10, "runner_pool_ack")
 
-                wireless.send(runner.id, msg, "runner_pool")
+                -- Task has been picked up.
 
-                local runner_sender, _, _ = wireless.receive(10, "runner_pool_ack")
-
-                if not runner_sender then
-                    return
-                end
-
-                runner.status = "Running"
-                turtle_store.upsert(runner.id, runner)
-                found_runner = true
-
-                print("Sent pickup request to runner " .. runner.id)
-
+                task_is_received = true
                 break
             end
         end
 
-        if not found_runner then
-            print("Pausing for 10s, waiting for a new runner...")
-            sleep(10)
-        else
-            break
+        -- All runners are busy, find the one with the least amount of tasks and queue it.
+        if not task_is_received then
+            local runner = find_least_queued(runners)
+
+            if not runner then
+                error("TODO fill in")
+            end
+
+            wireless.send(runner.id, { pos = msg, type = "pickup" }, "runner_pool")
+
+            wireless.receive(10, "runner_pool_ack")
+            task_is_received = true
+
+            -- Task has been picked up.
         end
     end
 end

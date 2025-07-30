@@ -5,7 +5,9 @@ local utils = require("utils")
 
 return function(sender, msg)
     local turtle = turtle_store.get(sender)
+
     if not turtle then
+        print("Killed " .. sender)
         wireless.kill(sender)
         return
     end
@@ -16,10 +18,12 @@ return function(sender, msg)
     if turtle.role == "quarry" then
         turtle.current_layer = msg.current_layer
         turtle.total_layers = msg.total_layers
-        display.add_or_update_block(sender, display.quarry_lines(turtle))
     elseif turtle.role == "runner" then
-        display.add_or_update_block(sender, display.runner_lines(turtle))
+        turtle.queued_tasks = msg.queued_tasks
     end
+
+    local lines = display.status_lines_for(turtle)
+    display.add_or_update_block(sender, lines)
 
     turtle_store.upsert(sender, turtle)
 end

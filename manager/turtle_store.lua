@@ -1,4 +1,5 @@
 local utils = require("utils")
+local display = require("display")
 
 local turtle_store = {}
 
@@ -13,11 +14,8 @@ local function save()
 end
 
 local function ensure_loaded()
-    if next(turtles) ~= nil then return end
-
     if not fs.exists(TURTLE_FILE) then
         turtles = {}
-        turtle_store.save()
         return
     end
 
@@ -25,12 +23,7 @@ local function ensure_loaded()
     local raw = f.readAll()
     f.close()
 
-    local ok, data = pcall(textutils.unserialize, raw)
-    if ok and type(data) == "table" then
-        turtles = data
-    else
-        turtles = {}
-    end
+    turtles = textutils.unserialize(raw)
 end
 
 function turtle_store.get(id)
@@ -68,11 +61,15 @@ function turtle_store.purge_stale(max_stale_seconds)
             table.insert(to_remove, id)
         elseif now - data.last_seen >= max_stale_seconds / 2 then
             turtles[id].status = "Stale"
+
+            local lines = display.status_lines_for(turtles[id])
+            display.add_or_update_block(id, lines)
         end
     end
 
     for _, k in ipairs(to_remove) do
         turtles[k] = nil
+        display.remove_block(k)
     end
 end
 

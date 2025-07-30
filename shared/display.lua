@@ -121,21 +121,25 @@ function display.render()
     end
 end
 
-function display.quarry_lines(turtle)
-    return {
-        ("ID: %s (%s)"):format(turtle.id, turtle.role),
-        ("Status: %s"):format(turtle.status),
-        ("Mining layer %d of %d"):format(turtle.current_layer, turtle.total_layers),
-        ("Last seen at: %s"):format(os.date("%H:%M:%S", turtle.last_seen))
-    }
-end
+function display.status_lines_for(turtle)
+    local lines
+    if turtle.role == "quarry" then
+        lines = {
+            ("ID: %s (%s)"):format(turtle.id, turtle.role),
+            ("Status: %s"):format(turtle.status),
+            ("Mining layer %d of %d"):format(turtle.current_layer, turtle.total_layers),
+            ("Last seen at: %s"):format(os.date("%H:%M:%S", turtle.last_seen))
+        }
+    elseif turtle.role == "runner" then
+        lines = {
+            ("ID: %s (%s)"):format(turtle.id, turtle.role),
+            ("Status: %s"):format(turtle.status),
+            ("Queued tasks: %s"):format(turtle.queued_tasks),
+            ("Last seen at: %s"):format(os.date("%H:%M:%S", turtle.last_seen))
+        }
+    end
 
-function display.runner_lines(turtle)
-    return {
-        ("ID: %s (%s)"):format(turtle.id, turtle.role),
-        ("Status: %s"):format(turtle.status),
-        ("Last seen at: %s"):format(os.date("%H:%M:%S", turtle.last_seen))
-    }
+    return lines
 end
 
 return display

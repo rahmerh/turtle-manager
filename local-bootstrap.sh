@@ -26,11 +26,10 @@ if [[ ! -f "$CACHE_FILE" ]]; then
 fi
 
 SAVE_DIR="$(cat "$CACHE_FILE")"
-TARGET_DIR=$(find "$SAVE_DIR/computercraft" -type d -name "$TARGET_ID" 2>/dev/null | head -n 1 || true)
+TARGET_DIR="$SAVE_DIR/computercraft/computer/$TARGET_ID"
 
 if [[ -z "$TARGET_DIR" || ! -d "$TARGET_DIR" ]]; then
-    echo "Error: Computer dir '$TARGET_ID' not found in save '$SAVE_DIR'" >&2
-    exit 1
+    mkdir -p "$TARGET_DIR"
 fi
 
 role_valid=false

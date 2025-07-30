@@ -48,16 +48,11 @@ end
 function wireless.register_new_turtle(role, timeout)
     timeout = timeout or 10
 
-    for _ = 1, 3 do
-        wireless.broadcast(role, "announce")
+    wireless.broadcast(role, "announce")
 
-        local sender, msg, _ = wireless.receive(timeout, "announce")
-        if sender and msg == "ack" then
-            return sender
-        end
-
-        printer.print_warning("No manager found in " .. timeout .. "s, retrying...")
-        sleep(2)
+    local sender, msg, _ = wireless.receive(timeout, "announce")
+    if sender and msg == "ack" then
+        return sender
     end
 
     return nil, "No manager found."

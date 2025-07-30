@@ -42,6 +42,42 @@ local function sort_axis(delta)
     return list
 end
 
+local function move_on_axis(axis, amount)
+    local current_direction = mover.determine_orientation()
+
+    local direction
+    if axis == "x" then
+        direction = amount > 0 and "east" or "west"
+    elseif axis == "z" then
+        direction = amount > 0 and "south" or "north"
+    elseif axis == "y" then
+        direction = amount > 0 and "up" or "down"
+    end
+
+    if current_direction ~= direction and current_direction ~= "up" and current_direction ~= "down" then
+        mover.turn_to_direction(direction)
+    end
+
+    for _ = 1, math.abs(amount) do
+        local moved = false
+        if direction == "up" then
+            if mover.move_up() then
+                moved = true
+            end
+        elseif direction == "down" then
+            if mover.move_down() then
+                moved = true
+            end
+        elseif mover.move_forward() then
+            moved = true
+        end
+
+        if not moved then
+            return moved
+        end
+    end
+end
+
 mover.turn_left = function()
     local current_orientation = mover.determine_orientation()
     turtle.turnLeft()
@@ -269,6 +305,7 @@ mover.move_to_z = function(z, dig)
     end
 end
 
+
 mover.move_to = function(x, y, z)
     while true do
         if not fueler.refuel_from_inventory() then
@@ -276,16 +313,15 @@ mover.move_to = function(x, y, z)
             os.sleep(10)
             goto continue
         end
-        local current_direction = mover.determine_orientation()
 
         local pos = locator.get_pos()
         local delta = {
-            dx = x - pos.x,
-            dy = y - pos.y,
-            dz = z - pos.z
+            x = x - pos.x,
+            y = y - pos.y,
+            z = z - pos.z
         }
 
-        if delta.dx == 0 and delta.dy == 0 and delta.dz == 0 then
+        if delta.x == 0 and delta.y == 0 and delta.z == 0 then
             return true
         end
 
@@ -293,92 +329,19 @@ mover.move_to = function(x, y, z)
         local axis = ordered_deltas[1].axis
         local value = ordered_deltas[1].value
 
-        local direction
-        if axis == "dx" then
-            direction = value > 0 and "east" or "west"
-        elseif axis == "dz" then
-            direction = value > 0 and "south" or "north"
-        elseif axis == "dy" then
-            direction = value > 0 and "up" or "down"
-        end
+        local moved = move_on_axis(axis, value)
 
-        while turtle_state.stuck do
-            turtle_state.unstuck_attempt = 0
+        if not moved then
+            for i = 1, #ordered_deltas do
+                axis = ordered_deltas[i].axis
+                value = ordered_deltas[i].value
 
-            local preferred_direction = direction
-            while true do
-                if turtle_state.unstuck_attempt > MAX_UNSTUCK_ATTEMPTS then
-                    error("Turtle is stuck and can't get out, please help.")
-                end
-
-                turtle_state.unstuck_attempt = turtle_state.unstuck_attempt + 1
-
-                -- Try some common ways to either duck or climb over stuff
-                if turtle.detect() and turtle.detectDown() and not turtle.detectUp() then
-                    while turtle.detect() and not turtle.detectUp() do
-                        turtle.up()
-                        mover.move_forward()
-                    end
-                    turtle_state.stuck = false
-                    break
-                end
-
-                -- Scan for non blocking paths
-                local blocking_blocks = {}
-                for _ = 1, 4 do
-                    if turtle.detect() then
-                        blocking_blocks[turtle_state.orientation] = true
-                    end
-                    mover.turn_left()
-                end
-
-                local left_rotation = LEFT_ROTATION[preferred_direction]
-                local right_rotation = RIGHT_ROTATION[preferred_direction]
-                local amount_of_steps = math.random(1, 5)
-                if not blocking_blocks[left_rotation] then
-                    mover.turn_to_direction(left_rotation)
-                    for _ = 1, amount_of_steps do
-                        mover.move_forward()
-                    end
-                    turtle_state.stuck = false
-                    break
-                elseif not blocking_blocks[right_rotation] then
-                    mover.turn_to_direction(right_rotation)
-                    for _ = 1, amount_of_steps do
-                        mover.move_forward()
-                    end
-                    turtle_state.stuck = false
+                if move_on_axis(axis, value) then
                     break
                 end
             end
         end
 
-        if current_direction ~= direction and current_direction ~= "up" and current_direction ~= "down" then
-            mover.turn_to_direction(direction)
-        end
-
-        for _ = 1, math.abs(value) do
-            if direction == "up" then
-                if not mover.move_up() then
-                    if turtle.detectUp() then
-                        turtle_state.stuck = true
-                    end
-                    break
-                end
-            elseif direction == "down" then
-                if not mover.move_down() then
-                    if turtle.detectDown() then
-                        turtle_state.stuck = true
-                    end
-                    break
-                end
-            elseif not mover.move_forward() then
-                if turtle.detect() then
-                    turtle_state.stuck = true
-                end
-                break
-            end
-        end
         ::continue::
     end
 end

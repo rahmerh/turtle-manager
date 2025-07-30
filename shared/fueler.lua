@@ -14,7 +14,12 @@ fueler.refuel_from_inventory = function()
         if turtle.refuel(0) then
             turtle.transferTo(1)
         end
+
+        if turtle.getItemCount(1) == 64 then
+            break
+        end
     end
+
     turtle.select(1)
     return turtle.refuel(1)
 end
