@@ -51,25 +51,22 @@ function turtle_store.upsert(id, data)
     save()
 end
 
-function turtle_store.purge_stale()
+function turtle_store.detect_stale()
     ensure_loaded()
     local now = utils.epoch_in_seconds()
 
-    local to_remove = {}
     for id, data in pairs(turtles) do
         if now - data.last_seen >= 10 then
-            table.insert(to_remove, id)
+            turtles[id].status = "Offline"
+
+            local lines = display.status_lines_for(turtles[id])
+            display.add_or_update_block(id, lines, "err")
         elseif now - data.last_seen >= 5 then
             turtles[id].status = "Stale"
 
             local lines = display.status_lines_for(turtles[id])
-            display.add_or_update_block(id, lines)
+            display.add_or_update_block(id, lines, "warn")
         end
-    end
-
-    for _, k in ipairs(to_remove) do
-        turtles[k] = nil
-        display.remove_block(k)
     end
     save()
 end

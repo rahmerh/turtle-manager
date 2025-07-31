@@ -23,5 +23,5 @@ while true do
         printer.print_warning("Unhandled protocol: " .. tostring(protocol))
     end
 
-    turtle_store.purge_stale()
+    turtle_store.detect_stale()
 end

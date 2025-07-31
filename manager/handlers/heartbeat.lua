@@ -22,7 +22,7 @@ return function(sender, msg)
     end
 
     local lines = display.status_lines_for(turtle)
-    display.add_or_update_block(sender, lines)
+    display.add_or_update_block(sender, lines, "normal")
 
     turtle_store.upsert(sender, turtle)
 end

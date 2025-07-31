@@ -87,12 +87,25 @@ local function write_block(lines, bg_colour, fg_colour)
     monitor.setTextColour(prev_fg_colour)
 end
 
-function display.add_or_update_block(id, lines)
+function display.add_or_update_block(id, lines, block_type)
     if not display.blocks[id] then
         table.insert(display.display_order, id)
     end
+
+    local background_color
+    if block_type == "normal" then
+        background_color = colours.white
+    elseif block_type == "warn" then
+        background_color = colours.yellow
+    elseif block_type == "err" then
+        background_color = colours.red
+    else
+        error("Unknown block type: " .. block_type)
+    end
+
     display.blocks[id] = {
-        lines = lines
+        lines = lines,
+        background_color = background_color
     }
 end
 
@@ -116,7 +129,7 @@ function display.render()
         local x, y = get_block_pos(id_to_display)
         if x and y then
             monitor.setCursorPos(x, y)
-            write_block(block.lines)
+            write_block(block.lines, block.background_color)
         end
     end
 end
@@ -131,10 +144,11 @@ function display.status_lines_for(turtle)
             ("Last seen at: %s"):format(os.date("%H:%M:%S", turtle.last_seen))
         }
     elseif turtle.role == "runner" then
+        local runner_is_running = string.find(turtle.status, "Running", 1, true)
         lines = {
             ("ID: %s (%s)"):format(turtle.id, turtle.role),
             ("Status: %s"):format(turtle.status),
-            ("Tasks: %d out of %s"):format((turtle.status == "Idle") and 0 or 1, turtle.queued_tasks),
+            ("Tasks: %d out of %s"):format((runner_is_running) and 1 or 0, turtle.queued_tasks),
             ("Last seen at: %s"):format(os.date("%H:%M:%S", turtle.last_seen))
         }
     end
