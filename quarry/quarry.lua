@@ -164,6 +164,10 @@ local function move_to_current_row()
 
         if not refueled and refueled_err == errors.NO_FUEL_STORED then
             -- TODO: Request runner to refuel
+            while not refueled do
+                printer.print_warning("Out of fuel, waiting for runner, sleeping 30s...")
+                sleep(30)
+            end
         end
 
         arrived, err = mover.move_to(target_x, target_y, target_z, true)
@@ -188,7 +192,6 @@ if not success then
     printer.print_error(msg)
     return
 end
-
 
 local function run_quarry()
     local boundaries = job.get_boundaries()

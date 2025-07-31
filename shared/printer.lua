@@ -30,12 +30,8 @@ printer.print_info = function(msg)
     printColored(colors.cyan, msg)
 end
 
-printer.write_warning = function(msg)
-    writeColored(colors.yellow, msg)
-end
-
-printer.write_info = function(msg)
-    writeColored(colors.cyan, msg)
+printer.write_prompt = function(msg)
+    writeColored(colors.white, msg)
 end
 
 return printer

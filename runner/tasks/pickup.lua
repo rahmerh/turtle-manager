@@ -1,10 +1,8 @@
-local locator = require("locator")
 local mover = require("mover")
 local fueler = require("fueler")
 local errors = require("errors")
 
-return function(task)
-    local current_pos = locator.get_pos()
+return function(task, config)
     fueler.refuel_from_inventory()
 
     local arrived, err = mover.move_to(task.pos.x, task.pos.y, task.pos.z)
@@ -17,21 +15,25 @@ return function(task)
     -- Pick up chest + it's contents
     turtle.digDown()
 
-    local moved_back, moved_back_err = mover.move_to(current_pos.x, current_pos.y, current_pos.z)
+    local moved_back, moved_back_err = mover.move_to(
+        config.unloading_chest_pos.x,
+        config.unloading_chest_pos.y + 1,
+        config.unloading_chest_pos.z)
+
     while not moved_back and moved_back_err == errors.NO_FUEL do
         fueler.refuel_from_inventory()
-        moved_back, moved_back_err = mover.move_to(task.pos.x, task.pos.y, task.pos.z)
+        moved_back, moved_back_err = mover.move_to(
+            config.unloading_chest_pos.x,
+            config.unloading_chest_pos.y + 1,
+            config.unloading_chest_pos.z)
     end
-
-    -- TODO: Actually configure a dropoff chest
-    mover.turn_to_direction("south")
 
     -- Drop inventory
     for i = 2, 16 do
         local item = turtle.getItemDetail(i)
         if item and item.count > 0 then
             turtle.select(i)
-            turtle.drop()
+            turtle.dropDown()
         end
     end
     turtle.select(1)

@@ -16,6 +16,12 @@ local task_handlers = {
     pickup = require("pickup")
 }
 
+local config_file = fs.open("runner.conf", "r")
+local raw = config_file.readAll()
+config_file.close()
+
+local config = textutils.unserialize(raw)
+
 local queue = task_store.new()
 
 local function receive_task()
@@ -45,7 +51,7 @@ local function run_task()
             task.type .. "' at: " .. task.pos.x .. "/" .. task.pos.y .. "/" .. task.pos.z .. "\n")
 
         if task_handlers[task.type] then
-            task_handlers[task.type](task)
+            task_handlers[task.type](task, config)
         else
             printer.print_warning("Unsupported task: " .. task.type)
         end
