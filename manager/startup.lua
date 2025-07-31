@@ -7,6 +7,7 @@ local handlers = {
     announce = require("announce"),
     heartbeat = require("heartbeat"),
     request_pickup = require("request_pickup"),
+    request_resupply = require("request_resupply"),
     task_completed = require("task_completed")
 }
 

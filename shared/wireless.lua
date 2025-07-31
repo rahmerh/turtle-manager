@@ -4,7 +4,8 @@ local protocols = {
     runner_tasks = "runner_tasks",
     task_completed = "task_completed",
     kill = "kill",
-    request_pickup = "request_pickup"
+    request_pickup = "request_pickup",
+    request_resupply = "request_resupply"
 }
 
 local default_receive_timeout = 5
@@ -84,6 +85,10 @@ end
 
 function wireless.request_pickup(receiver, pos)
     rednet.send(receiver, pos, protocols.request_pickup)
+end
+
+function wireless.request_resupply(receiver, pos)
+    rednet.send(receiver, pos, protocols.request_resupply)
 end
 
 return wireless

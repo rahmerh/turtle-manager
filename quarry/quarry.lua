@@ -5,6 +5,7 @@ local unloader = require("unloader")
 local job = require("job")
 local wireless = require("wireless")
 local errors = require("errors")
+local locator = require("locator")
 
 local manager_id = wireless.register_new_turtle("quarry")
 if not manager_id then
@@ -30,15 +31,7 @@ local function mine_next_column()
     end
 
     local moved, err = mover.move_forward()
-    if not moved and err == errors.NO_FUEL then
-        local refueled, _ = fueler.refuel_from_inventory()
-
-        if not refueled and err == errors.NO_FUEL_STORED then
-            -- TODO: Request for runner to bring coal
-        end
-
-        mover.move_forward()
-    elseif not moved and err then
+    if not moved and err then
         return moved, err
     end
 
@@ -74,8 +67,17 @@ local function mine_amount_of_rows(amount, length)
             local mined, err = mine_next_column()
 
             if not mined and err == errors.NO_FUEL then
-                fueler.refuel_from_inventory()
-                mined, err = mine_next_column()
+                local refueled, refueled_err = fueler.refuel_from_inventory()
+
+                if not refueled and refueled_err == errors.NO_FUEL_STORED then
+                    wireless.request_resupply(manager_id, locator.get_pos())
+
+                    while not refueled do
+                        printer.print_warning("Out of fuel, waiting for runner, sleeping 30s...")
+                        sleep(30)
+                        refueled, refueled_err = fueler.refuel_from_inventory()
+                    end
+                end
             end
 
             if unloader.should_unload() then
@@ -151,6 +153,7 @@ local function move_to_current_row()
         end
     end
 
+
     -- +2 here since we have to account for the movements down before starting the first layer.
     local steps_to_move_down = (boundaries.layers - current_layer) * 3 + 2
 
@@ -163,10 +166,12 @@ local function move_to_current_row()
         local refueled, refueled_err = fueler.refuel_from_inventory()
 
         if not refueled and refueled_err == errors.NO_FUEL_STORED then
-            -- TODO: Request runner to refuel
+            wireless.request_resupply(manager_id, locator.get_pos())
+
             while not refueled do
                 printer.print_warning("Out of fuel, waiting for runner, sleeping 30s...")
                 sleep(30)
+                refueled, refueled_err = fueler.refuel_from_inventory()
             end
         end
 
@@ -229,9 +234,10 @@ local function run_quarry()
 
         printer.print_info("Moving to X: " ..
             boundaries.start_pos.x .. " Y: " .. boundaries.start_pos.y .. " Z: " .. boundaries.start_pos.z)
-        if not mover.move_to(boundaries.start_pos.x, boundaries.start_pos.y, boundaries.start_pos.z) then
-            printer.print_error("Could not move to starting point.")
-            return
+        local arrived, err = mover.move_to(boundaries.start_pos.x, boundaries.start_pos.y, boundaries.start_pos.z)
+        while not arrived and err == errors.NO_FUEL do
+            fueler.refuel_from_inventory()
+            arrived, err = mover.move_to(boundaries.start_pos.x, boundaries.start_pos.y, boundaries.start_pos.z)
         end
 
         mover.turn_to_direction("north")

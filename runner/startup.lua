@@ -13,7 +13,8 @@ end
 
 local status = "Idle"
 local task_handlers = {
-    pickup = require("pickup")
+    pickup = require("pickup"),
+    resupply = require("resupply")
 }
 
 local config_file = fs.open("runner.conf", "r")
