@@ -1,5 +1,4 @@
 local mover = require("mover")
-local wireless = require("wireless")
 local locator = require("locator")
 local fueler = require("fueler")
 
@@ -11,6 +10,8 @@ function unloader.unload()
         return nil
     end
 
+    fueler.refuel_from_inventory()
+
     mover.move_back()
     mover.move_up()
 
@@ -18,7 +19,6 @@ function unloader.unload()
     turtle.placeDown()
 
     -- Refuel first
-    fueler.refuel_from_inventory()
     for i = 3, 16 do
         local item = turtle.getItemDetail(i)
         if item and item.name:lower():match("coal") then

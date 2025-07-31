@@ -123,7 +123,7 @@ mover.determine_orientation = function()
     local x1, _, z1 = gps.locate(2)
 
     local moved, err = mover.move_forward()
-    if not moved and err == errors.NO_FUEL then
+    if not moved and err then
         return moved, err
     end
 
@@ -145,7 +145,10 @@ mover.determine_orientation = function()
 
     local x2, _, z2 = gps.locate(2)
 
-    mover.move_back()
+    local moved_back, moved_back_err = mover.move_back()
+    if not moved_back and moved_back_err then
+        return moved, err
+    end
 
     local direction
     if x2 > x1 then
@@ -197,12 +200,13 @@ mover.turn_to_direction = function(target_direction)
 end
 
 mover.move_back = function()
-    while not fueler.refuel_from_inventory() do
-        printer.print_error("Could not refuel, sleeping for 10s...")
-        os.sleep(10)
+    local ok, err = turtle.back()
+
+    if not ok and err then
+        err = reason_to_error(err)
     end
 
-    return turtle.back()
+    return ok, err
 end
 
 mover.move_forward = function()
@@ -216,125 +220,23 @@ mover.move_forward = function()
 end
 
 mover.move_up = function()
-    while not fueler.refuel_from_inventory() do
-        printer.print_error("Could not refuel, sleeping for 10s...")
-        os.sleep(10)
+    local ok, err = turtle.up()
+
+    if not ok and err then
+        err = reason_to_error(err)
     end
 
-    return turtle.up()
+    return ok, err
 end
 
 mover.move_down = function()
-    while not fueler.refuel_from_inventory() do
-        printer.print_error("Could not refuel, sleeping for 10s...")
-        os.sleep(10)
+    local ok, err = turtle.down()
+
+    if not ok and err then
+        err = reason_to_error(err)
     end
 
-    return turtle.down()
-end
-
-mover.move_to_x = function(x, dig)
-    dig = dig or false
-
-    local pos = locator.get_pos()
-    local delta = x - pos.x
-
-    if delta == 0 then return end
-
-    if delta > 0 then
-        mover.turn_to_direction("east")
-    else
-        mover.turn_to_direction("west")
-    end
-
-    for _ = 1, math.abs(delta) do
-        if dig then
-            while turtle.detect() do
-                turtle.dig()
-            end
-        end
-
-        local ok, err = mover.move_forward()
-        if not ok and err then
-            return ok, err
-        end
-    end
-
-    return true
-end
-
-mover.move_to_y = function(y, dig)
-    dig = dig or false
-
-    while not fueler.refuel_from_inventory() do
-        printer.print_error("Could not refuel, sleeping for 10s...")
-        os.sleep(10)
-    end
-
-    local pos = locator.get_pos()
-    local delta = y - pos.y
-
-    if delta == 0 then return end
-
-    for _ = 1, math.abs(delta) do
-        local success = true
-
-        if delta > 0 then
-            if dig then
-                while turtle.detectUp() do
-                    turtle.digUp()
-                end
-            end
-
-            success = mover.move_up()
-        else
-            if dig then
-                while turtle.detectDown() do
-                    turtle.digDown()
-                end
-            end
-
-            success = mover.move_down()
-        end
-
-        if not success then
-            printer.print_error("Got blocked while trying to move to Y: " .. y)
-            return
-        end
-    end
-end
-
-mover.move_to_z = function(z, dig)
-    dig = dig or false
-
-    while not fueler.refuel_from_inventory() do
-        printer.print_error("Could not refuel, sleeping for 10s...")
-        os.sleep(10)
-    end
-
-    local pos = locator.get_pos()
-    local delta = z - pos.z
-
-    if delta == 0 then return end
-
-    if delta > 0 then
-        mover.turn_to_direction("south")
-    else
-        mover.turn_to_direction("north")
-    end
-
-    for _ = 1, math.abs(delta) do
-        if dig then
-            while turtle.detect() do
-                turtle.dig()
-            end
-        end
-
-        if not mover.move_forward() then
-            printer.print_error("Got blocked while trying to move to Z: " .. z)
-            return
-        end
-    end
+    return ok, err
 end
 
 mover.move_to = function(x, y, z, dig)
