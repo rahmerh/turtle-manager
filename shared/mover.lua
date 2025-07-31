@@ -1,6 +1,4 @@
-local printer = require("printer")
 local locator = require("locator")
-local fueler = require("fueler")
 local errors = require("errors")
 
 local mover = {}
@@ -123,7 +121,7 @@ mover.determine_orientation = function()
     local x1, _, z1 = gps.locate(2)
 
     local moved, err = mover.move_forward()
-    if not moved and err then
+    if not moved and err == errors.NO_FUEL then
         return moved, err
     end
 
