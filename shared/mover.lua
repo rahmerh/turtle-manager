@@ -1,6 +1,7 @@
 local printer = require("printer")
 local locator = require("locator")
 local fueler = require("fueler")
+local errors = require("errors")
 
 local mover = {}
 
@@ -27,6 +28,11 @@ local ORIENTATION_TO_DIRECTION_MAP = {
 
 local turtle_state = {}
 
+local function reason_to_error(reason)
+    if reason == "Out of fuel" then return errors.NO_FUEL end
+    if reason == "Movement obstructed" then return errors.BLOCKED end
+end
+
 local function sort_axis(delta)
     local list = {}
     for axis, value in pairs(delta) do
@@ -40,7 +46,7 @@ local function sort_axis(delta)
     return list
 end
 
-local function move_on_axis(axis, amount)
+local function move_on_axis(axis, amount, dig)
     local current_direction = mover.determine_orientation()
 
     local direction
@@ -57,33 +63,54 @@ local function move_on_axis(axis, amount)
     end
 
     for _ = 1, math.abs(amount) do
-        local moved = false
+        local moved, err
         if direction == "up" then
-            if mover.move_up() then
-                moved = true
+            if dig then
+                while turtle.detectUp() do
+                    turtle.digUp()
+                end
             end
+
+            moved, err = mover.move_up()
         elseif direction == "down" then
-            if mover.move_down() then
-                moved = true
+            if dig then
+                while turtle.detectDown() do
+                    turtle.digDown()
+                end
             end
-        elseif mover.move_forward() then
-            moved = true
+            moved, err = mover.move_down()
+        else
+            if dig then
+                while turtle.detect() do
+                    turtle.dig()
+                end
+            end
+
+            moved, err = mover.move_forward()
         end
 
-        if not moved then
-            return moved
+        if not moved and err then
+            return moved, err
         end
     end
 end
 
 mover.turn_left = function()
-    local current_orientation = mover.determine_orientation()
+    local current_orientation, err = mover.determine_orientation()
+    if not current_orientation and err then
+        return current_orientation, err
+    end
+
     turtle.turnLeft()
     turtle_state.orientation = LEFT_ROTATION[current_orientation]
 end
 
 mover.turn_right = function()
-    local current_orientation = mover.determine_orientation()
+    local current_orientation, err = mover.determine_orientation()
+    if not current_orientation and err then
+        return current_orientation, err
+    end
+
     turtle.turnRight()
     turtle_state.orientation = RIGHT_ROTATION[current_orientation]
 end
@@ -95,21 +122,30 @@ mover.determine_orientation = function()
 
     local x1, _, z1 = gps.locate(2)
 
+    local moved, err = mover.move_forward()
+    if not moved and err == errors.NO_FUEL then
+        return moved, err
+    end
+
     local unstuck_turns = 0
-    while not mover.move_forward() do
+    while not moved do
         unstuck_turns = unstuck_turns + 1
         turtle.turnLeft() -- This has to be the native turtle turn, will cause recursion otherwise.
+        moved, err = mover.move_forward()
 
         if unstuck_turns > 3 then
-            if not turtle.up() then
-                turtle.down()
+            local moved_up, up_err = mover.move_up()
+            if not moved_up and up_err == errors.BLOCKED then
+                return nil, "Unable to determine orientation"
             end
+
+            unstuck_turns = 0
         end
     end
 
     local x2, _, z2 = gps.locate(2)
 
-    turtle.back()
+    mover.move_back()
 
     local direction
     if x2 > x1 then
@@ -170,12 +206,13 @@ mover.move_back = function()
 end
 
 mover.move_forward = function()
-    while not fueler.refuel_from_inventory() do
-        printer.print_error("Could not refuel, sleeping for 10s...")
-        os.sleep(10)
+    local ok, err = turtle.forward()
+
+    if not ok and err then
+        err = reason_to_error(err)
     end
 
-    return turtle.forward()
+    return ok, err
 end
 
 mover.move_up = function()
@@ -199,11 +236,6 @@ end
 mover.move_to_x = function(x, dig)
     dig = dig or false
 
-    while not fueler.refuel_from_inventory() do
-        printer.print_error("Could not refuel, sleeping for 10s...")
-        os.sleep(10)
-    end
-
     local pos = locator.get_pos()
     local delta = x - pos.x
 
@@ -222,11 +254,13 @@ mover.move_to_x = function(x, dig)
             end
         end
 
-        if not mover.move_forward() then
-            printer.print_error("Got blocked while trying to move to X: " .. x)
-            return
+        local ok, err = mover.move_forward()
+        if not ok and err then
+            return ok, err
         end
     end
+
+    return true
 end
 
 mover.move_to_y = function(y, dig)
@@ -303,15 +337,11 @@ mover.move_to_z = function(z, dig)
     end
 end
 
+mover.move_to = function(x, y, z, dig)
+    dig = dig or false
 
-mover.move_to = function(x, y, z)
-    while true do
-        if not fueler.refuel_from_inventory() then
-            printer.print_error("Could not refuel, sleeping for 10s...")
-            os.sleep(10)
-            goto continue
-        end
-
+    local attempts = 0
+    while attempts < 50 do
         local pos = locator.get_pos()
         local delta = {
             x = x - pos.x,
@@ -324,23 +354,28 @@ mover.move_to = function(x, y, z)
         end
 
         local ordered_deltas = sort_axis(delta)
-        local axis = ordered_deltas[1].axis
-        local value = ordered_deltas[1].value
 
-        local moved = move_on_axis(axis, value)
+        local moved, err
+        for i = 1, #ordered_deltas do
+            local axis = ordered_deltas[i].axis
+            local value = ordered_deltas[i].value
 
-        if not moved then
-            for i = 2, #ordered_deltas do
-                axis = ordered_deltas[i].axis
-                value = ordered_deltas[i].value
+            if value ~= 0 then
+                moved, err = move_on_axis(axis, value, dig)
 
-                if move_on_axis(axis, value) then
+                if moved then
                     break
+                elseif not moved and err == errors.NO_FUEL then
+                    return moved, err
                 end
             end
         end
 
-        ::continue::
+        if not moved then
+            attempts = attempts + 1
+        else
+            attempts = 0
+        end
     end
 end
 

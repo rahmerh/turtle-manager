@@ -4,6 +4,7 @@ local fueler = require("fueler")
 local unloader = require("unloader")
 local job = require("job")
 local wireless = require("wireless")
+local errors = require("errors")
 
 local manager_id = wireless.register_new_turtle("quarry")
 if not manager_id then
@@ -11,25 +12,35 @@ if not manager_id then
     return
 end
 
+printer.print_info("Starting quarry #" .. os.getComputerID())
+
 local UNBREAKABLE = {
-  ["minecraft:bedrock"] = true,
-  ["minecraft:end_portal"] = true,
-  ["minecraft:end_portal_frame"] = true,
-  ["minecraft:barrier"] = true,
+    ["minecraft:bedrock"] = true,
+    ["minecraft:end_portal"] = true,
+    ["minecraft:end_portal_frame"] = true,
+    ["minecraft:barrier"] = true,
 }
 
 local function mine_next_column()
-    fueler.refuel_from_inventory()
-
     local ok, metadata = turtle.inspect()
     if ok and metadata and not UNBREAKABLE[metadata.name] then
-
         while turtle.detect() do
             turtle.dig()
         end
     end
 
-    mover.move_forward()
+    local moved, err = mover.move_forward()
+    if not moved and err == errors.NO_FUEL then
+        local refueled, _ = fueler.refuel_from_inventory()
+
+        if not refueled and err == errors.NO_FUEL_STORED then
+            -- TODO: Request for runner to bring coal
+        end
+
+        mover.move_forward()
+    elseif not moved and err then
+        return moved, err
+    end
 
     local up_ok, up_metadata = turtle.inspectUp()
     if up_ok and up_metadata and not UNBREAKABLE[up_metadata.name] then
@@ -60,7 +71,12 @@ local function mine_amount_of_rows(amount, length)
     for i = 1, amount do
         -- We do -1 here since we assume the turtle already is in the start pos of that row
         for _ = 1, length - 1 do
-            mine_next_column()
+            local mined, err = mine_next_column()
+
+            if not mined and err == errors.NO_FUEL then
+                fueler.refuel_from_inventory()
+                mined, err = mine_next_column()
+            end
 
             if unloader.should_unload() then
                 local chest_pos = unloader.unload()
@@ -135,8 +151,23 @@ local function move_to_current_row()
         end
     end
 
-    mover.move_to_z(boundaries.start_pos.z - to_move_z, true)
-    mover.move_to_x(boundaries.start_pos.x + to_move_x, true)
+    -- +2 here since we have to account for the movements down before starting the first layer.
+    local steps_to_move_down = (boundaries.layers - current_layer) * 3 + 2
+
+    local target_x = boundaries.start_pos.x + to_move_x
+    local target_y = boundaries.start_pos.y - steps_to_move_down
+    local target_z = boundaries.start_pos.z - to_move_z
+
+    local arrived, err = mover.move_to(target_x, target_y, target_z, true)
+    if not arrived and err == errors.NO_FUEL then
+        local refueled, refueled_err = fueler.refuel_from_inventory()
+
+        if not refueled and refueled_err == errors.NO_FUEL_STORED then
+            -- TODO: Request runner to refuel
+        end
+
+        arrived, err = mover.move_to(target_x, target_y, target_z, true)
+    end
 
     local orientation_to_face
     if even_row then
@@ -145,12 +176,6 @@ local function move_to_current_row()
         orientation_to_face = mover.opposite_orientation_of(current_layer_row_direction)
     end
     mover.turn_to_direction(orientation_to_face)
-
-    -- +2 here since we have to account for the movements down before starting the first layer.
-    local steps_to_move_down = (boundaries.layers - current_layer) * 3 + 2
-
-    local layer_y = boundaries.start_pos.y - steps_to_move_down
-    mover.move_to_y(layer_y, true)
 
     if turtle.detectDown() then
         turtle.digDown()
@@ -230,8 +255,8 @@ local function run_quarry()
         job.next_layer()
     end
 
-    mover.move_to(boundaries.start_pos.x , boundaries.start_pos.y ,boundaries.start_pos.z)
-    
+    mover.move_to(boundaries.start_pos.x, boundaries.start_pos.y, boundaries.start_pos.z)
+
     local chest_pos = unloader.unload()
     wireless.request_pickup(manager_id, chest_pos)
 
@@ -265,4 +290,3 @@ end
 parallel.waitForAny(run_quarry, kill_switch, heartbeat)
 
 printer.print_success("Done.")
-

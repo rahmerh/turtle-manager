@@ -1,17 +1,22 @@
-local printer = require("printer")
+local errors = require("errors")
 
 local fueler = {}
 
-local COAL_FUEL_UNITS = 80
+local ACCEPTED_FUEL = {
+    ["coal"] = true
+}
 
 fueler.refuel_from_inventory = function()
-    if turtle.getFuelLevel() > 0 then return true end
+    if turtle.getFuelLevel() > 0 then return true, nil end
 
-    turtle.select(1)
-    if turtle.refuel(5) then return true end
-    for slot = 3, 16 do
-        turtle.select(slot)
-        if turtle.refuel(0) then
+    if turtle.getSelectedSlot() ~= 1 then
+        turtle.select(1)
+    end
+
+    for i = 3, 16 do
+        local item = turtle.getItemDetail(i)
+
+        if item and ACCEPTED_FUEL[item.name] then
             turtle.transferTo(1)
         end
 
@@ -20,30 +25,19 @@ fueler.refuel_from_inventory = function()
         end
     end
 
-    turtle.select(1)
-    return turtle.refuel(1)
-end
+    local refueled, err = turtle.refuel(5)
 
-fueler.refuel_from_chest = function()
-    local success, data = turtle.inspect()
-    local chest_exists = success and data.name:match("chest")
+    if not refueled and err then
+        local fuel = turtle.getItemDetail(1)
 
-    if not chest_exists then
-        printer.print_error("No chest in front of turtle, can't refuel.")
-        return
+        if fuel.count == 0 then
+            return nil, errors.NO_FUEL_STORED
+        else
+            return refueled, err
+        end
     end
-end
 
-fueler.calculate_fuel_for_quarry = function(width, depth, layers)
-    local fuel_per_layer = (depth - 1) * width + (width - 1)
-    local horizontal_fuel = fuel_per_layer * layers
-    local vertical_fuel = (layers - 1) * 3
-
-    return horizontal_fuel + vertical_fuel
-end
-
-fueler.fuel_to_coal = function(fuel)
-    return math.ceil(fuel / COAL_FUEL_UNITS)
+    return true, nil
 end
 
 return fueler

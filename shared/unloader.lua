@@ -1,12 +1,9 @@
 local mover = require("mover")
 local wireless = require("wireless")
 local locator = require("locator")
+local fueler = require("fueler")
 
 local unloader = {}
-
-unloader.get_unloading_chests = function(progress)
-    return progress.unloading_chests
-end
 
 function unloader.unload()
     local chest_detail = turtle.getItemDetail(2)
@@ -21,6 +18,7 @@ function unloader.unload()
     turtle.placeDown()
 
     -- Refuel first
+    fueler.refuel_from_inventory()
     for i = 3, 16 do
         local item = turtle.getItemDetail(i)
         if item and item.name:lower():match("coal") then
