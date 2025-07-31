@@ -51,8 +51,9 @@ function wireless.acknowledge_announcement(receiver)
     rednet.send(receiver, "ack", protocols.announce)
 end
 
-function wireless.send_runner_task(receiver, pos, task_type)
-    rednet.send(receiver, { pos = pos, type = task_type }, protocols.runner_tasks)
+function wireless.send_runner_task(receiver, data, task_type)
+    local message = { data = data, type = task_type }
+    rednet.send(receiver, message, protocols.runner_tasks)
 
     local sender, message, protocol = rednet.receive(protocols.runner_tasks, default_receive_timeout)
 
@@ -87,8 +88,8 @@ function wireless.request_pickup(receiver, pos)
     rednet.send(receiver, pos, protocols.request_pickup)
 end
 
-function wireless.request_resupply(receiver, pos)
-    rednet.send(receiver, pos, protocols.request_resupply)
+function wireless.request_resupply(receiver, pos, desired)
+    rednet.send(receiver, { turtle_pos = pos, desired = desired }, protocols.request_resupply)
 end
 
 return wireless

@@ -35,9 +35,8 @@ fueler.refuel_from_inventory = function()
     if turtle.getSelectedSlot() ~= 1 then
         turtle.select(1)
     end
+
     local refueled, err = turtle.refuel(1)
-
-
 
     if not refueled and err then
         err = reason_to_error(err)

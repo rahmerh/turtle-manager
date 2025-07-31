@@ -1,7 +1,6 @@
 local wireless = require("wireless")
 local printer = require("printer")
 local task_store = require("task_store")
-local utils = require("utils")
 
 printer.print_info("Starting runner #" .. os.getComputerID())
 
@@ -30,9 +29,9 @@ local function receive_task()
         local sender, msg = wireless.receive_runner_task()
 
         if msg and msg.type and sender == manager_id then
-            printer.print_info(utils.timestamp() .. " Received '" .. msg.type .. "' task from manager.\n")
             wireless.confirm_task_received(sender)
-            queue:enqueue(msg.pos, msg.type)
+            printer.print_info("Queued task '" .. msg.type .. "'")
+            queue:enqueue(msg)
         end
     end
 end
@@ -47,9 +46,6 @@ local function run_task()
         end
 
         status = "Running (" .. task.type .. ")"
-
-        printer.print_info(utils.timestamp() .. " Running task '" ..
-            task.type .. "' at: " .. task.pos.x .. "/" .. task.pos.y .. "/" .. task.pos.z .. "\n")
 
         if task_handlers[task.type] then
             task_handlers[task.type](task, config)

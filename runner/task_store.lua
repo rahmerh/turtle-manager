@@ -40,9 +40,9 @@ function task_store.new()
     return self
 end
 
-function task_store:enqueue(pos, type)
+function task_store:enqueue(task)
     self.last = self.last + 1
-    self.items[self.last] = { pos = pos, type = type }
+    self.items[self.last] = task
     persist(self)
 end
 

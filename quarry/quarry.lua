@@ -66,11 +66,11 @@ local function mine_amount_of_rows(amount, length)
         for _ = 1, length - 1 do
             local mined, err = mine_next_column()
 
-            if not mined and err == errors.NO_FUEL then
+            while not mined and err == errors.NO_FUEL do
                 local refueled, refueled_err = fueler.refuel_from_inventory()
 
                 if not refueled and refueled_err == errors.NO_FUEL_STORED then
-                    wireless.request_resupply(manager_id, locator.get_pos())
+                    wireless.request_resupply(manager_id, locator.get_pos(), { ["minecraft:coal"] = 64 })
 
                     while not refueled do
                         printer.print_warning("Out of fuel, waiting for runner, sleeping 30s...")
@@ -78,16 +78,21 @@ local function mine_amount_of_rows(amount, length)
                         refueled, refueled_err = fueler.refuel_from_inventory()
                     end
                 end
+
+                mined, err = mine_next_column()
             end
 
             if unloader.should_unload() then
                 local chest_pos = unloader.unload()
 
-                while not chest_pos do
-                    printer.print_error("Not enough chests in slot 2, can't unload, sleeping for 10 seconds...")
-                    sleep(10)
+                if not chest_pos then
+                    wireless.request_resupply(manager_id, locator.get_pos(), { ["minecraft:chest"] = 63 })
+                    while not chest_pos do
+                        printer.print_warning("No chests, waiting for runner, sleeping for 30 seconds...")
+                        sleep(30)
 
-                    chest_pos = unloader.unload()
+                        chest_pos = unloader.unload()
+                    end
                 end
 
                 wireless.request_pickup(manager_id, chest_pos)
@@ -166,7 +171,7 @@ local function move_to_current_row()
         local refueled, refueled_err = fueler.refuel_from_inventory()
 
         if not refueled and refueled_err == errors.NO_FUEL_STORED then
-            wireless.request_resupply(manager_id, locator.get_pos())
+            wireless.request_resupply(manager_id, locator.get_pos(), { ["minecraft:coal"] = 64 })
 
             while not refueled do
                 printer.print_warning("Out of fuel, waiting for runner, sleeping 30s...")
@@ -224,19 +229,24 @@ local function run_quarry()
         job.next_layer()
         move_to_current_row()
     else
-        local chest_detail = turtle.getItemDetail(2)
-        if not chest_detail or chest_detail.count < 4 or not chest_detail.name:lower():match("chest") then
-            printer.print_error("Slot 2 must contain at least 4 chests.")
-            return
-        end
-
         job.starting()
 
         printer.print_info("Moving to X: " ..
             boundaries.start_pos.x .. " Y: " .. boundaries.start_pos.y .. " Z: " .. boundaries.start_pos.z)
         local arrived, err = mover.move_to(boundaries.start_pos.x, boundaries.start_pos.y, boundaries.start_pos.z)
         while not arrived and err == errors.NO_FUEL do
-            fueler.refuel_from_inventory()
+            local refueled, refueled_err = fueler.refuel_from_inventory()
+
+            if not refueled and refueled_err == errors.NO_FUEL_STORED then
+                wireless.request_resupply(manager_id, locator.get_pos(), { ["minecraft:coal"] = 64 })
+
+                while not refueled do
+                    printer.print_warning("Out of fuel, waiting for runner, sleeping 30s...")
+                    sleep(30)
+                    refueled, refueled_err = fueler.refuel_from_inventory()
+                end
+            end
+
             arrived, err = mover.move_to(boundaries.start_pos.x, boundaries.start_pos.y, boundaries.start_pos.z)
         end
 

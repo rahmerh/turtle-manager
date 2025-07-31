@@ -1,15 +1,18 @@
 local mover = require("mover")
 local fueler = require("fueler")
 local errors = require("errors")
+local printer = require("printer")
 
 return function(task, config)
     fueler.refuel_from_inventory()
 
-    local arrived, err = mover.move_to(task.pos.x, task.pos.y, task.pos.z)
+    printer.print_info("Picking up chest  at " .. task.data.x .. " " .. task.data.y .. " " .. task.data.z)
+
+    local arrived, err = mover.move_to(task.data.x, task.data.y, task.data.z)
 
     while not arrived and err == errors.NO_FUEL do
         fueler.refuel_from_inventory()
-        arrived, err = mover.move_to(task.pos.x, task.pos.y, task.pos.z)
+        arrived, err = mover.move_to(task.data.x, task.data.y, task.data.z)
     end
 
     -- Pick up chest + it's contents

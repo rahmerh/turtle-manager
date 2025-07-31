@@ -22,25 +22,25 @@ while not unloading_chest_complete do
     end
 end
 
-printer.print_info("Coordinates of the coal chest:")
+printer.print_info("Coordinates of the supply chest:")
 
-local coal_chest_x, coal_chest_y, coal_chest_z
-local coal_chest_complete = false
+local supply_chest_x, supply_chest_y, supply_chest_z
+local supply_chest_complete = false
 
-while not coal_chest_complete do
-    if not coal_chest_x then
+while not supply_chest_complete do
+    if not supply_chest_x then
         printer.write_prompt("X: ")
-        coal_chest_x = read()
-    elseif not coal_chest_y then
+        supply_chest_x = read()
+    elseif not supply_chest_y then
         printer.write_prompt("Y: ")
-        coal_chest_y = read()
-    elseif not coal_chest_z then
+        supply_chest_y = read()
+    elseif not supply_chest_z then
         printer.write_prompt("Z: ")
-        coal_chest_z = read()
+        supply_chest_z = read()
     end
 
-    if coal_chest_x and coal_chest_y and coal_chest_z then
-        coal_chest_complete = true
+    if supply_chest_x and supply_chest_y and supply_chest_z then
+        supply_chest_complete = true
     end
 end
 
@@ -50,10 +50,10 @@ local config = {
         y = unloading_chest_y,
         z = unloading_chest_z
     },
-    coal_chest_pos = {
-        x = coal_chest_x,
-        y = coal_chest_y,
-        z = coal_chest_z
+    supply_chest_pos = {
+        x = supply_chest_x,
+        y = supply_chest_y,
+        z = supply_chest_z
     }
 }
 
