@@ -6,6 +6,7 @@ local job = require("job")
 local wireless = require("wireless")
 local errors = require("errors")
 local locator = require("locator")
+local inventory = require("inventory")
 
 local manager_id = wireless.register_new_turtle("quarry")
 if not manager_id then
@@ -230,6 +231,23 @@ local function run_quarry()
         move_to_current_row()
     else
         job.starting()
+
+        local desired = {}
+        if not inventory.does_slot_contain_item(1, "minecraft:coal") then
+            desired["minecraft:coal"] = 64
+        end
+        if not inventory.does_slot_contain_item(2, "minecraft:chest") then
+            desired["minecraft:chest"] = 64
+        end
+
+        if next(desired) ~= nil then
+            wireless.request_resupply(manager_id, locator.get_pos(), desired)
+
+            while not inventory.does_slot_contain_item(1, "minecraft:coal") and not inventory.does_slot_contain_item(2, "minecraft:chest") do
+                printer.print_warning("Waiting for supplies, sleeping 30s...")
+                sleep(30)
+            end
+        end
 
         printer.print_info("Moving to X: " ..
             boundaries.start_pos.x .. " Y: " .. boundaries.start_pos.y .. " Z: " .. boundaries.start_pos.z)

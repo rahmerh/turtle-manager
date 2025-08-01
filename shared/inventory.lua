@@ -43,14 +43,14 @@ function inventory.pull_items_from_down(item, amount)
     return true
 end
 
-function inventory.pull_items_from_slot(slot, side)
-    local empty_slot = first_empty_slot()
+function inventory.does_slot_contain_item(slot, item)
+    local info = turtle.getItemDetail(slot)
 
-    if not first_empty_slot then
-        return nil, errors.INV_FULL
+    if info and info.name == item then
+        return true
+    else
+        return false
     end
-
-    local target = peripheral.wrap(side)
 end
 
 return inventory

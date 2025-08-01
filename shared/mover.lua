@@ -87,9 +87,7 @@ local function move_on_axis(axis, amount, dig)
             moved, err = mover.move_forward()
         end
 
-        if not moved and err then
-            return moved, err
-        end
+        return moved, err
     end
 end
 
