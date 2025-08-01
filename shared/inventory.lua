@@ -1,4 +1,4 @@
-local errors = require("errors")
+local errors = require("shared.errors")
 
 local inventory = {}
 

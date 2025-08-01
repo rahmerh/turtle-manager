@@ -1,4 +1,4 @@
-local printer = require("printer")
+local printer = require("shared.printer")
 local job = require("job")
 
 local startX, startY, startZ, depth, width = tonumber(arg[1]), tonumber(arg[2]), tonumber(arg[3]), tonumber(arg[4]),
@@ -11,7 +11,7 @@ end
 local success, _ = job.load()
 if success then
     printer.print_warning("Found existing job.")
-    printer.write_warning("Overwrite? y/n: ")
+    printer.write_prompt("Overwrite? y/n: ")
     local response = read()
     if response:lower() ~= "y" then
         print("Cancelled.")

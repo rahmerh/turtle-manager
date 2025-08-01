@@ -1,12 +1,12 @@
-local mover = require("mover")
-local printer = require("printer")
-local fueler = require("fueler")
-local unloader = require("unloader")
+local mover = require("shared.mover")
+local printer = require("shared.printer")
+local fueler = require("shared.fueler")
+local unloader = require("shared.unloader")
 local job = require("job")
-local wireless = require("wireless")
-local errors = require("errors")
-local locator = require("locator")
-local inventory = require("inventory")
+local wireless = require("shared.wireless")
+local errors = require("shared.errors")
+local locator = require("shared.locator")
+local inventory = require("shared.inventory")
 
 local manager_id = wireless.register_new_turtle("quarry")
 if not manager_id then
@@ -84,9 +84,21 @@ local function mine_amount_of_rows(amount, length)
             end
 
             if unloader.should_unload() then
-                local chest_pos = unloader.unload()
+                local chest_pos, unload_err = unloader.unload()
 
-                if not chest_pos then
+                if not chest_pos and unload_err == errors.NO_FUEL then
+                    local refueled, refueled_err = fueler.refuel_from_inventory()
+
+                    if not refueled and refueled_err == errors.NO_FUEL_STORED then
+                        wireless.request_resupply(manager_id, locator.get_pos(), { ["minecraft:coal"] = 64 })
+
+                        while not refueled do
+                            printer.print_warning("Out of fuel, waiting for runner, sleeping 30s...")
+                            sleep(30)
+                            refueled, refueled_err = fueler.refuel_from_inventory()
+                        end
+                    end
+                elseif not chest_pos and unload_err == errors.NO_FUEL_STORED then
                     wireless.request_resupply(manager_id, locator.get_pos(), { ["minecraft:chest"] = 63 })
                     while not chest_pos do
                         printer.print_warning("No chests, waiting for runner, sleeping for 30 seconds...")

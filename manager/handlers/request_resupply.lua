@@ -1,6 +1,6 @@
 local turtle_store = require("turtle_store")
-local wireless = require("wireless")
-local printer = require("printer")
+local wireless = require("shared.wireless")
+local printer = require("shared.printer")
 
 local function find_least_queued(turtles)
     local result = nil

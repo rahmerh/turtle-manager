@@ -1,7 +1,7 @@
 local turtle_store = require("turtle_store")
-local wireless = require("wireless")
-local display = require("display")
-local utils = require("utils")
+local wireless = require("shared.wireless")
+local display = require("shared.display")
+local utils = require("shared.utils")
 
 return function(sender, msg)
     local turtle = turtle_store.get(sender)

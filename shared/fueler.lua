@@ -1,9 +1,9 @@
-local errors = require("errors")
+local errors = require("shared.errors")
 
 local fueler = {}
 
 local ACCEPTED_FUEL = {
-    ["coal"] = true
+    ["minecraft:coal"] = true
 }
 
 local function reason_to_error(reason)
@@ -20,7 +20,7 @@ local function get_next_empty_slot()
 end
 
 local function scan_for_fuel()
-    for i = 3, 16 do
+    for i = 1, 16 do
         local item = turtle.getItemDetail(i)
 
         if item and ACCEPTED_FUEL[item.name] then
@@ -36,9 +36,9 @@ fueler.refuel_from_inventory = function()
         turtle.select(1)
     end
 
-    local refueled, err = turtle.refuel(1)
+    local refueled, err = turtle.refuel(4)
 
-    if not refueled and err then
+    while not refueled and err do
         err = reason_to_error(err)
 
         if err == errors.NOT_FUEL then
@@ -53,7 +53,16 @@ fueler.refuel_from_inventory = function()
             turtle.transferTo(empty_slot)
 
             local fuel_slot = scan_for_fuel()
+
+            if not fuel_slot then
+                return refueled, errors.NO_FUEL_STORED
+            end
+
+            turtle.select(fuel_slot)
             turtle.transferTo(1)
+            turtle.select(1)
+
+            refueled, err = turtle.refuel(4)
         end
 
         return refueled, errors.NO_FUEL_STORED

@@ -45,26 +45,28 @@ if [[ "$role_valid" == false ]]; then
     exit 1
 fi
 
-for role in "$ROLE" "shared"; do
-    if [[ ! -d "$role" ]]; then
-        echo "Warning: role dir '$role' does not exist, skipping."
-        continue
+for src in "shared" "$ROLE"; do
+  [[ -d "$src" ]] || { echo "Warning: role dir '$src' does not exist, skipping."; continue; }
+
+  while IFS= read -r -d '' file; do
+    if [[ "$src" == "$ROLE" ]]; then
+      rel="${file#"$src/"}"
+    else
+      rel="$file"
     fi
 
-    find "$role" -type f | while read -r file; do
-        target_path="$TARGET_DIR/$(basename "$file")"
+    target_path="$TARGET_DIR/$rel"
+    mkdir -p "$(dirname "$target_path")"
 
-        if [[ -e "$target_path" ]]; then
-            if [[ -L "$target_path" ]]; then
-                rm "$target_path"
-            else
-                echo "Error: '$target_path' exists and is not a symlink" >&2
-                exit 1
-            fi
-        fi
+    link_target="$(realpath --relative-to="$(dirname "$target_path")" "$file")"
 
-        ln -s "$(realpath "$file")" "$target_path"
-        echo "Linked: $file → $target_path"
-    done
+    if [[ -e "$target_path" && ! -L "$target_path" ]]; then
+      echo "Error: '$target_path' exists and is not a symlink" >&2
+      exit 1
+    fi
+
+    ln -sfn "$link_target" "$target_path"
+    echo "Linked: $target_path -> $link_target"
+  done < <(find "$src" -type f -print0)
 done
 

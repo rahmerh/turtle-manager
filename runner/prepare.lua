@@ -1,4 +1,4 @@
-local printer = require("printer")
+local printer = require("shared.printer")
 
 printer.print_info("Coordinates of the unloading chest:")
 

@@ -1,8 +1,8 @@
-local mover = require("mover")
-local fueler = require("fueler")
-local errors = require("errors")
-local printer = require("printer")
-local inventory = require("inventory")
+local mover = require("shared.mover")
+local fueler = require("shared.fueler")
+local errors = require("shared.errors")
+local printer = require("shared.printer")
+local inventory = require("shared.inventory")
 
 local function is_turtle(info)
     return info.name == "computercraft:turtle_advanced" or info.name == "computercraft:turtle_normal"

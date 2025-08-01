@@ -1,6 +1,5 @@
-local mover = require("mover")
-local locator = require("locator")
-local fueler = require("fueler")
+local mover = require("shared.mover")
+local locator = require("shared.locator")
 
 local unloader = {}
 
@@ -10,10 +9,14 @@ function unloader.unload()
         return nil
     end
 
-    fueler.refuel_from_inventory()
-
-    mover.move_back()
-    mover.move_up()
+    local moved, err = mover.move_back()
+    if not moved and err then
+        return moved, err
+    end
+    moved, err = mover.move_up()
+    if not moved and err then
+        return moved, err
+    end
 
     turtle.select(2)
     turtle.placeDown()
@@ -42,8 +45,14 @@ function unloader.unload()
     end
     turtle.select(1)
 
-    mover.move_forward()
-    mover.move_down()
+    moved, err = mover.move_forward()
+    if not moved and err then
+        return moved, err
+    end
+    moved, err = mover.move_down()
+    if not moved and err then
+        return moved, err
+    end
 
     return pos
 end

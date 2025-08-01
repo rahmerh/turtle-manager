@@ -1,7 +1,7 @@
-local mover = require("mover")
-local fueler = require("fueler")
-local errors = require("errors")
-local printer = require("printer")
+local mover = require("shared.mover")
+local fueler = require("shared.fueler")
+local errors = require("shared.errors")
+local printer = require("shared.printer")
 
 return function(task, config)
     fueler.refuel_from_inventory()

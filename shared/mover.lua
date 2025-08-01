@@ -1,5 +1,5 @@
-local locator = require("locator")
-local errors = require("errors")
+local locator = require("shared.locator")
+local errors = require("shared.errors")
 
 local mover = {}
 
@@ -23,7 +23,6 @@ local ORIENTATION_TO_DIRECTION_MAP = {
     south = { north = "around", east = "left", south = nil, west = "right" },
     west  = { north = "right", east = "around", south = "left", west = nil },
 }
-
 local turtle_state = {}
 
 local function reason_to_error(reason)
@@ -87,7 +86,9 @@ local function move_on_axis(axis, amount, dig)
             moved, err = mover.move_forward()
         end
 
-        return moved, err
+        if not moved and err == errors.NO_FUEL then
+            return moved, err
+        end
     end
 end
 

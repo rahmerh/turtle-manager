@@ -1,6 +1,6 @@
 local turtle_store = require("turtle_store")
-local utils = require("utils")
-local wireless = require("wireless")
+local utils = require("shared.utils")
+local wireless = require("shared.wireless")
 
 return function(sender, msg)
     wireless.acknowledge_announcement(sender)

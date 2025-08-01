@@ -1,6 +1,7 @@
 local turtle_store = require("turtle_store")
-local wireless = require("wireless")
-local printer = require("printer")
+local wireless = require("shared.wireless")
+local printer = require("shared.printer")
+local errors = require("shared.errors")
 
 local function find_least_queued(turtles)
     local result = nil
@@ -17,13 +18,18 @@ end
 
 return function(_, msg)
     local runners = turtle_store.get_by_role("runner")
-    if not runners then
-        error("No runners registered.")
+
+    if not runners and #runners == 0 then
+        return nil, errors.wireless.NO_AVAILABLE_RUNNERS
     end
 
     local task_is_received = false
     while not task_is_received do
         for _, runner in ipairs(runners) do
+            if runner.status == "Offline" or runner.status == "Stale" then
+                goto continue
+            end
+
             if runner.status == "Idle" then
                 local sender, confirmation = wireless.send_runner_task(runner.id, msg, "pickup")
 
@@ -35,6 +41,8 @@ return function(_, msg)
                 task_is_received = true
                 break
             end
+
+            ::continue::
         end
 
         -- All runners are busy, find the one with the least amount of tasks and queue it.
@@ -42,19 +50,21 @@ return function(_, msg)
             local runner = find_least_queued(runners)
 
             if not runner then
-                printer.print_warning("No runners available.")
-                return
+                return nil, errors.wireless.NO_AVAILABLE_RUNNERS
             end
 
-            local sender, confirmation = wireless.send_runner_task(runner.id, msg, "pickup")
+            local sender = wireless.send_runner_task(runner.id, msg, "pickup")
 
             if not sender then
-                printer.print_warning(confirmation)
                 break
             end
 
             task_is_received = true
             break
         end
+    end
+
+    if not task_is_received then
+        return nil, errors.wireless.COULD_NOT_ASSIGN
     end
 end

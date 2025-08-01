@@ -1,5 +1,5 @@
-local wireless = require("wireless")
-local printer = require("printer")
+local wireless = require("shared.wireless")
+local printer = require("shared.printer")
 local task_store = require("task_store")
 
 printer.print_info("Starting runner #" .. os.getComputerID())
@@ -12,8 +12,8 @@ end
 
 local status = "Idle"
 local task_handlers = {
-    pickup = require("pickup"),
-    resupply = require("resupply")
+    pickup = require("tasks.pickup"),
+    resupply = require("tasks.resupply")
 }
 
 local config_file = fs.open("runner.conf", "r")

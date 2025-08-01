@@ -1,5 +1,5 @@
-local utils = require("utils")
-local display = require("display")
+local utils = require("shared.utils")
+local display = require("shared.display")
 
 local turtle_store = {}
 

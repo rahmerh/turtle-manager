@@ -1,4 +1,4 @@
-local printer = require("printer")
+local printer = require("shared.printer")
 
 local locator = {}
 
