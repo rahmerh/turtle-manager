@@ -4,7 +4,6 @@ printer.print_info("Coordinates of the unloading chest:")
 
 local unloading_chest_x, unloading_chest_y, unloading_chest_z
 local unloading_chest_complete = false
-
 while not unloading_chest_complete do
     if not unloading_chest_x then
         printer.write_prompt("X: ")

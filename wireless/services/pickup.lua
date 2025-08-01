@@ -1,0 +1,3 @@
+local pickup = {}
+
+return pickup

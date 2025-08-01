@@ -1,38 +1,38 @@
-local JOB_FILE = "job-file"
+local list = require("shared.list")
 
-local STATUS_IDLE = "Idle"
-local STATUS_STARTING = "Starting quarry"
-local STATUS_IN_PROGRESS = "In progress"
+local JOB_FILE = "job.conf"
 
 local job = {
-    _data = nil
+    _data = nil,
+    statuses = {
+        idle = "Idle",
+        starting = "Starting quarry",
+        in_progress = "In progress",
+    }
 }
 
 -- === Internal ===
 
 local function validate(data)
-    if type(data) ~= "table" then return false end
+    if type(data) ~= "table" then
+        return false
+    end
 
-    local b = data.boundaries
-    if not b or not b.start_pos or not b.width or not b.depth or not b.layers then return false end
+    local is_valid = false
 
-    data.current_layer = data.current_layer or b.layers
-    data.current_row = data.current_row or 0
-    data.unloading_chests = data.unloading_chests or {}
-    data.resumable = data.resumable == nil and true or data.resumable
-    data.status = data.status or STATUS_IDLE
+    is_valid = data.boundaries ~= nil and data.boundaries.starting_position ~= nil
+    is_valid = tonumber(data.boundaries.starting_position.x) ~= nil
+    is_valid = tonumber(data.boundaries.starting_position.y) ~= nil
+    is_valid = tonumber(data.boundaries.starting_position.z) ~= nil
+    is_valid = data.boundaries.width ~= nil and tonumber(data.boundaries.width) ~= nil
+    is_valid = data.boundaries.depth ~= nil and tonumber(data.boundaries.depth) ~= nil
+    is_valid = data.boundaries.layers ~= nil and tonumber(data.boundaries.layers) ~= nil
+    is_valid = data.resumable ~= nil and type(data.resumable) == "boolean"
 
-    return true
+    return is_valid
 end
 
-local function set_status(status)
-    job._data.status = status
-    job.save()
-end
-
--- === Public ===
-
-function job.load()
+local function load()
     if not fs.exists(JOB_FILE) then
         return nil, "Job file missing"
     end
@@ -46,79 +46,103 @@ function job.load()
         return nil, "Invalid or corrupt progress file"
     end
 
-    job._data = data
-    return true
+    return data
 end
 
-function job.save()
+local function save()
     if not job._data then error("No progress loaded") end
 
-    local f = fs.open(JOB_FILE, "w")
+    local f = fs.open(JOB_FILE, "w+")
     f.write(textutils.serialize(job._data))
     f.close()
 end
 
-function job.initialize(data)
+-- === Public ===
+
+function job.create(data)
     if not validate(data) then
-        error("Invalid job data, not saving.")
+        return nil, "Invalid job data."
     end
+
     job._data = data
-    job.save()
+    save()
+end
+
+function job.exists()
+    local exists = fs.exists(JOB_FILE)
+    local is_valid = false
+    if exists then
+        local data, err = load()
+
+        if data and not err then
+            is_valid = true
+        end
+    end
+
+    return exists and is_valid
+end
+
+--- Loads the job's information from file, initializing this instance.
+--- @return boolean|boolean, string?  boolean or nil,error
+function job.initialize()
+    local data, err = load()
+
+    if not data and err then
+        return false, err
+    end
+
+    job._data = data
+    return true
 end
 
 function job.complete()
     fs.delete(JOB_FILE)
 end
 
-function job.pause()
-    set_status(STATUS_IDLE)
-end
-
-function job.starting()
-    set_status(STATUS_STARTING)
-end
-
-function job.start()
-    set_status(STATUS_IN_PROGRESS)
-end
-
 function job.status()
     return job._data.status
 end
 
+function job.set_status(status)
+    if not list.map_contains_value(job.statuses, status) then
+        error("Invalid status: '" .. status .. "'")
+    end
+
+    job._data.status = status
+    save()
+end
+
 function job.increment_row()
+    if not job._data.current_row then
+        job._data.current_row = 0
+    end
+
     job._data.current_row = job._data.current_row + 1
-    job.save()
+
+    save()
 end
 
 function job.set_row(row)
     job._data.current_row = row
-    job.save()
+    save()
 end
 
 function job.current_row()
-    return job._data.current_row
+    return job._data.current_row or 0
 end
 
 function job.next_layer()
+    if not job._data.current_layer then
+        job._data.current_layer = job._data.boundaries.layers
+    end
+
     job._data.current_layer = job._data.current_layer - 1
     job._data.current_row = 0
-    job.save()
+    save()
 end
 
 function job.current_layer()
-    return job._data.current_layer
-end
-
-function job.register_unloading_chest(pos)
-    local max = 0
-    for k in pairs(job._data.unloading_chests) do
-        if type(k) == "number" and k > max then max = k end
-    end
-    local key = max + 1
-    job._data.unloading_chests[key] = pos
-    job.save()
-    return key
+    return job._data.current_layer or job._data.boundaries.layers
 end
 
 function job.get_boundaries()
@@ -126,7 +150,7 @@ function job.get_boundaries()
 end
 
 function job.is_in_progress()
-    return job._data.status == STATUS_IN_PROGRESS or job._data.status == STATUS_STARTING
+    return job._data.status == job.statuses.in_progress or job._data.status == job.statuses.starting
 end
 
 return job

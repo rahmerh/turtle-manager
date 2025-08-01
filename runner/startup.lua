@@ -1,20 +1,20 @@
-local wireless = require("shared.wireless")
 local printer = require("shared.printer")
 local task_store = require("task_store")
+local wireless = require("wireless")
+local utils = require("shared.utils")
 
-printer.print_info("Starting runner #" .. os.getComputerID())
-
-local manager_id = wireless.register_new_turtle("runner")
-if not manager_id then
-    printer.print_error("No manager found, is there a manager instance running?")
-    return
-end
+printer.print_info("Booting runner #" .. os.getComputerID())
 
 local status = "Idle"
 local task_handlers = {
     pickup = require("tasks.pickup"),
     resupply = require("tasks.resupply")
 }
+
+if not fs.exists("runner.conf") then
+    printer.print_error("Please run 'prepare' before starting this runner.")
+    return
+end
 
 local config_file = fs.open("runner.conf", "r")
 local raw = config_file.readAll()
@@ -23,6 +23,19 @@ config_file.close()
 local config = textutils.unserialize(raw)
 
 local queue = task_store.new()
+
+local manager_id, err = wireless.discovery.find("manager")
+if not manager_id and err then
+    printer.print_error("Could not determine manager: " .. err)
+    return
+end
+
+local start_heartbeat, _ = wireless.heartbeat.loop(manager_id, 1, function()
+    return {
+        last_seen = utils.epoch_in_seconds(),
+        status = status
+    }
+end)
 
 local function receive_task()
     while true do
@@ -62,29 +75,6 @@ local function run_task()
     end
 end
 
-local function heartbeat()
-    while true do
-        local metadata = {
-            status = status,
-            queued_tasks = queue:size()
-        }
-        if not wireless.send_heartbeat(manager_id, metadata) then
-            error("Could not locate manager.")
-        end
-        sleep(1)
-    end
-end
-
-local function kill_switch()
-    while true do
-        local _, id_to_kill = wireless.receive_kill()
-        if id_to_kill == os.getComputerID() then
-            printer.print_warning("Received kill command, exiting.")
-            break
-        end
-    end
-end
-
 printer.print_success("Awaiting tasks...")
 
-parallel.waitForAny(receive_task, run_task, kill_switch, heartbeat)
+parallel.waitForAny(start_heartbeat)

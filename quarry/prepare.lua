@@ -1,31 +1,74 @@
 local printer = require("shared.printer")
 local job = require("job")
 
-local startX, startY, startZ, depth, width = tonumber(arg[1]), tonumber(arg[2]), tonumber(arg[3]), tonumber(arg[4]),
-    tonumber(arg[5])
-if not startX or not startZ or not startY or not depth or not width then
-    printer.print_error("Usage: prepare.lua <start_x> <start_y> <start_z> <depth> <width>")
-    return
-end
-
-local success, _ = job.load()
-if success then
-    printer.print_warning("Found existing job.")
-    printer.write_prompt("Overwrite? y/n: ")
-    local response = read()
-    if response:lower() ~= "y" then
-        print("Cancelled.")
-        return
+local function prompt_num(label)
+    while true do
+        printer.write_prompt(label)
+        local n = tonumber(read())
+        if n then return n end
+        printer.print_warning("Please enter a number.")
     end
 end
 
-local layers = math.floor((startY + 59) / 3)
+if job.exists() then
+    printer.print_warning("Found existing job.")
+
+    local answered = false
+    while not answered do
+        printer.write_prompt("Overwrite? y/n: ")
+        local response = read()
+
+        if response:lower() == "y" then
+            break
+        elseif response:lower() == "n" then
+            printer.print_success("Canelling setup, exiting.")
+            return
+        end
+    end
+end
+
+printer.print_info("Coordinates of quarry's starting location:")
+
+local starting_position_x, starting_position_y, starting_position_z
+while not starting_position_x or not starting_position_y or not starting_position_z do
+    if not starting_position_x then
+        starting_position_x = prompt_num("X: ")
+    elseif not starting_position_y then
+        starting_position_y = prompt_num("Y: ")
+    elseif not starting_position_z then
+        starting_position_z = prompt_num("Z: ")
+    end
+end
+
+printer.print_info("Dimensions of the quarry (Starting from the starting position, facing north)")
+
+local width, depth
+while not width or not depth do
+    if not width then
+        width = prompt_num("Width: ")
+    elseif not depth then
+        depth = prompt_num("Depth: ")
+    end
+end
+
+local min_y_level = 59
+local layer_thickness = 3
+local layers = math.floor((starting_position_y + min_y_level) / layer_thickness)
 local data = {
-    boundaries = { start_pos = { x = startX, y = startY, z = startZ }, width = width, depth = depth, layers = layers },
+    boundaries = {
+        starting_position = {
+            x = tonumber(starting_position_x),
+            y = tonumber(starting_position_y),
+            z = tonumber(starting_position_z)
+        },
+        width = tonumber(width),
+        depth = tonumber(depth),
+        layers = tonumber(layers)
+    },
     resumable = true,
-    unloading_chests = {}
+    status = "new"
 }
 
-job.initialize(data)
+job.create(data)
 
-printer.print_success("Initialized job.")
+printer.print_success("Quarry initialized, reboot to start quarry.")

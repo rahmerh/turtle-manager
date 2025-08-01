@@ -1,4 +1,5 @@
 local errors = require("shared.errors")
+local resupply = require("wireless").resupply
 
 local fueler = {}
 
@@ -29,7 +30,7 @@ local function scan_for_fuel()
     end
 end
 
-fueler.refuel_from_inventory = function()
+function fueler.refuel_from_inventory()
     if turtle.getFuelLevel() > 0 then return true, nil end
 
     if turtle.getSelectedSlot() ~= 1 then
@@ -69,6 +70,24 @@ fueler.refuel_from_inventory = function()
     end
 
     return true, nil
+end
+
+function fueler.handle_movement_result(ok, err, ctx)
+    if ok then return "retry" end
+    if err ~= errors.NO_FUEL then return nil, err end
+
+    if fueler.refuel_from_inventory() then
+        return "retry"
+    end
+
+    local manager_id = ctx.manager_id
+    local current_position = ctx.current_position
+    local desired = { ["minecraft:coal"] = 64 }
+
+    if not manager_id or not current_position then
+        return nil, errors.NO_FUEL
+    end
+    -- TODO: Re-implement resupply
 end
 
 return fueler

@@ -1,9 +1,8 @@
-local utils = require("shared.utils")
-local display = require("shared.display")
+local time = require("shared.time")
 
 local turtle_store = {}
 
-local TURTLE_FILE = "turtles"
+local TURTLE_FILE = "turtles.db"
 
 local turtles = {}
 
@@ -44,6 +43,16 @@ function turtle_store.get_by_role(role)
     return result
 end
 
+function turtle_store.patch(id, data)
+    ensure_loaded()
+
+    local rec = turtles[id] or { id = id }
+    for k, v in pairs(data) do rec[k] = v end
+    turtles[id] = rec
+
+    save()
+end
+
 function turtle_store.upsert(id, data)
     ensure_loaded()
 
@@ -53,21 +62,16 @@ end
 
 function turtle_store.detect_stale()
     ensure_loaded()
-    local now = utils.epoch_in_seconds()
+    local now = time.epoch_in_seconds()
 
     for id, data in pairs(turtles) do
         if now - data.last_seen >= 10 then
             turtles[id].status = "Offline"
-
-            local lines = display.status_lines_for(turtles[id])
-            display.add_or_update_block(id, lines, "err")
         elseif now - data.last_seen >= 5 then
             turtles[id].status = "Stale"
-
-            local lines = display.status_lines_for(turtles[id])
-            display.add_or_update_block(id, lines, "warn")
         end
     end
+
     save()
 end
 

@@ -1,6 +1,6 @@
 local core = {}
 
-function core.open(side) rednet.open(side) end
+function core.open() peripheral.find("modem", rednet.open) end
 
 function core.close(side) rednet.close(side) end
 

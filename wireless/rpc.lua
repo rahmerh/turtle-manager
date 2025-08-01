@@ -1,2 +1,0 @@
-local rpc = {}
-return rpc
