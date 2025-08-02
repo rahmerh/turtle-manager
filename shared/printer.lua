@@ -27,7 +27,7 @@ printer.print_success = function(msg)
 end
 
 printer.print_info = function(msg)
-    printColored(colors.white, msg)
+    printColored(colors.lightBlue, msg)
 end
 
 printer.write_prompt = function(msg)

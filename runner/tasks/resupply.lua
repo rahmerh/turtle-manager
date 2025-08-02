@@ -1,5 +1,6 @@
-local mover = require("shared.mover")
-local fueler = require("shared.fueler")
+local movement = require("movement")
+local wireless = require("wireless")
+
 local errors = require("shared.errors")
 local printer = require("shared.printer")
 local inventory = require("shared.inventory")
@@ -10,57 +11,59 @@ end
 
 return function(task, config)
     printer.print_info("Resupplying turtle at " ..
-        task.data.turtle_pos.x .. " " ..
-        task.data.turtle_pos.y .. " " ..
-        task.data.turtle_pos.z)
+        task.data.target.x .. " " ..
+        task.data.target.y .. " " ..
+        task.data.target.z)
 
-    local arrived_at_supply, arrived_at_supply_err = mover.move_to(
+    local arrived, arrived_err = movement.move_to(
         config.supply_chest_pos.x,
         config.supply_chest_pos.y + 1,
         config.supply_chest_pos.z)
-    while not arrived_at_supply and arrived_at_supply_err == errors.NO_FUEL do
-        fueler.refuel_from_inventory()
-        arrived_at_supply, arrived_at_supply_err = mover.move_to(
-            config.supply_chest_pos.x,
-            config.supply_chest_pos.y + 1,
-            config.supply_chest_pos.z)
-    end
+    -- TODO: Handle error
 
     turtle.select(2)
 
+    local filled_slots = {}
     for item, amount in pairs(task.data.desired) do
-        inventory.pull_items_from_down(item, amount)
+        local filled_slot = inventory.pull_items_from_down(item, amount)
+        table.insert(filled_slots, filled_slot)
     end
 
-    local turtle_pos = task.data.turtle_pos
-
     -- +1 to make sure we're on top of the turtle to resupply
-    local arrived, err = mover.move_to(turtle_pos.x, turtle_pos.y + 1, turtle_pos.z)
-    while not arrived and err == errors.NO_FUEL do
-        fueler.refuel_from_inventory()
-        arrived, err = mover.move_to(turtle_pos.x, turtle_pos.y + 1, turtle_pos.z)
+    movement.move_to(task.data.target.x, task.data.target.y + 1, task.data.target.z)
+
+    wireless.resupply.runner_arrived(task.data.requester, task.job_id)
+    local ok, err = wireless.resupply.await_ready(task.job_id)
+
+    if not ok then
+        printer.print_error(err)
+        movement.move_to(
+            config.unloading_chest_pos.x,
+            config.unloading_chest_pos.y + 1,
+            config.unloading_chest_pos.z)
+
+        inventory.drop_slots(2, 16, "down")
+        return
     end
 
     local _, info = turtle.inspectDown()
     if is_turtle(info) then
-        turtle.select(2)
-        turtle.dropDown()
+        for _, slot in ipairs(filled_slots) do
+            turtle.select(slot)
+            turtle.dropDown()
+        end
     else
-        -- TODO: Handle error
+        return nil, errors.NO_INVENTORY_DOWN
     end
 
     turtle.select(1)
 
-    local moved_back, moved_back_err = mover.move_to(
+    wireless.resupply.signal_done(task.data.requester, task.job_id)
+
+    movement.move_to(
         config.unloading_chest_pos.x,
         config.unloading_chest_pos.y + 1,
         config.unloading_chest_pos.z)
 
-    while not moved_back and moved_back_err == errors.NO_FUEL do
-        fueler.refuel_from_inventory()
-        moved_back, moved_back_err = mover.move_to(
-            config.unloading_chest_pos.x,
-            config.unloading_chest_pos.y + 1,
-            config.unloading_chest_pos.z)
-    end
+    inventory.drop_slots(2, 16, "down")
 end

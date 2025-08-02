@@ -83,8 +83,8 @@ local function write_block(lines, bg_colour, fg_colour)
     end
     monitor.write(string.rep(" ", MAX_WIDTH))
 
-    monitor.setBackgroundColour(prev_bg_colour)
-    monitor.setTextColour(prev_fg_colour)
+    monitor.setBackgroundColour(colours.black)
+    monitor.setTextColour(colours.white)
 end
 
 function display.add_or_update_block(id, lines, block_type)
@@ -134,21 +134,21 @@ function display.render()
     end
 end
 
-function display.status_lines_for(turtle)
+function display.status_lines_for(id, turtle)
     local lines
     if turtle.role == "quarry" then
         lines = {
-            ("ID: %s (%s)"):format(turtle.id, turtle.role),
-            ("Status: %s"):format(turtle.status),
-            ("Mining layer %d of %d"):format(turtle.current_layer, turtle.total_layers),
+            ("ID: %s (%s)"):format(id, turtle.role),
+            ("Status: %s"):format(turtle.metadata.status),
+            ("Layer: %d Row: %d"):format(turtle.metadata.current_layer + 1, turtle.metadata.current_row + 1),
             ("Last seen at: %s"):format(os.date("%H:%M:%S", turtle.last_seen))
         }
     elseif turtle.role == "runner" then
-        local runner_is_running = string.find(turtle.status, "Running", 1, true)
+        local runner_is_running = string.find(turtle.metadata.status, "Running", 1, true)
         lines = {
-            ("ID: %s (%s)"):format(turtle.id, turtle.role),
-            ("Status: %s"):format(turtle.status),
-            ("Tasks: %d out of %s"):format((runner_is_running) and 1 or 0, turtle.queued_tasks),
+            ("ID: %s (%s)"):format(id, turtle.role),
+            ("Status: %s"):format(turtle.metadata.status),
+            ("Tasks: %d out of %s"):format((runner_is_running) and 1 or 0, turtle.metadata.queued_tasks),
             ("Last seen at: %s"):format(os.date("%H:%M:%S", turtle.last_seen))
         }
     end

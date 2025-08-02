@@ -1,5 +1,7 @@
 local printer = require("shared.printer")
-local time = require("shared.time")
+local inventory = require("shared.inventory")
+local locator = require("shared.locator")
+local miner = require("shared.miner")
 
 local job = require("job")
 local quarry = require("quarry")
@@ -21,7 +23,22 @@ if not manager_id and find_err then
     return
 end
 
-wireless.registry.register(manager_id, "quarry")
+local needed_supplies = {}
+if not inventory.is_item_in_slot("minecraft:coal", 1) then
+    needed_supplies["minecraft:coal"] = 64
+end
+if not inventory.is_item_in_slot("minecraft:chest", 2) then
+    needed_supplies["minecraft:chest"] = 64
+end
+
+if next(needed_supplies) ~= nil then
+    wireless.resupply.request(manager_id, locator.get_pos(), needed_supplies)
+    local runner_id, job_id = wireless.resupply.await_arrival()
+    wireless.resupply.signal_ready(runner_id, job_id)
+    wireless.resupply.await_done()
+end
+
+wireless.registry.register_self_as(manager_id, "quarry")
 
 local start_heartbeat, _ = wireless.heartbeat.loop(manager_id, 1, function()
     return {
@@ -34,25 +51,38 @@ end)
 local function main()
     local boundaries = job.get_boundaries()
 
+    local movement_context = {
+        dig = true,
+        manager_id = manager_id
+    }
+
     if not job.is_in_progress() then
         local moved, moved_error = movement.move_to(
             boundaries.starting_position.x,
             boundaries.starting_position.y,
-            boundaries.starting_position.z)
+            boundaries.starting_position.z,
+            movement_context)
 
         if not moved then
             error("Turtle stuck: " .. moved_error)
         end
     end
 
-    local movement_context = {
-        dig = true
-    }
-
     job.set_status(job.statuses.in_progress)
     printer.print_info("Quarry #" .. os.getComputerID() .. " in progress...")
     while job.current_layer() > 0 do
-        for _ = 1, boundaries.width - job.current_row() do
+        local direction = quarry.get_row_direction_for_layer(boundaries.width, job.current_layer())
+
+        local rows, length
+        if direction == "north" or direction == "south" then
+            rows = boundaries.width - job.current_row()
+            length = boundaries.depth - 1
+        else
+            rows = boundaries.depth - job.current_row()
+            length = boundaries.width - 1
+        end
+
+        for _ = 1, rows do
             local coords = quarry.starting_location_for_row(job.current_layer(), job.current_row(), boundaries)
             local moved, moved_error = movement.move_to(coords.x, coords.y, coords.z, movement_context)
 
@@ -60,7 +90,6 @@ local function main()
                 error("Turtle stuck: " .. moved_error)
             end
 
-            local direction = quarry.get_row_direction_for_layer(boundaries.width, job.current_layer())
             local orientation_to_face
             if job.current_row() % 2 == 0 then
                 orientation_to_face = direction
@@ -68,14 +97,38 @@ local function main()
                 orientation_to_face = movement.opposite_of(direction)
             end
             movement.turn_to_direction(orientation_to_face)
-            quarry.mine_up()
-            quarry.mine_down()
 
-            for _ = 1, boundaries.depth - 1 do
-                quarry.mine()
+            miner.mine_up()
+            miner.mine_down()
+
+            for _ = 1, length do
+                local success, err = miner.mine()
+
+                if not success and err then
+                    printer.print_error(err)
+                    return
+                end
+
                 movement.move_forward()
-                quarry.mine_up()
-                quarry.mine_down()
+
+                -- Ignore errors, we can move forward even with up/down blocked.
+                miner.mine_up()
+                miner.mine_down()
+
+                -- TODO: Request chests if not enough.
+                if inventory.are_all_slots_full() then
+                    movement.move_back()
+                    movement.move_up()
+
+                    turtle.select(2)
+                    turtle.placeDown()
+                    inventory.drop_slots(3, 16, "down")
+
+                    wireless.pickup.request(manager_id, locator.get_pos())
+
+                    movement.move_forward()
+                    movement.move_down()
+                end
             end
 
             job.increment_row()

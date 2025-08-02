@@ -4,13 +4,16 @@ local errors = {
     NOT_FUEL = "not_fuel",
 
     BLOCKED = "blocked",
+    INVALID_DIRECTION = "invalid_direction",
+    NO_INVENTORY_DOWN = "no_inv_down",
 
     INV_FULL = "inv_full",
 
     wireless = {
-        NO_ACK = "no_ack",
-        COULD_NOT_ASSIGN = "could_not_assign",
-        NO_AVAILABLE_RUNNERS = "no_available_runners"
+        NO_ACK = "wireless:no_ack",
+        TIMEOUT = "wireless:timeout",
+        COULD_NOT_ASSIGN = "wireless:could_not_assign",
+        NO_AVAILABLE_RUNNERS = "wireless:no_available_runners",
     }
 }
 

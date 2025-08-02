@@ -1,15 +1,19 @@
-local errors = require("shared.errors")
-local resupply = require("wireless").resupply
+local wireless      = require("wireless")
 
-local fueler = {}
+local printer       = require("shared.printer")
+local inventory     = require("shared.inventory")
+local errors        = require("shared.errors")
+local locator       = require("shared.locator")
+
+local fueler        = {}
 
 local ACCEPTED_FUEL = {
     ["minecraft:coal"] = true
 }
 
-local function reason_to_error(reason)
+local function parse_error(reason)
     if reason == "Items not combustible" then return errors.NOT_FUEL end
-    if reason == "No items to combust" then return errors.NO_FUEL_STORED end
+    if reason == "No items to combust" then return errors.NO_FUEL end
 end
 
 local function get_next_empty_slot()
@@ -31,45 +35,37 @@ local function scan_for_fuel()
 end
 
 function fueler.refuel_from_inventory()
-    if turtle.getFuelLevel() > 0 then return true, nil end
-
-    if turtle.getSelectedSlot() ~= 1 then
-        turtle.select(1)
+    if turtle.getFuelLevel() > 0 then
+        return true
     end
 
-    local refueled, err = turtle.refuel(4)
+    turtle.select(1)
+    if turtle.refuel(4) then
+        return true
+    end
 
-    while not refueled and err do
-        err = reason_to_error(err)
+    local fuel_slot = scan_for_fuel()
+    if not fuel_slot then
+        return false, errors.NO_FUEL_STORED
+    end
 
-        if err == errors.NOT_FUEL then
-            turtle.select(1)
-
-            local empty_slot = get_next_empty_slot()
-
-            if not empty_slot then
-                -- TODO: Inventory full, can't move.
-            end
-
-            turtle.transferTo(empty_slot)
-
-            local fuel_slot = scan_for_fuel()
-
-            if not fuel_slot then
-                return refueled, errors.NO_FUEL_STORED
-            end
-
-            turtle.select(fuel_slot)
-            turtle.transferTo(1)
-            turtle.select(1)
-
-            refueled, err = turtle.refuel(4)
+    if turtle.getItemCount(1) > 0 then
+        local empty_slot = get_next_empty_slot()
+        if not empty_slot then
+            return false, errors.INV_FULL
         end
-
-        return refueled, errors.NO_FUEL_STORED
+        turtle.select(1)
+        turtle.transferTo(empty_slot)
     end
 
-    return true, nil
+    turtle.select(fuel_slot)
+    turtle.transferTo(1)
+    turtle.select(1)
+    if turtle.refuel(4) then
+        return true
+    else
+        return false, errors.NOT_FUEL
+    end
 end
 
 function fueler.handle_movement_result(ok, err, ctx)
@@ -81,13 +77,23 @@ function fueler.handle_movement_result(ok, err, ctx)
     end
 
     local manager_id = ctx.manager_id
-    local current_position = ctx.current_position
+    local current_position = locator.get_pos()
     local desired = { ["minecraft:coal"] = 64 }
 
-    if not manager_id or not current_position then
+    if not manager_id then
         return nil, errors.NO_FUEL
     end
-    -- TODO: Re-implement resupply
+
+    wireless.resupply.request(manager_id, current_position, desired)
+    local runner_id, job_id = wireless.resupply.await_arrival()
+
+    inventory.drop_slots(1, 1, "up")
+
+    wireless.resupply.signal_ready(runner_id, job_id)
+
+    wireless.resupply.await_done()
+
+    return "retry"
 end
 
 return fueler

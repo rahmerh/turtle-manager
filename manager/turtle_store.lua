@@ -35,22 +35,34 @@ function turtle_store.get_by_role(role)
     ensure_loaded()
 
     local result = {}
-    for _, turtle in pairs(turtles) do
+    for id, turtle in pairs(turtles) do
         if turtle.role == role then
-            table.insert(result, turtle)
+            result[id] = turtle
         end
     end
+
     return result
 end
 
 function turtle_store.patch(id, data)
     ensure_loaded()
 
+    local function deep_patch(dst, src)
+        for k, v in pairs(src) do
+            if type(v) == "table" and type(dst[k]) == "table" then
+                deep_patch(dst[k], v)
+            else
+                dst[k] = v
+            end
+        end
+    end
+
     local rec = turtles[id] or { id = id }
-    for k, v in pairs(data) do rec[k] = v end
+    deep_patch(rec, data)
     turtles[id] = rec
 
     save()
+    return rec
 end
 
 function turtle_store.upsert(id, data)
@@ -60,19 +72,9 @@ function turtle_store.upsert(id, data)
     save()
 end
 
-function turtle_store.detect_stale()
+function turtle_store.list()
     ensure_loaded()
-    local now = time.epoch_in_seconds()
-
-    for id, data in pairs(turtles) do
-        if now - data.last_seen >= 10 then
-            turtles[id].status = "Offline"
-        elseif now - data.last_seen >= 5 then
-            turtles[id].status = "Stale"
-        end
-    end
-
-    save()
+    return turtles
 end
 
 return turtle_store

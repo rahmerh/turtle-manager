@@ -1,5 +1,6 @@
 local locator = require("shared.locator")
 local errors = require("shared.errors")
+local miner = require("shared.miner")
 
 local mover = {}
 
@@ -63,24 +64,18 @@ local function move_on_axis(axis, amount, dig)
         local moved, err
         if direction == "up" then
             if dig then
-                while turtle.detectUp() do
-                    turtle.digUp()
-                end
+                miner.mine_up()
             end
 
             moved, err = mover.move_up()
         elseif direction == "down" then
             if dig then
-                while turtle.detectDown() do
-                    turtle.digDown()
-                end
+                miner.mine_down()
             end
             moved, err = mover.move_down()
         else
             if dig then
-                while turtle.detect() do
-                    turtle.dig()
-                end
+                miner.mine()
             end
 
             moved, err = mover.move_forward()

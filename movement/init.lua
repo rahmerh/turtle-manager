@@ -17,6 +17,31 @@ function M.move_to(x, y, z, ctx)
         local action = fueler.handle_movement_result(ok, err, ctx)
 
         if action == "retry" then
+            goto continue
+        end
+
+        attempts = attempts + 1
+        if attempts > retries then
+            return nil, "TEMP"
+        end
+
+        ::continue::
+    end
+end
+
+function M.move_forward(ctx)
+    local retries = (ctx and ctx.retries) or 5
+
+    local attempts = 0
+    while true do
+        local ok, err = mover.move_forward()
+        if ok then
+            return ok
+        end
+
+        local action = fueler.handle_movement_result(ok, err, ctx)
+
+        if action ~= "retry" then
             break
         end
 
@@ -27,12 +52,58 @@ function M.move_to(x, y, z, ctx)
     end
 end
 
-function M.move_forward(ctx)
+function M.move_back(ctx)
     local retries = (ctx and ctx.retries) or 5
 
     local attempts = 0
     while true do
-        local ok, err = mover.move_forward()
+        local ok, err = mover.move_back()
+        if ok then
+            return ok
+        end
+
+        local action = fueler.handle_movement_result(ok, err, ctx)
+
+        if action ~= "retry" then
+            break
+        end
+
+        attempts = attempts + 1
+        if attempts > retries then
+            return nil, "TEMP"
+        end
+    end
+end
+
+function M.move_up(ctx)
+    local retries = (ctx and ctx.retries) or 5
+
+    local attempts = 0
+    while true do
+        local ok, err = mover.move_up()
+        if ok then
+            return ok
+        end
+
+        local action = fueler.handle_movement_result(ok, err, ctx)
+
+        if action ~= "retry" then
+            break
+        end
+
+        attempts = attempts + 1
+        if attempts > retries then
+            return nil, "TEMP"
+        end
+    end
+end
+
+function M.move_down(ctx)
+    local retries = (ctx and ctx.retries) or 5
+
+    local attempts = 0
+    while true do
+        local ok, err = mover.move_down()
         if ok then
             return ok
         end

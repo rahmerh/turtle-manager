@@ -1,7 +1,4 @@
 local core = require("wireless._internal.core")
-local store = require("wireless._internal.turtle_store")
-
-local time = require("shared.time")
 
 local heartbeat = {}
 
@@ -27,20 +24,6 @@ function heartbeat.loop(receiver, interval, data_fn)
     end
     local function stop() running = false end
     return run, stop
-end
-
-function heartbeat.install_on(router)
-    router.register_handler(PROTOCOL, "heartbeat:beat", function(sender, msg)
-        local rec = store.get(sender)
-        if not rec then return false end
-
-        store.patch(sender, {
-            last_seen = time.epoch_in_seconds(),
-            status    = msg.status,
-            metadata  = msg.data or rec.metadata,
-        })
-        return true
-    end)
 end
 
 return heartbeat

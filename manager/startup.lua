@@ -1,17 +1,92 @@
-local printer = require("shared.printer")
+local turtle_store = require("turtle_store")
 local wireless = require("wireless")
 
+local printer = require("shared.printer")
+local time = require("shared.time")
+local display = require("shared.display")
+
 local handlers = {
-    request_pickup = require("handlers.request_pickup"),
-    --     request_resupply = require("handlers.request_resupply"),
+    dispatch_pickup = require("handlers.dispatch_pickup"),
+    dispatch_resupply = require("handlers.dispatch_resupply"),
 }
 
-printer.print_success("Manager online.")
+printer.print_info("Booting manager #" .. os.getComputerID())
 
 wireless.open()
 wireless.discovery.host("manager")
 
-wireless.registry.install_on(wireless.router)
-wireless.heartbeat.install_on(wireless.router)
+wireless.router.register_handler(wireless.protocols.telemetry, "heartbeat:beat", function(sender, msg)
+    local turtle = turtle_store.get(sender)
 
-wireless.router.loop()
+    if not turtle then return false end
+
+    local patched = turtle_store.patch(sender, {
+        last_seen = time.epoch_in_seconds(),
+        status    = msg.status,
+        metadata  = msg.data or turtle.metadata,
+    })
+
+    local lines = display.status_lines_for(sender, patched)
+    display.add_or_update_block(sender, lines, "normal")
+
+    return true
+end)
+
+wireless.router.register_handler(wireless.protocols.rpc, "registry:register", function(sender, m)
+    wireless.ack(sender, m)
+
+    local data = {
+        role = m.data.role,
+    }
+
+    turtle_store.upsert(sender, data)
+
+    printer.print_info("New turtle registered: #" .. sender .. " '" .. data.role .. "'")
+
+    return true
+end)
+
+wireless.router.register_handler(wireless.protocols.rpc, "pickup:request", handlers.dispatch_pickup)
+wireless.router.register_handler(wireless.protocols.rpc, "resupply:request", handlers.dispatch_resupply)
+
+local function render_display()
+    while true do
+        display.render()
+        sleep(1)
+    end
+end
+
+local function mark_stale()
+    while true do
+        local turtles = turtle_store.list()
+        local now = time.epoch_in_seconds()
+
+        for k, v in pairs(turtles) do
+            if now - v.last_seen >= 10 then
+                local patched = turtle_store.patch(k, {
+                    metadata = {
+                        status = "Offline"
+                    }
+                })
+
+                local lines = display.status_lines_for(k, patched)
+                display.add_or_update_block(k, lines, "err")
+            elseif now - v.last_seen >= 5 then
+                local patched = turtle_store.patch(k, {
+                    metadata = {
+                        status = "Stale"
+                    }
+                })
+
+                local lines = display.status_lines_for(k, patched)
+                display.add_or_update_block(k, lines, "warn")
+            end
+        end
+
+        sleep(1)
+    end
+end
+
+printer.print_success("Manager online.")
+
+parallel.waitForAny(wireless.router.loop, render_display, mark_stale)
