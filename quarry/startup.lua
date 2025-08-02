@@ -36,6 +36,16 @@ if next(needed_supplies) ~= nil then
     local runner_id, job_id = wireless.resupply.await_arrival()
     wireless.resupply.signal_ready(runner_id, job_id)
     wireless.resupply.await_done()
+
+    local coal_slot = inventory.find_item("minecraft:coal")
+    if coal_slot ~= 1 then
+        inventory.move_to_slot(coal_slot, 1)
+    end
+
+    local chest_slot = inventory.find_item("minecraft:chest")
+    if chest_slot ~= 2 then
+        inventory.move_to_slot(chest_slot, 2)
+    end
 end
 
 wireless.registry.register_self_as(manager_id, "quarry")
@@ -117,6 +127,22 @@ local function main()
 
                 -- TODO: Request chests if not enough.
                 if inventory.are_all_slots_full() then
+                    local has_chests = inventory.does_slot_contain_item(2, "minecraft:chest")
+
+                    if not has_chests then
+                        local desired = { ["minecraft:chest"] = 64 }
+                        wireless.resupply.request(manager_id, locator.get_pos(), desired)
+                        local runner_id, job_id = wireless.resupply.await_arrival()
+                        inventory.drop_slots(2, 2, "up")
+                        wireless.resupply.signal_ready(runner_id, job_id)
+                        wireless.resupply.await_done()
+
+                        local chest_slot = inventory.find_item("minecraft:chest")
+                        if chest_slot ~= 2 then
+                            inventory.move_to_slot(chest_slot, 2)
+                        end
+                    end
+
                     movement.move_back()
                     movement.move_up()
 

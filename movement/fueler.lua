@@ -90,8 +90,16 @@ function fueler.handle_movement_result(ok, err, ctx)
     inventory.drop_slots(1, 1, "up")
 
     wireless.resupply.signal_ready(runner_id, job_id)
-
     wireless.resupply.await_done()
+
+    local slot = inventory.find_item("minecraft:coal")
+    if slot ~= 1 then
+        local moved, moved_err = inventory.move_to_slot(slot, 1, true)
+
+        if not moved and moved_err then
+            return moved, moved_err
+        end
+    end
 
     return "retry"
 end

@@ -100,4 +100,50 @@ function inventory.is_item_in_slot(item, slot)
     return result
 end
 
+function inventory.find_item(item)
+    for i = 1, 16 do
+        local info = turtle.getItemDetail(i)
+
+        if info and info.name == item then
+            return i, info.count
+        end
+    end
+end
+
+function inventory.move_to_slot(from, to, swap)
+    swap = swap or true
+
+    local from_info = turtle.getItemDetail(from)
+    if not from_info then
+        return nil, errors.SLOT_EMPTY
+    end
+
+    local to_info = turtle.getItemDetail(to)
+
+    local selected = turtle.getSelectedSlot()
+    if not to_info then
+        turtle.select(from)
+        turtle.transferTo(to)
+    elseif to_info and swap then
+        local free_slot = first_empty_slot()
+
+        if not free_slot then
+            return nil, errors.INV_FULL
+        end
+
+        turtle.select(to)
+        turtle.transferTo(free_slot)
+
+        turtle.select(from)
+        turtle.transferTo(to)
+
+        turtle.select(free_slot)
+        turtle.transferTo(from)
+    else
+        return nil, errors.SLOT_NOT_EMPTY
+    end
+
+    turtle.select(selected)
+end
+
 return inventory

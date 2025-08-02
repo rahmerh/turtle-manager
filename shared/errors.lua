@@ -8,6 +8,8 @@ local errors = {
     NO_INVENTORY_DOWN = "no_inv_down",
 
     INV_FULL = "inv_full",
+    SLOT_EMPTY = "slot_empty",
+    SLOT_NOT_EMPTY = "slot_not_empty",
 
     wireless = {
         NO_ACK = "wireless:no_ack",
