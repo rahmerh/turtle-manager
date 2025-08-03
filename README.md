@@ -2,8 +2,6 @@
 
 Collection of my own scripts for working with CC: Tweaked's turtles. Includes generic pathfinding, dashboards and the works.
 
-""Pathfinding"" is very generious, the turtle is very stupid and through some brute force and randomness it tries to claw it's way out of a stuck position. When using this script, please be nice and put him on the surface, or at least in a room with an easy vertical path out. He'll have around 100 attempts to get unstuck before giving up.
-
 ## Getting started
 
 First get the bootstrap script onto the turtle or computer:
@@ -40,7 +38,7 @@ The turtle doesn't go back up to the surface to unload or to resupply, it will s
 
 A runner is a very general helper role which assists others. When a quarry turtle sends a pickup request, a runner will come and retrieve it. When a turtle is out of fuel or chests, a runner will go and rescue it.
 
-First you need to run `prepare` and enter the correct values. The resupply chest requires some additional setup. Due to turtle limitations, it can't directly suck up a specified item, which is why it requires an additional "buffer" chest on top. This means the supply chest's setup is like this:
+First you need to run `prepare` and enter the correct values. The resupply chest requires some additional setup. Due to turtle limitations, it can't directly suck up a specified item, which is why it requires an additional "buffer" chest on top. This means the supply chest's setup should look like this:
 
 ```
 [buffer chest]
