@@ -1,15 +1,4 @@
-local miner = require("shared.miner")
-
 local quarry = {}
-
-local FORBIDDEN = {
-    ["minecraft:bedrock"] = true,
-    ["minecraft:end_portal"] = true,
-    ["minecraft:end_portal_frame"] = true,
-    ["minecraft:barrier"] = true,
-    ["computercraft:turtle_advanced"] = true,
-    ["computercraft:turtle_normal"] = true,
-}
 
 function quarry.get_row_direction_for_layer(width, layer)
     if width % 2 == 1 then
@@ -68,24 +57,6 @@ function quarry.starting_location_for_row(layer, row, boundaries)
         y = target_y,
         z = target_z
     }
-end
-
-function quarry.mine_up()
-    local up_ok, up_metadata = turtle.inspectUp()
-    if up_ok and up_metadata and not FORBIDDEN[up_metadata.name] then
-        while turtle.detectUp() do
-            turtle.digUp()
-        end
-    end
-end
-
-function quarry.mine_down()
-    local down_ok, down_metadata = turtle.inspectDown()
-    if down_ok and down_metadata and not FORBIDDEN[down_metadata.name] then
-        while turtle.detectDown() do
-            turtle.digDown()
-        end
-    end
 end
 
 return quarry

@@ -1,11 +1,12 @@
-local printer = require("shared.printer")
-local inventory = require("shared.inventory")
-local miner = require("shared.miner")
-
 local job = require("job")
 local quarry = require("quarry")
 local wireless = require("wireless")
 local movement = require("movement")
+
+local printer = require("shared.printer")
+local inventory = require("shared.inventory")
+local miner = require("shared.miner")
+local list = require("shared.list")
 
 printer.print_info("Booting quarry #" .. os.getComputerID())
 
@@ -57,6 +58,40 @@ local start_heartbeat, _ = wireless.heartbeat.loop(manager_id, 1, function()
         current_location = movement.get_current_coordinates()
     }
 end)
+
+local function detect_and_handle_fluids()
+    local fluids = {
+        "minecraft:water",
+        "minecraft:lava"
+    }
+
+    local selected = turtle.getSelectedSlot()
+    local cobblestone = inventory.find_item("minecraft:cobblestone")
+
+    local detected, info = turtle.inspect()
+    if detected and list.contains(fluids, info.name) then
+        turtle.select(cobblestone)
+        turtle.place()
+        miner.mine()
+        turtle.select(selected)
+    end
+
+    local up_detected, up_info = turtle.inspectUp()
+    if up_detected and list.contains(fluids, up_info.name) then
+        turtle.select(cobblestone)
+        turtle.placeUp()
+        miner.mine_up()
+        turtle.select(selected)
+    end
+
+    local down_detected, down_info = turtle.inspectDown()
+    if down_detected and list.contains(fluids, down_info.name) then
+        turtle.select(cobblestone)
+        turtle.placeDown()
+        miner.mine_down()
+        turtle.select(selected)
+    end
+end
 
 local function main()
     local boundaries = job.get_boundaries()
@@ -112,6 +147,8 @@ local function main()
             miner.mine_down()
 
             for _ = 1, length do
+                detect_and_handle_fluids()
+
                 local success, err = miner.mine()
 
                 if not success and err then

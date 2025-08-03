@@ -80,9 +80,7 @@ function fueler.handle_movement_result(ok, err, ctx)
 
     wireless.resupply.request(manager_id, current_coordinates, desired)
     local runner_id, job_id = wireless.resupply.await_arrival()
-
     inventory.drop_slots(1, 1, "up")
-
     wireless.resupply.signal_ready(runner_id, job_id)
     wireless.resupply.await_done()
 
