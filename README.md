@@ -12,10 +12,11 @@ First get the bootstrap script onto the turtle or computer:
 wget https://raw.githubusercontent.com/rahmerh/turtle-manager/refs/heads/main/bootstrap.lua
 ```
 
-Next bootstrap the device, you can select from the following roles:
+Next bootstrap the turtle/computer, you can select from the following roles:
 
 - Manager `bootstrap manager`
 - Quarry `bootstrap quarry`
+- Runner `bootstrap runner`
 
 ## Usage
 
@@ -27,24 +28,29 @@ If you want to see the current turtles, attach a monitor (minimum 2x2).
 
 ### Quarry
 
-First you have to prepare the job:
+First you have to prepare the job by running `prepare` and entering the quarry dimensions.
 
-```sh
-prepare <start_pos_x> <start_pos_y> <start_pos_z> <width> <depth>
-```
+This will create a file called `job.conf` which contains the quarry's boundaries and progress. By default a quarry is resumable but this and other data can be edited manually.
 
-This will create a file called `job-file` which contains the quarry's boundaries and progress. By default a quarry is resumable but this and other data can be edited manually.
+You can start the quarry by rebooting the turtle.
 
-When the job is created you can then simply start the quarry with: `quarry`. When the turtle restarts (because of starting a new game or it gets unloaded/loaded) it will also resume the quarry by running that command.
-
-The turtle doesn't go back up to the surface to unload, it will send a pickup command to the manager which will send a runner to retrieve the items. This saves both fuel and time of the quarrying turtle.
+The turtle doesn't go back up to the surface to unload or to resupply, it will send a command to the manager which will send a runner to retrieve the items or provide requested resources.
 
 ### Runner
 
 A runner is a very general helper role which assists others. When a quarry turtle sends a pickup request, a runner will come and retrieve it. When a turtle is out of fuel or chests, a runner will go and rescue it.
 
+First you need to run `prepare` and enter the correct values. The resupply chest requires some additional setup. Due to turtle limitations, it can't directly suck up a specified item, which is why it requires an additional "buffer" chest on top. This means the supply chest's setup is like this:
+
+```
+[buffer chest]
+[air]
+[supply chest]
+```
+
+The turtles only request coal and chests, so make sure to always have these supplies in your supply chest. Personal recommendation is to either have an AE2 interface which always has 64 coal and chests or use another mod to always have those items in the supply chest.
+
 ## TODO
 
 - Quarry fluids handling
 - Display interactivity
-- Turtle maintain own gps
