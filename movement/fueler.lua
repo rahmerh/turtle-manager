@@ -1,20 +1,14 @@
 local wireless      = require("wireless")
+local locator       = require("movement.locator")
 
-local printer       = require("shared.printer")
 local inventory     = require("shared.inventory")
 local errors        = require("shared.errors")
-local locator       = require("shared.locator")
 
 local fueler        = {}
 
 local ACCEPTED_FUEL = {
     ["minecraft:coal"] = true
 }
-
-local function parse_error(reason)
-    if reason == "Items not combustible" then return errors.NOT_FUEL end
-    if reason == "No items to combust" then return errors.NO_FUEL end
-end
 
 local function get_next_empty_slot()
     for i = 1, 16 do
@@ -77,14 +71,14 @@ function fueler.handle_movement_result(ok, err, ctx)
     end
 
     local manager_id = ctx.manager_id
-    local current_position = locator.get_pos()
+    local current_coordinates = locator.get_current_coordinates()
     local desired = { ["minecraft:coal"] = 64 }
 
     if not manager_id then
         return nil, errors.NO_FUEL
     end
 
-    wireless.resupply.request(manager_id, current_position, desired)
+    wireless.resupply.request(manager_id, current_coordinates, desired)
     local runner_id, job_id = wireless.resupply.await_arrival()
 
     inventory.drop_slots(1, 1, "up")

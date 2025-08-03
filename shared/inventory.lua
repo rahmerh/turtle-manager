@@ -19,7 +19,7 @@ end
 function inventory.pull_items_from_down(item, amount)
     local empty_slot = first_empty_slot()
 
-    if not first_empty_slot then
+    if not empty_slot then
         return nil, errors.INV_FULL
     end
 
@@ -47,16 +47,6 @@ function inventory.pull_items_from_down(item, amount)
     turtle.select(1)
 
     return empty_slot, nil
-end
-
-function inventory.does_slot_contain_item(slot, item)
-    local info = turtle.getItemDetail(slot)
-
-    if info and info.name == item then
-        return true
-    else
-        return false
-    end
 end
 
 function inventory.are_all_slots_full()
@@ -110,6 +100,10 @@ function inventory.find_item(item)
     end
 end
 
+function inventory.details_from_slot(slot)
+    return turtle.getItemDetail(slot)
+end
+
 function inventory.move_to_slot(from, to, swap)
     swap = swap or true
 
@@ -142,6 +136,20 @@ function inventory.move_to_slot(from, to, swap)
     else
         return nil, errors.SLOT_NOT_EMPTY
     end
+
+    turtle.select(selected)
+end
+
+function inventory.merge_into_slot(from, to)
+    local selected = turtle.getSelectedSlot()
+
+    local from_info = turtle.getItemDetail(from)
+    if not from_info then
+        return nil, errors.SLOT_EMPTY
+    end
+
+    turtle.select(from)
+    turtle.transferTo(to)
 
     turtle.select(selected)
 end

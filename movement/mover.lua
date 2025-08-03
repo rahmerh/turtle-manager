@@ -1,4 +1,5 @@
-local locator = require("shared.locator")
+local locator = require("movement.locator")
+
 local errors = require("shared.errors")
 local miner = require("shared.miner")
 
@@ -26,7 +27,7 @@ local ORIENTATION_TO_DIRECTION_MAP = {
 }
 local turtle_state = {}
 
-local function reason_to_error(reason)
+local function parse_error(reason)
     if reason == "Out of fuel" then return errors.NO_FUEL end
     if reason == "Movement obstructed" then return errors.BLOCKED end
 end
@@ -112,9 +113,13 @@ mover.determine_orientation = function()
         return turtle_state.orientation
     end
 
-    local x1, _, z1 = gps.locate(2)
+    local coordinates_1, err_1 = locator.get_current_coordinates(true)
+    if not coordinates_1 then
+        return coordinates_1, err_1
+    end
 
-    local moved, err = mover.move_forward()
+    local moved, err = turtle.forward()
+    err = parse_error(err)
     if not moved and err == errors.NO_FUEL then
         return moved, err
     end
@@ -122,11 +127,13 @@ mover.determine_orientation = function()
     local unstuck_turns = 0
     while not moved do
         unstuck_turns = unstuck_turns + 1
-        turtle.turnLeft() -- This has to be the native turtle turn, will cause recursion otherwise.
-        moved, err = mover.move_forward()
+        turtle.turnLeft()
+        moved, err = turtle.forward()
 
         if unstuck_turns > 3 then
-            local moved_up, up_err = mover.move_up()
+            local moved_up, up_err = turtle.up()
+            up_err = parse_error(up_err)
+
             if not moved_up and up_err == errors.BLOCKED then
                 return nil, "Unable to determine orientation"
             end
@@ -135,21 +142,26 @@ mover.determine_orientation = function()
         end
     end
 
-    local x2, _, z2 = gps.locate(2)
+    local coordinates_2, err_2 = locator.get_current_coordinates(true)
+    if not coordinates_2 then
+        return coordinates_2, err_2
+    end
 
-    local moved_back, moved_back_err = mover.move_back()
+    local moved_back, moved_back_err = turtle.back()
     if not moved_back and moved_back_err then
         return moved, err
     end
 
+    locator.get_current_coordinates(true)
+
     local direction
-    if x2 > x1 then
+    if coordinates_2.x > coordinates_1.x then
         direction = "east"
-    elseif x2 < x1 then
+    elseif coordinates_2.x < coordinates_1.x then
         direction = "west"
-    elseif z2 > z1 then
+    elseif coordinates_2.z > coordinates_1.z then
         direction = "south"
-    elseif z2 < z1 then
+    elseif coordinates_2.z < coordinates_1.z then
         direction = "north"
     else
         direction = "unknown"
@@ -195,7 +207,10 @@ mover.move_back = function()
     local ok, err = turtle.back()
 
     if not ok and err then
-        err = reason_to_error(err)
+        err = parse_error(err)
+    else
+        local direction = mover.determine_orientation()
+        locator.moved_in_direction(1, mover.opposite_orientation_of(direction))
     end
 
     return ok, err
@@ -205,7 +220,10 @@ mover.move_forward = function()
     local ok, err = turtle.forward()
 
     if not ok and err then
-        err = reason_to_error(err)
+        err = parse_error(err)
+    else
+        local direction = mover.determine_orientation()
+        locator.moved_in_direction(1, direction)
     end
 
     return ok, err
@@ -215,7 +233,9 @@ mover.move_up = function()
     local ok, err = turtle.up()
 
     if not ok and err then
-        err = reason_to_error(err)
+        err = parse_error(err)
+    else
+        locator.moved_in_direction(1, "up")
     end
 
     return ok, err
@@ -225,7 +245,9 @@ mover.move_down = function()
     local ok, err = turtle.down()
 
     if not ok and err then
-        err = reason_to_error(err)
+        err = parse_error(err)
+    else
+        locator.moved_in_direction(1, "down")
     end
 
     return ok, err
@@ -236,7 +258,7 @@ mover.move_to = function(x, y, z, dig)
 
     local attempts = 0
     while attempts < 50 do
-        local pos = locator.get_pos()
+        local pos = locator.get_current_coordinates()
         local delta = {
             x = x - pos.x,
             y = y - pos.y,
@@ -262,6 +284,18 @@ mover.move_to = function(x, y, z, dig)
                 elseif not moved and err == errors.NO_FUEL then
                     return moved, err
                 end
+            end
+        end
+
+        -- Try some unstuck manouvers
+        if not moved and attempts >= 5 then
+            local hopped, hopped_err = mover.move_up()
+            if not hopped and hopped_err ~= errors.NO_FUEL then
+                hopped, hopped_err = mover.move_down()
+            end
+
+            if hopped then
+                attempts = 0
             end
         end
 

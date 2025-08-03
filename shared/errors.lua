@@ -6,6 +6,7 @@ local errors = {
     BLOCKED = "blocked",
     INVALID_DIRECTION = "invalid_direction",
     NO_INVENTORY_DOWN = "no_inv_down",
+    NO_GPS = "no_gps",
 
     INV_FULL = "inv_full",
     SLOT_EMPTY = "slot_empty",

@@ -1,7 +1,9 @@
 local task_store = require("task_store")
 local wireless = require("wireless")
+local movement = require("movement")
 
 local printer = require("shared.printer")
+local inventory = require("shared.inventory")
 
 printer.print_info("Booting runner #" .. os.getComputerID())
 
@@ -35,7 +37,8 @@ wireless.registry.register_self_as(manager_id, "runner")
 local start_heartbeat, _ = wireless.heartbeat.loop(manager_id, 1, function()
     return {
         status = status,
-        queued_tasks = queue:size()
+        queued_tasks = queue:size(),
+        current_location = movement.get_current_coordinates()
     }
 end)
 
@@ -58,6 +61,28 @@ end
 
 local function main()
     while true do
+        local fuel = inventory.details_from_slot(1)
+        if not fuel then
+            printer.print_info("Requesting supplies...")
+            local desired = { ["minecraft:coal"] = 64 }
+            wireless.resupply.request(manager_id, movement.get_current_coordinates(), desired)
+            local runner_id, job_id = wireless.resupply.await_arrival()
+            wireless.resupply.signal_ready(runner_id, job_id)
+            wireless.resupply.await_done()
+        elseif fuel.count < 16 then
+            printer.print_info("Refueling self...")
+            movement.move_to(
+                config.supply_chest_pos.x,
+                config.supply_chest_pos.y + 1,
+                config.supply_chest_pos.z)
+            local slot = inventory.pull_items_from_down("minecraft:coal", 64 - fuel.count)
+            inventory.merge_into_slot(slot, 1)
+            movement.move_to(
+                config.unloading_chest_pos.x,
+                config.unloading_chest_pos.y + 1,
+                config.unloading_chest_pos.z)
+        end
+
         local task = queue:peek()
 
         if not task then

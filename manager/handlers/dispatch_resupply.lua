@@ -4,15 +4,22 @@ local wireless = require("wireless")
 local printer = require("shared.printer")
 local errors = require("shared.errors")
 
-local function find_least_queued(turtles)
+local function find_other_least_queued(turtles, sender)
     local result_id, result
 
     for id, t in pairs(turtles) do
-        local amount_of_tasks = tonumber(t.queued_tasks) or 0
-        if not result or amount_of_tasks < result.queued_tasks then
+        if id == sender then
+            goto skip
+        end
+
+        local amount_of_tasks = t.queued_tasks or 0
+
+        if not result or amount_of_tasks < (result.queued_tasks or 0) then
             result = t
             result_id = id
         end
+
+        ::skip::
     end
 
     return result_id, result
@@ -34,7 +41,7 @@ return function(sender, msg)
                 goto continue
             end
 
-            if runner.metadata.status == "Idle" then
+            if sender ~= id and runner.metadata.status == "Idle" then
                 local payload = {
                     target    = msg.data.target,
                     desired   = msg.data.desired,
@@ -57,7 +64,7 @@ return function(sender, msg)
 
         -- All runners are busy, find the one with the least amount of tasks and queue it.
         if not task_is_received then
-            local id, runner = find_least_queued(runners)
+            local id, runner = find_other_least_queued(runners, sender)
 
             if not runner then
                 return nil, errors.wireless.NO_AVAILABLE_RUNNERS

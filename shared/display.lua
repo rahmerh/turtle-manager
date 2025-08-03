@@ -141,7 +141,11 @@ function display.status_lines_for(id, turtle)
             ("ID: %s (%s)"):format(id, turtle.role),
             ("Status: %s"):format(turtle.metadata.status),
             ("Layer: %d Row: %d"):format(turtle.metadata.current_layer + 1, turtle.metadata.current_row + 1),
-            ("Last seen at: %s"):format(os.date("%H:%M:%S", turtle.last_seen))
+            ("Last seen at: %s"):format(os.date("%H:%M:%S", turtle.last_seen)),
+            ("Location: %d %d %d"):format(
+                turtle.metadata.current_location.x,
+                turtle.metadata.current_location.y,
+                turtle.metadata.current_location.z)
         }
     elseif turtle.role == "runner" then
         local runner_is_running = string.find(turtle.metadata.status, "Running", 1, true)
@@ -149,7 +153,11 @@ function display.status_lines_for(id, turtle)
             ("ID: %s (%s)"):format(id, turtle.role),
             ("Status: %s"):format(turtle.metadata.status),
             ("Tasks: %d out of %s"):format((runner_is_running) and 1 or 0, turtle.metadata.queued_tasks),
-            ("Last seen at: %s"):format(os.date("%H:%M:%S", turtle.last_seen))
+            ("Last seen at: %s"):format(os.date("%H:%M:%S", turtle.last_seen)),
+            ("Location: %d %d %d"):format(
+                turtle.metadata.current_location.x,
+                turtle.metadata.current_location.y,
+                turtle.metadata.current_location.z)
         }
     end
 

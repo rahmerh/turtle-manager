@@ -1,6 +1,5 @@
 local printer = require("shared.printer")
 local inventory = require("shared.inventory")
-local locator = require("shared.locator")
 local miner = require("shared.miner")
 
 local job = require("job")
@@ -32,7 +31,7 @@ if not inventory.is_item_in_slot("minecraft:chest", 2) then
 end
 
 if next(needed_supplies) ~= nil then
-    wireless.resupply.request(manager_id, locator.get_pos(), needed_supplies)
+    wireless.resupply.request(manager_id, movement.get_current_coordinates(), needed_supplies)
     local runner_id, job_id = wireless.resupply.await_arrival()
     wireless.resupply.signal_ready(runner_id, job_id)
     wireless.resupply.await_done()
@@ -54,7 +53,8 @@ local start_heartbeat, _ = wireless.heartbeat.loop(manager_id, 1, function()
     return {
         status = job.status(),
         current_layer = job.current_layer(),
-        current_row = job.current_row()
+        current_row = job.current_row(),
+        current_location = movement.get_current_coordinates()
     }
 end)
 
@@ -119,7 +119,7 @@ local function main()
                     return
                 end
 
-                movement.move_forward()
+                movement.move_forward(movement_context)
 
                 -- Ignore errors, we can move forward even with up/down blocked.
                 miner.mine_up()
@@ -127,11 +127,11 @@ local function main()
 
                 -- TODO: Request chests if not enough.
                 if inventory.are_all_slots_full() then
-                    local has_chests = inventory.does_slot_contain_item(2, "minecraft:chest")
+                    local has_chests = inventory.is_item_in_slot("minecraft:chest", 2)
 
                     if not has_chests then
                         local desired = { ["minecraft:chest"] = 64 }
-                        wireless.resupply.request(manager_id, locator.get_pos(), desired)
+                        wireless.resupply.request(manager_id, movement.get_current_coordinates(), desired)
                         local runner_id, job_id = wireless.resupply.await_arrival()
                         inventory.drop_slots(2, 2, "up")
                         wireless.resupply.signal_ready(runner_id, job_id)
@@ -150,7 +150,7 @@ local function main()
                     turtle.placeDown()
                     inventory.drop_slots(3, 16, "down")
 
-                    wireless.pickup.request(manager_id, locator.get_pos())
+                    wireless.pickup.request(manager_id, movement.get_current_coordinates())
 
                     movement.move_forward()
                     movement.move_down()

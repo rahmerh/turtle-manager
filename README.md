@@ -46,5 +46,5 @@ A runner is a very general helper role which assists others. When a quarry turtl
 ## TODO
 
 - Quarry fluids handling
-- Runner refuel itself
 - Display interactivity
+- Turtle maintain own gps
