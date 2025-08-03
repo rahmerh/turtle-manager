@@ -13,22 +13,22 @@ local REF     = "main"
 -- ---- Layout per role ----
 local LAYOUTS = {
     quarry = {
-        { src = "quarry",   dest = "",         flatten = true },
-        { src = "shared",   dest = "shared",   flatten = false },
-        { src = "wireless", dest = "wireless", flatten = false },
-        { src = "movement", dest = "movement", flatten = false },
+        { src = "quarry",   dest = "", },
+        { src = "shared",   dest = "shared", },
+        { src = "wireless", dest = "wireless", },
+        { src = "movement", dest = "movement", },
     },
     runner = {
-        { src = "runner",   dest = "",         flatten = true },
-        { src = "shared",   dest = "shared",   flatten = false },
-        { src = "wireless", dest = "wireless", flatten = false },
-        { src = "movement", dest = "movement", flatten = false },
+        { src = "runner",   dest = "", },
+        { src = "shared",   dest = "shared", },
+        { src = "wireless", dest = "wireless", },
+        { src = "movement", dest = "movement", },
     },
     manager = {
-        { src = "manager",  dest = "",         flatten = true },
-        { src = "shared",   dest = "shared",   flatten = false },
-        { src = "wireless", dest = "wireless", flatten = false },
-        { src = "movement", dest = "movement", flatten = false },
+        { src = "manager",  dest = "", },
+        { src = "shared",   dest = "shared", },
+        { src = "wireless", dest = "wireless", },
+        { src = "movement", dest = "movement", },
     },
 }
 
@@ -66,7 +66,7 @@ local function download_file(download_url, dest)
 end
 
 -- ---- Sync logic ----
-local function sync_tree(src_root, dest_root, flatten)
+local function sync_tree(src_root, dest_root)
     local queue = { src_root }
     while #queue > 0 do
         local path = table.remove(queue)
@@ -76,25 +76,13 @@ local function sync_tree(src_root, dest_root, flatten)
         else
             for _, e in ipairs(entries) do
                 if e.type == "file" then
-                    -- dest path: flatten removes the leading src_root segment
-                    local rel
-                    if flatten then
-                        -- keep only the file name when flattening
-                        rel = e.name
-                    else
-                        rel = e.path:sub(#src_root + 2) -- strip "src_root/" prefix
-                    end
+                    local rel = e.path:sub(#src_root + 2) -- strip "src_root/" prefix
                     local dest = dest_root ~= "" and fs.combine(dest_root, rel) or rel
                     print(("Downloading %s -> %s"):format(e.path, dest))
                     local ok, derr = download_file(e.download_url, dest)
                     if not ok then print("  failed: " .. tostring(derr)) end
                 elseif e.type == "dir" then
-                    if flatten then
-                        -- still recurse, but keep flattening (everything dumped into dest_root)
-                        table.insert(queue, e.path)
-                    else
-                        table.insert(queue, e.path)
-                    end
+                    table.insert(queue, e.path)
                 end
             end
         end
@@ -110,7 +98,7 @@ for _, m in ipairs(layout) do
 end
 
 for _, m in ipairs(layout) do
-    sync_tree(m.src, m.dest, m.flatten)
+    sync_tree(m.src, m.dest)
 end
 
 shell.run("set motd.enable false")
