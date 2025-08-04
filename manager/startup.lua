@@ -46,11 +46,9 @@ end)
 wireless.router.register_handler(wireless.protocols.rpc, "pickup:request", handlers.dispatch_pickup)
 wireless.router.register_handler(wireless.protocols.rpc, "resupply:request", handlers.dispatch_resupply)
 
-local function render_display()
-    while true do
-        display.render()
-        sleep(1)
-    end
+local monitor = peripheral.find("monitor")
+if monitor then
+    display.set_monitor(monitor)
 end
 
 local function mark_stale()
@@ -80,4 +78,4 @@ end
 
 printer.print_success("Manager online.")
 
-parallel.waitForAny(wireless.router.loop, render_display, mark_stale)
+parallel.waitForAny(wireless.router.loop, display.loop, mark_stale)

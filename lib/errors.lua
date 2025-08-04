@@ -14,6 +14,9 @@ local errors = {
     SLOT_EMPTY = "slot_empty",
     SLOT_NOT_EMPTY = "slot_not_empty",
 
+    NO_MONITOR_ATTACHED = "no_monitor_attached",
+    INVALID_MONITOR = "invalid_monitor",
+
     wireless = {
         NO_ACK = "wireless:no_ack",
         TIMEOUT = "wireless:timeout",
