@@ -2,6 +2,7 @@ local locator = require("movement.locator")
 
 local errors = require("shared.errors")
 local miner = require("shared.miner")
+local time = require("shared.time")
 
 local mover = {}
 
@@ -84,8 +85,12 @@ local function move_on_axis(axis, amount, dig)
 
         if not moved and err == errors.NO_FUEL then
             return moved, err
+        elseif not moved then
+            return moved, errors.BLOCKED
         end
     end
+
+    return true
 end
 
 mover.turn_left = function()
@@ -259,6 +264,11 @@ mover.move_to = function(x, y, z, dig)
     local attempts = 0
     while attempts < 50 do
         local pos = locator.get_current_coordinates()
+
+        if not pos then
+            return nil, errors.NO_GPS
+        end
+
         local delta = {
             x = x - pos.x,
             y = y - pos.y,
@@ -279,9 +289,7 @@ mover.move_to = function(x, y, z, dig)
             if value ~= 0 then
                 moved, err = move_on_axis(axis, value, dig)
 
-                if moved then
-                    break
-                elseif not moved and err == errors.NO_FUEL then
+                if err == errors.NO_FUEL then
                     return moved, err
                 end
             end
@@ -289,17 +297,17 @@ mover.move_to = function(x, y, z, dig)
 
         -- Try some unstuck manouvers
         if not moved and attempts >= 5 then
-            while not turtle.detect() do
+            while turtle.detect() do
                 mover.move_up()
             end
 
             attempts = 0
         end
 
-        if not moved then
-            attempts = attempts + 1
-        else
+        if moved then
             attempts = 0
+        else
+            attempts = attempts + 1
         end
     end
 end

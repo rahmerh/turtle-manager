@@ -172,6 +172,7 @@ local function main()
         job.next_layer()
     end
 
+    printer.print_success("Quarry done.")
     job.complete()
 end
 
