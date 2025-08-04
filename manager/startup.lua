@@ -1,9 +1,9 @@
 local turtle_store = require("turtle_store")
 local wireless = require("wireless")
+local display = require("display")
 
-local printer = require("shared.printer")
-local time = require("shared.time")
-local display = require("shared.display")
+local printer = require("lib.printer")
+local time = require("lib.time")
 
 local handlers = {
     dispatch_pickup = require("handlers.dispatch_pickup"),
@@ -25,9 +25,6 @@ wireless.router.register_handler(wireless.protocols.telemetry, "heartbeat:beat",
         status    = msg.status,
         metadata  = msg.data or turtle.metadata,
     })
-
-    local lines = display.status_lines_for(sender, patched)
-    display.add_or_update_block(sender, lines, "normal")
 
     return true
 end)
@@ -68,18 +65,12 @@ local function mark_stale()
                         status = "Offline"
                     }
                 })
-
-                local lines = display.status_lines_for(k, patched)
-                display.add_or_update_block(k, lines, "err")
             elseif now - v.last_seen >= 5 then
                 local patched = turtle_store.patch(k, {
                     metadata = {
                         status = "Stale"
                     }
                 })
-
-                local lines = display.status_lines_for(k, patched)
-                display.add_or_update_block(k, lines, "warn")
             end
         end
 

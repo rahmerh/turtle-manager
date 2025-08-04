@@ -2,8 +2,8 @@ local task_store = require("task_store")
 local wireless = require("wireless")
 local movement = require("movement")
 
-local printer = require("shared.printer")
-local inventory = require("shared.inventory")
+local printer = require("lib.printer")
+local inventory = require("lib.inventory")
 
 printer.print_info("Booting runner #" .. os.getComputerID())
 

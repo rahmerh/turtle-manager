@@ -1,8 +1,8 @@
 local rpc = require("wireless._internal.rpc")
 local core = require("wireless._internal.core")
 
-local time = require("shared.time")
-local errors = require("shared.errors")
+local time = require("lib.time")
+local errors = require("lib.errors")
 
 local resupply = {}
 

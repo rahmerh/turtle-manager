@@ -3,11 +3,9 @@ local quarry = require("quarry")
 local wireless = require("wireless")
 local movement = require("movement")
 
-local printer = require("shared.printer")
-local inventory = require("shared.inventory")
-local miner = require("shared.miner")
-local list = require("shared.list")
-local time = require("shared.time")
+local printer = require("lib.printer")
+local inventory = require("lib.inventory")
+local miner = require("lib.miner")
 
 printer.print_info("Booting quarry #" .. os.getComputerID())
 

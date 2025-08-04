@@ -1,8 +1,8 @@
 local wireless      = require("wireless")
 local locator       = require("movement.locator")
 
-local inventory     = require("shared.inventory")
-local errors        = require("shared.errors")
+local inventory     = require("lib.inventory")
+local errors        = require("lib.errors")
 
 local fueler        = {}
 

@@ -1,6 +1,6 @@
-local time = require("shared.time")
-local printer = require("shared.printer")
-local errors = require("shared.errors")
+local time = require("lib.time")
+local printer = require("lib.printer")
+local errors = require("lib.errors")
 
 local locator = {}
 

@@ -50,7 +50,5 @@ The turtles only request coal and chests, so make sure to always have these supp
 
 ## TODO
 
-- Quarry fluids handling
 - Display interactivity
 - Turtles redistribute tasks
-

@@ -1,10 +1,10 @@
 local movement = require("movement")
 local wireless = require("wireless")
 
-local list = require("shared.list")
-local errors = require("shared.errors")
-local inventory = require("shared.inventory")
-local printer = require("shared.printer")
+local list = require("lib.list")
+local errors = require("lib.errors")
+local inventory = require("lib.inventory")
+local printer = require("lib.printer")
 
 local quarry = {}
 

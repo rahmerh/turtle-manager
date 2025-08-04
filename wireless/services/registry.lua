@@ -1,6 +1,6 @@
 local rpc = require("wireless._internal.rpc")
 
-local errors = require("shared.errors")
+local errors = require("lib.errors")
 
 local registry = {}
 

@@ -45,7 +45,7 @@ if [[ "$role_valid" == false ]]; then
     exit 1
 fi
 
-for src in "shared" "wireless" "movement" "$ROLE"; do
+for src in "lib" "wireless" "movement" "display" "$ROLE"; do
   while IFS= read -r -d '' file; do
     if [[ "$src" == "$ROLE" ]]; then
       rel="${file#"$src/"}"

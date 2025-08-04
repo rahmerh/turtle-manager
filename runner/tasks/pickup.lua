@@ -1,7 +1,7 @@
 local movement = require("movement")
 
-local printer = require("shared.printer")
-local inventory = require("shared.inventory")
+local printer = require("lib.printer")
+local inventory = require("lib.inventory")
 
 return function(task, config)
     printer.print_info(("[%s] Picking up chest  at " ..

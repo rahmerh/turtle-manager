@@ -1,8 +1,8 @@
 local locator = require("movement.locator")
 
-local errors = require("shared.errors")
-local miner = require("shared.miner")
-local time = require("shared.time")
+local errors = require("lib.errors")
+local miner = require("lib.miner")
+local time = require("lib.time")
 
 local mover = {}
 

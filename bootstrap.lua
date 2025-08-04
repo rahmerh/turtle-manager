@@ -14,21 +14,21 @@ local REF     = "main"
 local LAYOUTS = {
     quarry = {
         { src = "quarry",   dest = "", },
-        { src = "shared",   dest = "shared", },
+        { src = "lib",      dest = "lib", },
         { src = "wireless", dest = "wireless", },
         { src = "movement", dest = "movement", },
     },
     runner = {
         { src = "runner",   dest = "", },
-        { src = "shared",   dest = "shared", },
+        { src = "lib",      dest = "lib", },
         { src = "wireless", dest = "wireless", },
         { src = "movement", dest = "movement", },
     },
     manager = {
         { src = "manager",  dest = "", },
-        { src = "shared",   dest = "shared", },
+        { src = "lib",      dest = "lib", },
         { src = "wireless", dest = "wireless", },
-        { src = "movement", dest = "movement", },
+        { src = "display",  dest = "display", },
     },
 }
 

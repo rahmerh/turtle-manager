@@ -1,4 +1,4 @@
-local printer = require("shared.printer")
+local printer = require("lib.printer")
 local job = require("job")
 
 local function prompt_num(label)

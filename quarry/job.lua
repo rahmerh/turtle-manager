@@ -1,4 +1,4 @@
-local list = require("shared.list")
+local list = require("lib.list")
 
 local JOB_FILE = "job.conf"
 

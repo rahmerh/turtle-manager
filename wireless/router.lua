@@ -1,6 +1,6 @@
 local core = require("wireless._internal.core")
 
-local printer = require("shared.printer")
+local printer = require("lib.printer")
 
 local router = {
     _handlers = {},

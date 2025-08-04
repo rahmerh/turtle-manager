@@ -1,4 +1,4 @@
-local time = require("shared.time")
+local time = require("lib.time")
 
 local turtle_store = {}
 

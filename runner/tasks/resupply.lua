@@ -1,9 +1,9 @@
 local movement = require("movement")
 local wireless = require("wireless")
 
-local errors = require("shared.errors")
-local printer = require("shared.printer")
-local inventory = require("shared.inventory")
+local errors = require("lib.errors")
+local printer = require("lib.printer")
+local inventory = require("lib.inventory")
 
 local function is_turtle(info)
     return info.name == "computercraft:turtle_advanced" or info.name == "computercraft:turtle_normal"

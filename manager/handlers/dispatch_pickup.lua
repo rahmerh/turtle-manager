@@ -1,8 +1,8 @@
 local turtle_store = require("turtle_store")
 local wireless = require("wireless")
 
-local printer = require("shared.printer")
-local errors = require("shared.errors")
+local printer = require("lib.printer")
+local errors = require("lib.errors")
 local dispatch_utils = require("dispatch_helpers")
 
 return function(sender, msg)
