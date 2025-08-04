@@ -4,10 +4,10 @@ local printer = require("shared.printer")
 local inventory = require("shared.inventory")
 
 return function(task, config)
-    printer.print_info("Picking up chest  at " ..
+    printer.print_info(("[%s] Picking up chest  at " ..
         task.data.target.x .. " " ..
         task.data.target.y .. " " ..
-        task.data.target.z)
+        task.data.target.z):format(task.data.job_id))
 
     local arrived, arrived_err = movement.move_to(
         task.data.target.x,

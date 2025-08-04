@@ -70,16 +70,8 @@ local function mine_direction(direction)
         return true
     end
 
-    local deadline = time.alive_duration_in_seconds() + 5
     while TURTLES[metadata.name] do
-        sleep(1)
-        ok, metadata = inspect_direction(direction)
-
-        local now = time.alive_duration_in_seconds()
-
-        if now > deadline then
-            return nil, errors.BLOCKED
-        end
+        return nil, errors.BLOCKED
     end
 
     if FORBIDDEN[metadata.name] then

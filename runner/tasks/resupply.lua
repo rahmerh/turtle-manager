@@ -10,10 +10,10 @@ local function is_turtle(info)
 end
 
 return function(task, config)
-    printer.print_info("Resupplying turtle at " ..
+    printer.print_info(("[%s] Resupplying turtle at " ..
         task.data.target.x .. " " ..
         task.data.target.y .. " " ..
-        task.data.target.z)
+        task.data.target.z):format(task.data.job_id))
 
     local arrived, arrived_err = movement.move_to(
         config.supply_chest_pos.x,

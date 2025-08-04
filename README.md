@@ -52,3 +52,5 @@ The turtles only request coal and chests, so make sure to always have these supp
 
 - Quarry fluids handling
 - Display interactivity
+- Turtles redistribute tasks
+

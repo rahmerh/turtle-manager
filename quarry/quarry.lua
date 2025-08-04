@@ -1,4 +1,17 @@
+local movement = require("movement")
+local wireless = require("wireless")
+
+local list = require("shared.list")
+local errors = require("shared.errors")
+local inventory = require("shared.inventory")
+local printer = require("shared.printer")
+
 local quarry = {}
+
+local fluids = {
+    "minecraft:water",
+    "minecraft:lava"
+}
 
 function quarry.get_row_direction_for_layer(width, layer)
     if width % 2 == 1 then
@@ -57,6 +70,93 @@ function quarry.starting_location_for_row(layer, row, boundaries)
         y = target_y,
         z = target_z
     }
+end
+
+function quarry.is_fluid_block(name)
+    return list.contains(fluids, name)
+end
+
+function quarry.scan_fluid_columns(job, movement_context)
+    local water_columns = {}
+
+    local starting_coordinates = movement.get_current_coordinates()
+    local starting_orientation = movement.determine_orientation()
+    local selected = turtle.getSelectedSlot()
+
+    movement.move_back()
+
+    -- local current_coordinates = movement.get_current_coordinates(true)
+    -- table.insert(water_columns, current_coordinates)
+
+    local water_row = job.current_row()
+    while true do
+        local ok, info = turtle.inspect()
+
+        if not ok then
+            break
+        end
+
+        repeat
+            movement.move_forward(movement_context)
+            local current_coordinates = movement.get_current_coordinates(true)
+            table.insert(water_columns, current_coordinates)
+
+            ok, info = turtle.inspect()
+        until not quarry.is_fluid_block(info.name)
+
+        local moved_to_next_column, moved_err
+
+        if water_row % 2 == 0 then
+            movement.turn_right()
+            moved_to_next_column, moved_err = movement.move_forward(movement_context)
+            movement.turn_right()
+        else
+            movement.turn_left()
+            moved_to_next_column, moved_err = movement.move_forward(movement_context)
+            movement.turn_left()
+        end
+
+        water_row = water_row + 1
+
+        if not moved_to_next_column and moved_err ~= errors.NO_FUEL then
+            break
+        elseif moved_to_next_column then
+            local current_coordinates = movement.get_current_coordinates(true)
+            table.insert(water_columns, current_coordinates)
+        end
+    end
+
+    for _, value in ipairs(water_columns) do
+        local cobblestone_slot = inventory.find_item("minecraft:cobblestone")
+        if not cobblestone_slot then
+            printer.print_info("Requesting cobblestone...")
+            local desired = { ["minecraft:cobblestone"] = 64 }
+            wireless.resupply.request(movement_context.manager_id, movement.get_current_coordinates(), desired)
+            local runner_id, job_id = wireless.resupply.await_arrival()
+            inventory.drop_slots(3, 3, "up")
+            wireless.resupply.signal_ready(runner_id, job_id)
+            wireless.resupply.await_done()
+            cobblestone_slot = inventory.find_item("minecraft:cobblestone")
+        end
+
+        turtle.select(cobblestone_slot)
+
+        movement.move_to(value.x, value.y, value.z, movement_context)
+        turtle.placeDown()
+
+        movement.move_to(value.x, value.y + 1, value.z, movement_context)
+        turtle.placeDown()
+
+        movement.move_to(value.x, value.y + 2, value.z, movement_context)
+        turtle.placeDown()
+    end
+    turtle.select(selected)
+
+    movement.move_to(starting_coordinates.x, starting_coordinates.y, starting_coordinates.z, movement_context)
+    movement.turn_to_direction(starting_orientation)
+end
+
+function quarry.fill_fluids(movement_context)
 end
 
 return quarry

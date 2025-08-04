@@ -122,11 +122,12 @@ function M.move_down(ctx)
     end
 end
 
-M.opposite_of = mover.opposite_orientation_of
-M.turn_to_direction = mover.turn_to_direction
+M.determine_orientation   = mover.determine_orientation
+M.opposite_of             = mover.opposite_orientation_of
+M.turn_to_direction       = mover.turn_to_direction
 
-M.turn_left = mover.turn_left
-M.turn_right = mover.turn_right
+M.turn_left               = mover.turn_left
+M.turn_right              = mover.turn_right
 
 M.get_current_coordinates = locator.get_current_coordinates
 
