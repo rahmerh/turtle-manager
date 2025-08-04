@@ -64,21 +64,16 @@ local function dig_direction(direction)
 end
 
 local function mine_direction(direction)
-    local ok, metadata = inspect_direction(direction)
-
-    if not ok then
-        return true
-    end
-
-    while TURTLES[metadata.name] do
-        return nil, errors.BLOCKED
-    end
-
-    if FORBIDDEN[metadata.name] then
-        return nil, errors.BLOCKED
-    end
-
     while detect_direction(direction) do
+        local _, metadata = inspect_direction(direction)
+        while TURTLES[metadata.name] do
+            return nil, errors.BLOCKED
+        end
+
+        if FORBIDDEN[metadata.name] then
+            return nil, errors.BLOCKED
+        end
+
         dig_direction(direction)
     end
 
