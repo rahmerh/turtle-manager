@@ -296,10 +296,11 @@ mover.move_to = function(x, y, z, dig)
         end
 
         -- Try some unstuck manouvers
-        if not moved and attempts >= 5 then
+        if not moved then
             while turtle.detect() do
                 mover.move_up()
             end
+            mover.move_forward()
 
             attempts = 0
         end
