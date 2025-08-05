@@ -50,5 +50,11 @@ The turtles only request coal and chests, so make sure to always have these supp
 
 ## TODO
 
-- Display interactivity
+- Dashboard
+  - Add pager for turtle pages
+  - Task management page
+  - Map/radar page
+  - Turtle info page
+  - Turtle remote control functionality
+
 - Turtles redistribute tasks

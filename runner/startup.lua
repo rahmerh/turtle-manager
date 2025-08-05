@@ -32,6 +32,11 @@ if not manager_id and err then
     return
 end
 
+local movement_context = {
+    dig = false,
+    manager_id = manager_id
+}
+
 wireless.registry.register_self_as(manager_id, "runner")
 
 local start_heartbeat, _ = wireless.heartbeat.loop(manager_id, 1, function()
@@ -95,7 +100,7 @@ local function main()
         status = "Running (" .. task_type .. ")"
 
         if task_handlers[task_type] then
-            task_handlers[task_type](task, config)
+            task_handlers[task_type](task, config, movement_context)
         else
             printer.print_warning("Unsupported task: " .. task_type)
         end

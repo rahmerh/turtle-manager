@@ -1,7 +1,7 @@
 local button = {}
 button.__index = button
 
-function button:new(opts)
+function button:new(monitor, opts)
     assert(opts.x and
         opts.y and
         opts.width and
@@ -11,6 +11,7 @@ function button:new(opts)
         opts.button_color and
         opts.on_click, "Missing button config")
     return setmetatable({
+        monitor = monitor,
         x = opts.x,
         y = opts.y,
         width = opts.width,
@@ -36,11 +37,11 @@ function button:handle_click(x, y)
     return false
 end
 
-function button:render(mon)
-    mon.setBackgroundColor(self.button_color)
+function button:render()
+    self.monitor.setBackgroundColor(self.button_color)
     for i = 0, self.height - 1 do
-        mon.setCursorPos(self.x, self.y + i)
-        mon.write(string.rep(" ", self.width))
+        self.monitor.setCursorPos(self.x, self.y + i)
+        self.monitor.write(string.rep(" ", self.width))
     end
 
     local middle_y = self.y + math.floor((self.height - 1) / 2)
@@ -52,9 +53,9 @@ function button:render(mon)
 
     local middle_x = self.x + (self.width / 2) - (text_len / 2)
 
-    mon.setCursorPos(middle_x, middle_y)
-    mon.setTextColor(self.text_color)
-    mon.write(self.text)
+    self.monitor.setCursorPos(middle_x, middle_y)
+    self.monitor.setTextColor(self.text_color)
+    self.monitor.write(self.text)
 end
 
 return button

@@ -9,7 +9,7 @@ local function is_turtle(info)
     return info.name == "computercraft:turtle_advanced" or info.name == "computercraft:turtle_normal"
 end
 
-return function(task, config)
+return function(task, config, movement_context)
     printer.print_info(("[%s] Resupplying turtle at " ..
         task.data.target.x .. " " ..
         task.data.target.y .. " " ..
@@ -18,8 +18,11 @@ return function(task, config)
     local arrived, arrived_err = movement.move_to(
         config.supply_chest_pos.x,
         config.supply_chest_pos.y + 1,
-        config.supply_chest_pos.z)
-    -- TODO: Handle error
+        config.supply_chest_pos.z,
+        movement_context)
+    if not arrived and arrived_err then
+        return arrived, arrived_err
+    end
 
     turtle.select(2)
 
@@ -40,7 +43,8 @@ return function(task, config)
         movement.move_to(
             config.unloading_chest_pos.x,
             config.unloading_chest_pos.y + 1,
-            config.unloading_chest_pos.z)
+            config.unloading_chest_pos.z,
+            movement_context)
 
         inventory.drop_slots(2, 16, "down")
         return
@@ -63,7 +67,8 @@ return function(task, config)
     movement.move_to(
         config.unloading_chest_pos.x,
         config.unloading_chest_pos.y + 1,
-        config.unloading_chest_pos.z)
+        config.unloading_chest_pos.z,
+        movement_context)
 
     inventory.drop_slots(2, 16, "down")
 end

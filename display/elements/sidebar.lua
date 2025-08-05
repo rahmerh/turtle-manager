@@ -1,4 +1,4 @@
-local button = require("display.button")
+local button = require("display.elements.button")
 
 local sidebar = {}
 sidebar.__index = sidebar
@@ -16,30 +16,35 @@ function sidebar:new(monitor, page_switcher, layout)
     }, sidebar)
 
     bar.buttons = {
-        button:new {
-            x = 2, y = 2,
-            width = width - 2, height = 3,
+        button:new(monitor, {
+            monitor = monitor,
+            x = 2,
+            y = 2,
+            width = width - 2,
+            height = 3,
             text = "Quarries",
-            button_color = colours.red,
+            button_color = colours.black,
             text_color = colours.white,
             on_click = function()
                 if bar.page_switcher then
                     bar.page_switcher("quarries")
                 end
             end
-        },
-        button:new {
-            x = 2, y = 6,
-            width = width - 2, height = 3,
+        }),
+        button:new(monitor, {
+            x = 2,
+            y = 6,
+            width = width - 2,
+            height = 3,
             text = "Runners",
-            button_color = colours.blue,
+            button_color = colours.black,
             text_color = colours.white,
             on_click = function()
                 if bar.page_switcher then
                     bar.page_switcher("runners")
                 end
             end
-        },
+        }),
     }
 
     return bar
@@ -63,7 +68,7 @@ function sidebar:render()
     end
 
     for _, b in ipairs(self.buttons) do
-        b:render(self.monitor)
+        b:render()
     end
 
     self.monitor.setBackgroundColour(colours.black)

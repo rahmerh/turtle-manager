@@ -22,6 +22,18 @@ function Layout:set_sidebar_width(width)
     self.sidebar_width = width
 end
 
+function Layout:does_element_fit_vertically(y, height)
+    local _, monitor_height = self:get_monitor_size()
+
+    return (y + height) <= monitor_height
+end
+
+function Layout:does_element_fit_horizontally(x, width)
+    local monitor_width, _ = self:get_monitor_size()
+
+    return (x + width) <= monitor_width
+end
+
 function Layout:render_background()
     local width, height = self.monitor.getSize()
 

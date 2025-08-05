@@ -1,6 +1,7 @@
-local Sidebar = require("display.sidebar")
+local Sidebar = require("display.elements.sidebar")
+local Page = require("display.elements.page")
+
 local Layout = require("display.layout")
-local Page = require("display.page")
 
 local errors = require("lib.errors")
 

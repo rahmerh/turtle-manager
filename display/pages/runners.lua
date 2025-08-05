@@ -1,3 +1,5 @@
+local InfoBlock = require("display.elements.info_block")
+
 local list = require("lib.list")
 
 local runners_page = {}
@@ -11,14 +13,40 @@ function runners_page:new(monitor, layout)
 end
 
 function runners_page:render(data)
-    local runners = list.filter_by(data, "role", "runner")
+    local quarries = list.filter_by(data, "role", "runner")
 
-    local temp = 1
-    for key, turtle in pairs(runners) do
-        self.monitor.setCursorPos(self.layout.sidebar_width + 1, temp)
-        self.monitor.write(key .. " " .. turtle.role)
+    local y_offset = 2
+    local x_offset = self.layout.sidebar_width + 2
+    for key, turtle in pairs(quarries) do
+        local boundaries = {
+            width = 20,
+            height = 5
+        }
 
-        temp = temp + 1
+        if not self.layout:does_element_fit_vertically(y_offset, boundaries.height) then
+            x_offset = x_offset + boundaries.width + 1
+            y_offset = 2
+        end
+
+        if not self.layout:does_element_fit_horizontally(x_offset, boundaries.width) then
+            -- TODO: Add pager
+            return
+        end
+
+        boundaries.x = x_offset
+        boundaries.y = y_offset
+
+        local opts = {
+            block_colour = colours.white,
+            text_colour = colours.black
+        }
+
+        local lines = { key, turtle.role }
+        local block = InfoBlock:new(self.monitor, boundaries, opts, lines, self.layout)
+
+        block:render()
+
+        y_offset = y_offset + boundaries.height + 2
     end
 end
 
