@@ -55,7 +55,7 @@ end)
 
 wireless.router.register_handler(wireless.protocols.rpc, "resupply:dispatch", function(sender, m)
     wireless.ack(sender, m)
-    printer.print_info(("[%s] Queued task 'pickup'"):format(m.data.job_id))
+    printer.print_info(("[%s] Queued task 'resupply'"):format(m.data.job_id))
     queue:enqueue(m)
 end)
 

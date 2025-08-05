@@ -90,8 +90,9 @@ function inventory.is_item_in_slot(item, slot)
     return result
 end
 
-function inventory.find_item(item)
-    for i = 1, 16 do
+function inventory.find_item(item, skip)
+    skip = skip or 0
+    for i = skip + 1, 16 do
         local info = turtle.getItemDetail(i)
 
         if info and info.name == item then

@@ -34,6 +34,10 @@ function Layout:does_element_fit_horizontally(x, width)
     return (x + width) <= monitor_width
 end
 
+function Layout:calculate_x_to_float_text_in(text, width)
+    return (width / 2) - (string.len(text) / 2)
+end
+
 function Layout:render_background()
     local width, height = self.monitor.getSize()
 

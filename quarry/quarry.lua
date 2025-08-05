@@ -79,56 +79,64 @@ end
 function quarry.scan_fluid_columns(job, movement_context)
     local water_columns = {}
 
-    local starting_coordinates = movement.get_current_coordinates()
-    local starting_orientation = movement.determine_orientation()
+    local start_pos = movement.get_current_coordinates()
+    local start_facing = movement.determine_orientation()
     local selected = turtle.getSelectedSlot()
 
     movement.move_back()
 
-    -- local current_coordinates = movement.get_current_coordinates(true)
-    -- table.insert(water_columns, current_coordinates)
+    local row = job.current_row()
 
-    local water_row = job.current_row()
     while true do
-        local ok, info = turtle.inspect()
+        while true do
+            local fluid_detected = false
 
-        if not ok then
-            break
+            local ok, info = turtle.inspect()
+            if ok and quarry.is_fluid_block(info.name) then
+                fluid_detected = true
+            end
+
+            local moved, _ = movement.move_forward(movement_context)
+
+            if not fluid_detected then
+                local ok_up, info_up = turtle.inspectUp()
+                local ok_down, info_down = turtle.inspectDown()
+                if ok_up and quarry.is_fluid_block(info_up.name) or
+                    ok_down and quarry.is_fluid_block(info_down.name) then
+                    fluid_detected = true
+                end
+            end
+
+            if fluid_detected then
+                local coordinates = movement.get_current_coordinates()
+
+                table.insert(water_columns, coordinates)
+            end
+
+            if not fluid_detected or not moved then
+                break
+            end
         end
 
-        repeat
-            movement.move_forward(movement_context)
-            local current_coordinates = movement.get_current_coordinates(true)
-            table.insert(water_columns, current_coordinates)
-
-            ok, info = turtle.inspect()
-        until not quarry.is_fluid_block(info.name)
-
-        local moved_to_next_column, moved_err
-
-        if water_row % 2 == 0 then
+        local moved
+        if row % 2 == 0 then
             movement.turn_right()
-            moved_to_next_column, moved_err = movement.move_forward(movement_context)
+            moved, _ = movement.move_forward(movement_context)
             movement.turn_right()
         else
             movement.turn_left()
-            moved_to_next_column, moved_err = movement.move_forward(movement_context)
+            moved, _ = movement.move_forward(movement_context)
             movement.turn_left()
         end
 
-        water_row = water_row + 1
+        row = row + 1
 
-        if not moved_to_next_column and moved_err ~= errors.NO_FUEL then
-            break
-        elseif moved_to_next_column then
-            local current_coordinates = movement.get_current_coordinates(true)
-            table.insert(water_columns, current_coordinates)
-        end
+        if not moved then break end
     end
 
-    for _, value in ipairs(water_columns) do
-        local cobblestone_slot = inventory.find_item("minecraft:cobblestone")
-        if not cobblestone_slot then
+    for _, pos in ipairs(water_columns) do
+        local cobble_slot = inventory.find_item("minecraft:cobblestone")
+        if not cobble_slot then
             printer.print_info("Requesting cobblestone...")
             local desired = { ["minecraft:cobblestone"] = 64 }
             wireless.resupply.request(movement_context.manager_id, movement.get_current_coordinates(), desired)
@@ -136,27 +144,30 @@ function quarry.scan_fluid_columns(job, movement_context)
             inventory.drop_slots(3, 3, "up")
             wireless.resupply.signal_ready(runner_id, job_id)
             wireless.resupply.await_done()
-            cobblestone_slot = inventory.find_item("minecraft:cobblestone")
+            cobble_slot = inventory.find_item("minecraft:cobblestone")
         end
 
-        turtle.select(cobblestone_slot)
+        local info = inventory.details_from_slot(cobble_slot)
+        if info.count < 3 then
+            local next_cobble_slot = inventory.find_item("minecraft:cobblestone", 1)
 
-        movement.move_to(value.x, value.y, value.z, movement_context)
+            inventory.merge_into_slot(next_cobble_slot, cobble_slot)
+        end
+
+        turtle.select(cobble_slot)
+
+        movement.move_to(pos.x, pos.y, pos.z, movement_context)
+
         turtle.placeDown()
-
-        movement.move_to(value.x, value.y + 1, value.z, movement_context)
+        movement.move_up()
         turtle.placeDown()
-
-        movement.move_to(value.x, value.y + 2, value.z, movement_context)
+        movement.move_up()
         turtle.placeDown()
     end
+
     turtle.select(selected)
-
-    movement.move_to(starting_coordinates.x, starting_coordinates.y, starting_coordinates.z, movement_context)
-    movement.turn_to_direction(starting_orientation)
-end
-
-function quarry.fill_fluids(movement_context)
+    movement.move_to(start_pos.x, start_pos.y, start_pos.z, movement_context)
+    movement.turn_to_direction(start_facing)
 end
 
 return quarry

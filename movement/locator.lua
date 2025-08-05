@@ -77,7 +77,11 @@ function locator.get_current_coordinates(force_refresh)
         return nil, errors.NO_GPS
     end
 
-    return locator.coordinates
+    return {
+        x = locator.coordinates.x,
+        y = locator.coordinates.y,
+        z = locator.coordinates.z
+    }
 end
 
 return locator

@@ -31,7 +31,8 @@ function block:render()
     end
 
     for i = 1, #self.lines do
-        self.monitor.setCursorPos(self.x, self.y + i)
+        self.monitor.setCursorPos(self.x + self.layout:calculate_x_to_float_text_in(self.lines[i], self.width),
+            self.y + i)
         self.monitor.write(self.lines[i])
     end
 end
