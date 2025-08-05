@@ -46,7 +46,7 @@ First you need to run `prepare` and enter the correct values. The resupply chest
 [supply chest]
 ```
 
-The turtles only request coal and chests, so make sure to always have these supplies in your supply chest. Personal recommendation is to either have an AE2 interface which always has 64 coal and chests or use another mod to always have those items in the supply chest.
+The turtles only request coal, chests and cobblestone, so make sure to always have these supplies in your supply chest. Personal recommendation is to either have an AE2 interface which always has 64 coal and chests or use another mod to always have those items in the supply chest.
 
 ## TODO
 
