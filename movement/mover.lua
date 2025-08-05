@@ -298,9 +298,16 @@ mover.move_to = function(x, y, z, dig)
         -- Try some unstuck manouvers
         if not moved then
             while turtle.detect() do
-                mover.move_up()
+                local moved_up, moved_up_err = mover.move_up()
+
+                if not moved_up and moved_up_err == errors.NO_FUEL then
+                    return moved_up, moved_up_err
+                end
             end
-            mover.move_forward()
+            local hopped, hopped_err = mover.move_forward()
+            if not hopped and hopped_err == errors.NO_FUEL then
+                return hopped, hopped_err
+            end
 
             attempts = 0
         end

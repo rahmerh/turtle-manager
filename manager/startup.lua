@@ -1,6 +1,6 @@
 local turtle_store = require("turtle_store")
 local wireless = require("wireless")
-local display = require("display")
+local Display = require("display")
 
 local printer = require("lib.printer")
 local time = require("lib.time")
@@ -15,6 +15,12 @@ printer.print_info("Booting manager #" .. os.getComputerID())
 wireless.open()
 wireless.discovery.host("manager")
 
+local monitor = peripheral.find("monitor")
+local display
+if monitor then
+    display = Display:new(monitor)
+end
+
 wireless.router.register_handler(wireless.protocols.telemetry, "heartbeat:beat", function(sender, msg)
     local turtle = turtle_store.get(sender)
 
@@ -25,6 +31,10 @@ wireless.router.register_handler(wireless.protocols.telemetry, "heartbeat:beat",
         status    = msg.status,
         metadata  = msg.data or turtle.metadata,
     })
+
+    if display then
+        display:add_or_update_turtle(sender, patched)
+    end
 
     return true
 end)
@@ -45,11 +55,6 @@ end)
 
 wireless.router.register_handler(wireless.protocols.rpc, "pickup:request", handlers.dispatch_pickup)
 wireless.router.register_handler(wireless.protocols.rpc, "resupply:request", handlers.dispatch_resupply)
-
-local monitor = peripheral.find("monitor")
-if monitor then
-    display.set_monitor(monitor)
-end
 
 local function mark_stale()
     while true do
@@ -76,6 +81,12 @@ local function mark_stale()
     end
 end
 
+local main_loops = { wireless.router.loop, mark_stale }
+
+if display then
+    table.insert(main_loops, function() display:loop() end)
+end
+
 printer.print_success("Manager online.")
 
-parallel.waitForAny(wireless.router.loop, display.loop, mark_stale)
+parallel.waitForAny(table.unpack(main_loops))
