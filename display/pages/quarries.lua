@@ -41,7 +41,14 @@ function quarries_page:render(data)
             text_colour = colours.black
         }
 
-        local lines = { key, turtle.role, turtle.metadata.status }
+        local lines = {
+            key,
+            turtle.metadata.status,
+            ("%d %d %d"):format(
+                turtle.metadata.current_location.x,
+                turtle.metadata.current_location.y,
+                turtle.metadata.current_location.z)
+        }
         local block = InfoBlock:new(self.monitor, boundaries, opts, lines, self.layout)
 
         block:render()

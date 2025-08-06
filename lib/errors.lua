@@ -16,6 +16,7 @@ local errors = {
 
     NO_MONITOR_ATTACHED = "no_monitor_attached",
     INVALID_MONITOR = "invalid_monitor",
+    INVALID_ELEMENT = "invalid_element",
 
     wireless = {
         NO_ACK = "wireless:no_ack",

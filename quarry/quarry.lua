@@ -2,9 +2,9 @@ local movement = require("movement")
 local wireless = require("wireless")
 
 local list = require("lib.list")
-local errors = require("lib.errors")
 local inventory = require("lib.inventory")
 local printer = require("lib.printer")
+local miner = require("lib.miner")
 
 local quarry = {}
 
@@ -76,65 +76,57 @@ function quarry.is_fluid_block(name)
     return list.contains(fluids, name)
 end
 
-function quarry.scan_fluid_columns(job, movement_context)
+local function detect_fluid_in_next_column(movement_context)
+    local fluid_detected = false
+
+    local ok, info = turtle.inspect()
+    if ok and quarry.is_fluid_block(info.name) then
+        fluid_detected = true
+    end
+
+    local moved, _ = movement.move_forward(movement_context)
+
+    if not fluid_detected then
+        local ok_up, info_up = turtle.inspectUp()
+        local ok_down, info_down = turtle.inspectDown()
+        if ok_up and quarry.is_fluid_block(info_up.name) or
+            ok_down and quarry.is_fluid_block(info_down.name) then
+            fluid_detected = true
+        end
+    end
+
+    if fluid_detected and moved then
+        return movement.get_current_coordinates()
+    end
+end
+
+function quarry.scan_fluid_columns(movement_context)
     local water_columns = {}
 
     local start_pos = movement.get_current_coordinates()
+    table.insert(water_columns, start_pos)
+
     local start_facing = movement.determine_orientation()
     local selected = turtle.getSelectedSlot()
 
-    movement.move_back()
-
-    local row = job.current_row()
-
     while true do
         while true do
-            local fluid_detected = false
-
-            local ok, info = turtle.inspect()
-            if ok and quarry.is_fluid_block(info.name) then
-                fluid_detected = true
-            end
-
-            local moved, _ = movement.move_forward(movement_context)
-
-            if not fluid_detected then
-                local ok_up, info_up = turtle.inspectUp()
-                local ok_down, info_down = turtle.inspectDown()
-                if ok_up and quarry.is_fluid_block(info_up.name) or
-                    ok_down and quarry.is_fluid_block(info_down.name) then
-                    fluid_detected = true
-                end
-            end
-
-            if fluid_detected then
-                local coordinates = movement.get_current_coordinates()
-
+            local coordinates = detect_fluid_in_next_column(movement_context)
+            if coordinates and not list.contains(water_columns, coordinates) then
                 table.insert(water_columns, coordinates)
-            end
-
-            if not fluid_detected or not moved then
+            else
                 break
             end
         end
 
-        local moved
-        if row % 2 == 0 then
-            movement.turn_right()
-            moved, _ = movement.move_forward(movement_context)
-            movement.turn_right()
+        if coordinates then
+            table.insert(water_columns, coordinates)
         else
-            movement.turn_left()
-            moved, _ = movement.move_forward(movement_context)
-            movement.turn_left()
+            break
         end
-
-        row = row + 1
-
-        if not moved then break end
     end
 
-    for _, pos in ipairs(water_columns) do
+    for _ = 1, #water_columns do
         local cobble_slot = inventory.find_item("minecraft:cobblestone")
         if not cobble_slot then
             printer.print_info("Requesting cobblestone...")
@@ -156,17 +148,21 @@ function quarry.scan_fluid_columns(job, movement_context)
 
         turtle.select(cobble_slot)
 
-        movement.move_to(pos.x, pos.y, pos.z, movement_context)
+        local back = movement.opposite_of(start_facing)
+        movement.turn_to_direction(back)
 
         turtle.placeDown()
-        movement.move_up()
-        turtle.placeDown()
-        movement.move_up()
-        turtle.placeDown()
+        turtle.placeUp()
+
+        movement.move_forward()
+        movement.turn_right()
+        movement.turn_right()
+
+        turtle.place()
     end
 
     turtle.select(selected)
-    movement.move_to(start_pos.x, start_pos.y, start_pos.z, movement_context)
+    movement.move_to(start_pos.x, start_pos.y, start_pos.z, { dig = true })
     movement.turn_to_direction(start_facing)
 end
 

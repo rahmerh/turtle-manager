@@ -38,6 +38,17 @@ function Layout:calculate_x_to_float_text_in(text, width)
     return (width / 2) - (string.len(text) / 2)
 end
 
+function Layout:scroll_text(x, y, text, duration)
+    self.monitor.setCursorPos(x, y)
+
+    local delay = duration / #text
+
+    for i = 1, #text do
+        self.monitor.write(text:sub(i, i))
+        sleep(delay)
+    end
+end
+
 function Layout:render_background()
     local width, height = self.monitor.getSize()
 

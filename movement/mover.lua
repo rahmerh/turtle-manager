@@ -297,19 +297,23 @@ mover.move_to = function(x, y, z, dig)
 
         -- Try some unstuck manouvers
         if not moved then
+            local moved_up, moved_up_err
             while turtle.detect() do
-                local moved_up, moved_up_err = mover.move_up()
+                moved_up, moved_up_err = mover.move_up()
 
                 if not moved_up and moved_up_err == errors.NO_FUEL then
                     return moved_up, moved_up_err
                 end
             end
-            local hopped, hopped_err = mover.move_forward()
-            if not hopped and hopped_err == errors.NO_FUEL then
-                return hopped, hopped_err
-            end
 
-            attempts = 0
+            -- It moved up, try to move forward to possibly change axis.
+            if moved_up then
+                local hopped, hopped_err = mover.move_forward()
+                if not hopped and hopped_err == errors.NO_FUEL then
+                    return hopped, hopped_err
+                end
+                attempts = 0
+            end
         end
 
         if moved then

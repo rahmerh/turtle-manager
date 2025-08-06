@@ -126,15 +126,16 @@ local function main()
                     return
                 end
 
+                local _, front_info = turtle.inspect()
+
                 movement.move_forward(movement_context)
 
-                local _, front_info = turtle.inspect()
                 local _, up_info = turtle.inspectUp()
                 local _, down_info = turtle.inspectDown()
                 if quarry.is_fluid_block(front_info.name) or
                     quarry.is_fluid_block(up_info.name) or
                     quarry.is_fluid_block(down_info.name) then
-                    quarry.scan_fluid_columns(job, movement_context)
+                    quarry.scan_fluid_columns(movement_context)
                 end
 
                 miner.mine_up()

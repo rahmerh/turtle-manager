@@ -51,6 +51,7 @@ The turtles only request coal, chests and cobblestone, so make sure to always ha
 ## TODO
 
 - Dashboard
+  - Boot screen
   - Add pager for turtle pages
   - Task management page
   - Map/radar page

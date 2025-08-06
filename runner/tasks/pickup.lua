@@ -4,10 +4,10 @@ local printer = require("lib.printer")
 local inventory = require("lib.inventory")
 
 return function(task, config, movement_context)
-    printer.print_info(("[%s] Picking up chest  at " ..
-        task.data.target.x .. " " ..
-        task.data.target.y .. " " ..
-        task.data.target.z):format(task.data.job_id))
+    printer.print_info(("[%s] Picking up chest at %d %d %d"):format(task.data.job_id,
+        task.data.target.x,
+        task.data.target.y,
+        task.data.target.z))
 
     local arrived, arrived_err = movement.move_to(
         task.data.target.x,
@@ -33,4 +33,6 @@ return function(task, config, movement_context)
     end
 
     inventory.drop_slots(2, 16, "down")
+
+    printer.print_info(("[%s] Done."):format(task.data.job_id))
 end

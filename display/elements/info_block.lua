@@ -1,3 +1,5 @@
+local errors = require("lib.errors")
+
 local block = {}
 block.__index = block
 
@@ -8,6 +10,19 @@ function block:new(monitor, boundaries, opts, lines, layout)
         boundaries.height and
         opts.block_colour and
         opts.text_colour, "Invalid boundaries")
+
+    if #lines > boundaries.height then
+        return nil, errors.INVALID_ELEMENT
+    end
+
+    for i = 1, #lines do
+        local line = lines[i]
+
+        if string.len(line) > boundaries.width then
+            return nil, errors.INVALID_ELEMENT
+        end
+    end
+
     return setmetatable({
         monitor = monitor,
         x = boundaries.x,
