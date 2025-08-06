@@ -10,34 +10,11 @@ local Display = {
 }
 Display.__index = Display
 
-local splash = {
-    "**- @.==+#-.:@.#+..   =+@             :-.     @ *.@              :%%-            *#%:         ",
-    "+--  -.@.*%@#+ -@+    %%-             +%%     #  * :             *=++           *--+*#        ",
-    "         %#           %.-             #@:      : =@#           + %=%+          :++  .         ",
-    "        #+:           - *             #%      -:+ =.@         -*@ @.          +*=   ##.       ",
-    "        -.%           :               ...     +:*  *.#        #   +.@        #*%     %.@      ",
-    "        @%*           *@*             -:+     --*   %=-      %=-  +-#        ##@      +%:     ",
-    "        *#.           -#%             %@#      =     ##     -=    %-%       #=        #+-#    ",
-    "          .           =               ==*     +@*    *+@   ###    .#:      -@.=@**=% #%*#     ",
-    "        +.+           :-:@            .=*     .#+     %+@  #-      .:     =@-#          ++%   ",
-    "        -              *@ =          #=       %@@      :+#+.@      @+    # %-            *=*  ",
-    "         #:              .+=%= *++*- --       :+.       -% -      *++    % .               -# ",
-    "        %+:                 %%.%: :            #+       %@-       -@+   -@                =%.@",
-}
-
-
-local function print_boot_screen(monitor, layout)
+local function print_boot_screen(layout)
     local _, height = layout:get_monitor_size()
-    local y_start = 5
-
-    monitor.setTextColor(colours.black)
-    for i, line in ipairs(splash) do
-        monitor.setCursorPos(1, y_start + i - 1)
-        monitor.write(line)
-    end
 
     local text = "TUMA is booting..."
-    layout:scroll_text(1, height, text, 2)
+    layout:scroll_text(1, height, text, 1)
 end
 
 function Display:new(monitor)
@@ -51,7 +28,7 @@ function Display:new(monitor)
     Display.selected_page = "quarries"
 
     layout:render_background()
-    print_boot_screen(monitor, layout)
+    print_boot_screen(layout)
 
     return setmetatable({
         monitor = monitor,

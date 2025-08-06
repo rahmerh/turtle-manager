@@ -13,6 +13,11 @@ local fluids = {
     "minecraft:lava"
 }
 
+local filler_blocks = {
+    "minecraft:cobblestone",
+    "minecraft:deepslate",
+}
+
 function quarry.get_row_direction_for_layer(width, layer)
     if width % 2 == 1 then
         return (layer % 2 == 0) and "south" or "north"
@@ -128,6 +133,7 @@ function quarry.scan_fluid_columns(movement_context)
 
     for _ = 1, #water_columns do
         local cobble_slot = inventory.find_item("minecraft:cobblestone")
+
         if not cobble_slot then
             printer.print_info("Requesting cobblestone...")
             local desired = { ["minecraft:cobblestone"] = 64 }

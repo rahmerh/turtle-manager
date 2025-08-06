@@ -174,8 +174,47 @@ local function main()
         job.next_layer()
     end
 
+    local current_location = movement.get_current_coordinates()
+
+    local final_y = -59
+    if current_location.y ~= final_y then
+        movement.move_to(
+            boundaries.starting_position.x,
+            final_y,
+            boundaries.starting_position.z,
+            movement_context_with_dig)
+
+        movement.turn_to_direction("north")
+
+        for row = 0, boundaries.width - 1 do
+            for _ = 0, boundaries.depth - 2 do
+                miner.mine_up()
+                miner.mine_down()
+                miner.mine()
+
+                movement.move_forward(movement_context)
+            end
+
+            if row % 2 == 0 then
+                movement.turn_right()
+                movement.move_forward(movement_context)
+                movement.turn_right()
+            else
+                movement.turn_left()
+                movement.move_forward(movement_context)
+                movement.turn_left()
+            end
+        end
+    end
+
     printer.print_success("Quarry done.")
     job.complete()
+
+    movement.move_to(
+        boundaries.starting_position.x,
+        boundaries.starting_position.y,
+        boundaries.starting_position.z,
+        movement_context)
 end
 
 parallel.waitForAny(start_heartbeat, main)

@@ -1,4 +1,6 @@
 local list = require("lib.list")
+local time = require("lib.time")
+local printer = require("lib.printer")
 
 local JOB_FILE = "job.conf"
 
@@ -96,7 +98,16 @@ function job.initialize()
 end
 
 function job.complete()
-    fs.delete(JOB_FILE)
+    local deadline = time.alive_duration_in_seconds() + 30
+    while not fs.delete(JOB_FILE) do
+        sleep(0.1)
+
+        local now = time.alive_duration_in_seconds()
+        if now > deadline then
+            printer.print_error(("Could not delete '%s', please remove this manually (`rm %s`)")
+                :format(JOB_FILE, JOB_FILE))
+        end
+    end
 end
 
 function job.status()

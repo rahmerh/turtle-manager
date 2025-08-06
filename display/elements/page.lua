@@ -10,7 +10,7 @@ function page:new(monitor, layout)
         layout = layout,
         quarries_page = QuarriesPage:new(monitor, layout),
         runners_page = RunnersPage:new(monitor, layout),
-    }, page)
+    }, self)
 end
 
 function page:render(selected, data)

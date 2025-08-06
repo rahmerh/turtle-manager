@@ -36,8 +36,15 @@ function runners_page:render(data)
         boundaries.x = x_offset
         boundaries.y = y_offset
 
+        local block_colour
+        if turtle.metadata.status == "Idle" then
+            block_colour = colours.white
+        else
+            block_colour = colours.green
+        end
+
         local opts = {
-            block_colour = colours.white,
+            block_colour = block_colour,
             text_colour = colours.black
         }
 

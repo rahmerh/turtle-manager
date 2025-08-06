@@ -62,18 +62,20 @@ local function mark_stale()
         local now = time.epoch_in_seconds()
 
         for k, v in pairs(turtles) do
-            if now - v.last_seen >= 10 then
+            if not v.last_seen or now - v.last_seen >= 10 then
                 local patched = turtle_store.patch(k, {
                     metadata = {
                         status = "Offline"
                     }
                 })
+                display:add_or_update_turtle(k, patched)
             elseif now - v.last_seen >= 5 then
                 local patched = turtle_store.patch(k, {
                     metadata = {
                         status = "Stale"
                     }
                 })
+                display:add_or_update_turtle(k, patched)
             end
         end
 

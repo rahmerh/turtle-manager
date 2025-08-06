@@ -23,8 +23,8 @@ function sidebar:new(monitor, page_switcher, layout)
             width = width - 2,
             height = 3,
             text = "Quarries",
-            button_color = colours.black,
-            text_color = colours.white,
+            button_color = colours.lightBlue,
+            text_color = colours.black,
             on_click = function()
                 if bar.page_switcher then
                     bar.page_switcher("quarries")
@@ -37,8 +37,8 @@ function sidebar:new(monitor, page_switcher, layout)
             width = width - 2,
             height = 3,
             text = "Runners",
-            button_color = colours.black,
-            text_color = colours.white,
+            button_color = colours.lightBlue,
+            text_color = colours.black,
             on_click = function()
                 if bar.page_switcher then
                     bar.page_switcher("runners")

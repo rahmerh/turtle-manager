@@ -54,6 +54,7 @@ end
 local min_y_level = 59
 local layer_thickness = 3
 local layers = math.floor((starting_position_y + min_y_level) / layer_thickness)
+
 local data = {
     boundaries = {
         starting_position = {

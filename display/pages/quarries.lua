@@ -36,18 +36,32 @@ function quarries_page:render(data)
         boundaries.x = x_offset
         boundaries.y = y_offset
 
+        local block_colour
+        if turtle.metadata.status == "Offline" then
+            block_colour = colours.red
+        elseif turtle.metadata.status == "Stale" then
+            block_colour = colours.yellow
+        else
+            block_colour = colours.green
+        end
+
         local opts = {
-            block_colour = colours.white,
+            block_colour = block_colour,
             text_colour = colours.black
         }
+
+        local location_line
+        if turtle.metadata.current_location then
+            location_line = ("%d %d %d"):format(
+                turtle.metadata.current_location.x,
+                turtle.metadata.current_location.y,
+                turtle.metadata.current_location.z)
+        end
 
         local lines = {
             key,
             turtle.metadata.status,
-            ("%d %d %d"):format(
-                turtle.metadata.current_location.x,
-                turtle.metadata.current_location.y,
-                turtle.metadata.current_location.z)
+            location_line
         }
         local block = InfoBlock:new(self.monitor, boundaries, opts, lines, self.layout)
 
