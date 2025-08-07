@@ -68,6 +68,12 @@ function pager:set_total_pages(total_pages)
     self.total_pages = total_pages
 end
 
+function pager:should_display(index, blocks_per_page)
+    local start_index = (self.current_page - 1) * blocks_per_page + 1
+    local end_index = self.current_page * blocks_per_page
+    return index >= start_index and index <= end_index
+end
+
 function pager:anchor_to(side)
     if side == "top" or side == "right" or side == "left" or side == "bottom" then
         self.anchored_to = side

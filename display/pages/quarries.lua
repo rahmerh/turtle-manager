@@ -6,43 +6,20 @@ local list = require("lib.list")
 local quarries_page = {}
 quarries_page.__index = quarries_page
 
-local default_block_boundaries = {
-    width = 20,
-    height = 5
-}
-
-local function calculate_blocks_per_page(layout, block_width, block_height)
-    local y_offset = 2
-    local x_offset = layout.sidebar_width + 2
-    local fit_count = 0
-
-    while true do
-        if not layout:does_element_fit_vertically(y_offset, block_height) then
-            x_offset = x_offset + block_width + 1
-            y_offset = 2
-        end
-
-        if not layout:does_element_fit_horizontally(x_offset, block_width) then
-            break
-        end
-
-        y_offset = y_offset + block_height + 2
-        fit_count = fit_count + 1
-    end
-
-    return fit_count
-end
-
 function quarries_page:new(monitor, layout)
     local result = setmetatable({
         monitor = monitor,
         layout = layout,
     }, self)
 
-    result.blocks_per_page = calculate_blocks_per_page(
-        layout,
-        default_block_boundaries.width,
-        default_block_boundaries.height)
+    result.default_block_size = {
+        width = 20,
+        height = 5
+    }
+
+    result.blocks_per_page = layout:calculate_blocks_per_page(
+        result.default_block_size.width,
+        result.default_block_size.height)
 
     result.pager = Pager:new(monitor, layout)
 
@@ -56,7 +33,15 @@ function quarries_page:handle_click(x, y)
 end
 
 function quarries_page:render(data)
-    local quarries = list.filter_by(data, "role", "quarry")
+    local quarries = list.filter_map_by(data, "role", "quarry")
+    local quarry_list = {}
+
+    for key, turtle in pairs(quarries) do
+        turtle.id = key
+        table.insert(quarry_list, turtle)
+    end
+
+    quarry_list = list.sort_by(quarry_list, "id", true)
 
     local quarry_count = 0
     for _ in pairs(quarries) do
@@ -71,31 +56,26 @@ function quarries_page:render(data)
     local x_offset = self.layout.sidebar_width + 2
 
     local index = 1
-    for key, turtle in pairs(quarries) do
-        if index <= (self.blocks_per_page * (self.pager.current_page - 1)) then
+    for _, turtle in ipairs(quarry_list) do
+        if not self.pager:should_display(index, self.blocks_per_page) then
             index = index + 1
             goto continue
         end
 
-        if index > (self.blocks_per_page * self.pager.current_page) then
-            break
-        end
-
-        if not self.layout:does_element_fit_vertically(y_offset, default_block_boundaries.height) then
-            x_offset = x_offset + default_block_boundaries.width + 1
+        if not self.layout:does_element_fit_vertically(y_offset, self.default_block_size.height) then
+            x_offset = x_offset + self.default_block_size.width + 1
             y_offset = 2
         end
-
-        default_block_boundaries.x = x_offset
-        default_block_boundaries.y = y_offset
 
         local block_colour
         if turtle.metadata.status == "Offline" then
             block_colour = colours.red
         elseif turtle.metadata.status == "Stale" then
             block_colour = colours.yellow
-        else
+        elseif turtle.metadata.status == "Completed" then
             block_colour = colours.green
+        else
+            block_colour = colours.white
         end
 
         local opts = {
@@ -111,16 +91,23 @@ function quarries_page:render(data)
                 turtle.metadata.current_location.z)
         end
 
+        local boundaries = {
+            x = x_offset,
+            y = y_offset,
+            width = self.default_block_size.width,
+            height = self.default_block_size.height
+        }
+
         local lines = {
-            key,
+            turtle.id,
             turtle.metadata.status,
             location_line
         }
 
-        local block = InfoBlock:new(self.monitor, default_block_boundaries, opts, lines, self.layout)
+        local block = InfoBlock:new(self.monitor, boundaries, opts, lines, self.layout)
         block:render()
 
-        y_offset = y_offset + default_block_boundaries.height + 2
+        y_offset = y_offset + self.default_block_size.height + 2
 
         index = index + 1
 

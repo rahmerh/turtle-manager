@@ -79,7 +79,7 @@ function quarry.starting_location_for_row(layer, row, boundaries)
     }
 end
 
-local function detect_fluid_in_next_column(movement_context)
+local function detect_fluid_in_next_column(boundaries, movement_context)
     local fluid_detected = false
 
     local ok, info = turtle.inspect()
@@ -107,7 +107,7 @@ function quarry.is_fluid_block(name)
     return list.contains(fluids, name)
 end
 
-function quarry.scan_fluid_columns(movement_context)
+function quarry.scan_fluid_columns(boundaries, movement_context)
     local water_columns = {}
 
     local start_pos = movement.get_current_coordinates()
@@ -117,23 +117,15 @@ function quarry.scan_fluid_columns(movement_context)
     local selected = turtle.getSelectedSlot()
 
     while true do
-        while true do
-            local coordinates = detect_fluid_in_next_column(movement_context)
-            if coordinates and not list.contains(water_columns, coordinates) then
-                table.insert(water_columns, coordinates)
-            else
-                break
-            end
-        end
-
-        if coordinates then
+        local coordinates = detect_fluid_in_next_column(boundaries, movement_context)
+        if coordinates and not list.contains(water_columns, coordinates) then
             table.insert(water_columns, coordinates)
         else
             break
         end
     end
 
-    for _ = 1, #water_columns do
+    for _ = 1, #water_columns + 1 do
         local cobble_slot = inventory.find_item("minecraft:cobblestone")
 
         if not cobble_slot then
@@ -156,170 +148,97 @@ function quarry.scan_fluid_columns(movement_context)
 
         turtle.select(cobble_slot)
 
-        local back = movement.opposite_of(start_facing)
-        movement.turn_to_direction(back)
-
         turtle.placeDown()
         turtle.placeUp()
 
-        movement.move_forward()
-        movement.turn_right()
-        movement.turn_right()
+        movement.move_back()
 
         turtle.place()
     end
+
+    miner.mine_up()
+    miner.mine_down()
+    miner.mine()
+    movement.move_forward()
+    miner.mine_up()
+    miner.mine_down()
 
     turtle.select(selected)
     movement.move_to(start_pos.x, start_pos.y, start_pos.z, { dig = true })
     movement.turn_to_direction(start_facing)
 end
 
-function quarry.mine_bedrock_layer(x, z, width, depth, movement_context)
-    local coordinates = movement.get_current_coordinates()
+function quarry.mine_bedrock_layer(start_x, start_z, width, depth, movement_context)
+    movement.move_to(start_x, -60, start_z, movement_context)
+    movement.turn_to_direction("north")
 
-    if coordinates.y > -59 then
-        movement.move_to(x, -59, z, { dig = true })
-        movement.turn_to_direction("north")
-
-        for row = 1, width do
-            for _ = 1, depth - 1 do
-                miner.mine_up()
-                miner.mine()
-
-                movement.move_forward(movement_context)
-
-                if inventory.are_all_slots_full() then
-                    quarry.unload(movement_context.manager_id)
-                end
-            end
-
-            if row % 2 == 0 then
-                movement.turn_left()
-                miner.mine()
-                miner.mine_up()
-                movement.move_forward(movement_context)
-                movement.turn_left()
-            else
-                movement.turn_right()
-                miner.mine()
-                miner.mine_up()
-                movement.move_forward(movement_context)
-                movement.turn_right()
+    local to_move_forward = depth - 1
+    local current_coordinates = movement.get_current_coordinates()
+    if current_coordinates.y ~= -60 then
+        while scanner.is_block("minecraft:bedrock", "down") do
+            local moved_forward = movement.move_forward(movement_context)
+            if moved_forward then
+                to_move_forward = to_move_forward - 1
             end
         end
     end
 
-    movement.move_to(x, -59, z, movement_context)
-    movement.turn_to_direction("north")
-
-    local movement_context_no_retries = {
-        manager_id = movement_context.manager_id,
-        retries = 0
-    }
-
     for row = 1, width do
-        local to_move_forward = depth - 1
+        for _ = 1, to_move_forward do
+            miner.mine()
 
-        while true do
-            if to_move_forward <= 0 then
-                break
+            while scanner.is_block("minecraft:bedrock", "forward") do
+                movement.move_up(movement_context)
             end
 
-            if inventory.are_all_slots_full() then
-                quarry.unload(movement_context.manager_id)
+            local moved_forward = movement.move_forward(movement_context)
+            if moved_forward then
+                to_move_forward = to_move_forward - 1
             end
 
-            local moved_down = 0
-            while true do
-                miner.mine()
+            miner.mine_down()
 
-                local ok, err = movement.move_down(movement_context_no_retries)
-
-                if ok then
-                    moved_down = moved_down + 1
-                end
-
-                local mined_err
-                if not ok and err == errors.BLOCKED then
-                    _, mined_err = miner.mine_down()
-                end
-
-                if err == errors.BLOCKED and mined_err == errors.BLOCKED then
+            while movement.get_current_coordinates().y > -60 do
+                local moved_down = movement.move_down(movement_context)
+                if not moved_down then
                     break
-                end
-
-                if ok and moved_down >= 2 then
-                    movement.turn_left()
-                    movement.turn_left()
-                    miner.mine()
-                    movement.turn_right()
-                    movement.turn_right()
-                end
-            end
-
-            if not scanner.is_free("up") then
-                miner.mine_up()
-            end
-
-            while scanner.is_block("minecraft:bedrock", "up") do
-                local moved_back = movement.move_back(movement_context_no_retries)
-                if moved_back then
-                    to_move_forward = to_move_forward + 1
-                end
-
-                movement.move_up(movement_context_no_retries)
-            end
-
-            while scanner.is_block("minecraft:bedrock", "forward") and scanner.is_free("up") do
-                movement.move_up(movement_context_no_retries)
-                local moved_forward = movement.move_forward(movement_context_no_retries)
-
-                if moved_forward then
-                    miner.mine()
-                    to_move_forward = to_move_forward - 1
-                end
-
-                if to_move_forward <= 0 then
-                    break
-                end
-            end
-
-            if to_move_forward <= 0 then
-                break
-            end
-
-            while scanner.is_block("minecraft:bedrock", "down") and scanner.is_free("forward") do
-                local moved_forward = movement.move_forward(movement_context_no_retries)
-                if moved_forward then
-                    miner.mine()
-                    to_move_forward = to_move_forward - 1
-                end
-
-                if to_move_forward <= 0 then
-                    break
+                else
+                    miner.mine_down()
                 end
             end
         end
 
-        while movement.get_current_coordinates().y < -59 do
-            movement.move_up(movement_context_no_retries)
+        if row == width then
+            break
         end
 
         if row % 2 == 0 then
             movement.turn_left()
-            miner.mine()
+
+            if scanner.is_block("minecraft:bedrock", "forward") then
+                movement.move_up(movement_context)
+            else
+                miner.mine()
+            end
+
             movement.move_forward(movement_context)
-            miner.mine_up()
             miner.mine_down()
             movement.turn_left()
         else
             movement.turn_right()
-            miner.mine()
+
+            if scanner.is_block("minecraft:bedrock", "forward") then
+                movement.move_up(movement_context)
+            else
+                miner.mine()
+            end
+
             movement.move_forward(movement_context)
-            miner.mine_up()
             miner.mine_down()
             movement.turn_right()
         end
+
+        to_move_forward = depth - 1
     end
 end
 

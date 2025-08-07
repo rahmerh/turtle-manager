@@ -16,7 +16,7 @@ function runners_page:new(monitor, layout)
 end
 
 function runners_page:render(data)
-    local quarries = list.filter_by(data, "role", "runner")
+    local quarries = list.filter_map_by(data, "role", "runner")
 
     if self.total_pages > 1 then
         local pager = Pager:new(self.monitor, self.layout)

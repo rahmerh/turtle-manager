@@ -129,17 +129,7 @@ local function main()
                     return
                 end
 
-                local _, front_info = turtle.inspect()
-
                 movement.move_forward(movement_context)
-
-                local _, up_info = turtle.inspectUp()
-                local _, down_info = turtle.inspectDown()
-                if quarry.is_fluid_block(front_info.name) or
-                    quarry.is_fluid_block(up_info.name) or
-                    quarry.is_fluid_block(down_info.name) then
-                    quarry.scan_fluid_columns(movement_context)
-                end
 
                 miner.mine_up()
                 miner.mine_down()
@@ -170,6 +160,8 @@ local function main()
         boundaries.starting_position.y,
         boundaries.starting_position.z,
         movement_context)
+
+    wireless.completed.signal_completed(manager_id, movement.get_current_coordinates())
 end
 
 parallel.waitForAny(start_heartbeat, main)

@@ -23,16 +23,27 @@ function list.contains(arr, entry)
     return false
 end
 
-function list.filter_by(tbl, key_path, value)
+function list.filter_map_by(map, key_path, value)
     local result = {}
 
-    for k, v in pairs(tbl) do
+    for k, v in pairs(map) do
         if resolve_path(v, key_path) == value then
             result[k] = v
         end
     end
 
     return result
+end
+
+function list.sort_by(array, field, descending)
+    table.sort(array, function(a, b)
+        if descending then
+            return a[field] > b[field]
+        else
+            return a[field] < b[field]
+        end
+    end)
+    return array
 end
 
 return list

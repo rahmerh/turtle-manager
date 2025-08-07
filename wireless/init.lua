@@ -14,6 +14,7 @@ return {
     registry = require("wireless.services.registry"),
     heartbeat = require("wireless.services.heartbeat"),
     discovery = require("wireless.services.discovery"),
+    completed = require("wireless.services.job-completed"),
     pickup = require("wireless.services.pickup"),
     resupply = require("wireless.services.resupply"),
 }

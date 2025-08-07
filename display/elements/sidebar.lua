@@ -44,6 +44,17 @@ function sidebar:new(monitor, page_switcher, layout)
                 end
             end
         }),
+        Button:new(monitor, {
+            x = 2,
+            y = monitor_height - 3,
+            width = width - 2,
+            height = 3,
+            text = "Settings",
+            button_color = colours.lightBlue,
+            text_color = colours.black,
+            on_click = function()
+            end
+        }),
     }
 
     return bar

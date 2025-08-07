@@ -58,4 +58,5 @@ The turtles only request coal, chests and cobblestone, so make sure to always ha
   - Turtle info page
   - Turtle remote control functionality
 
+- Remove quarry fluid handling, add runner fluid handling
 - Turtles redistribute tasks

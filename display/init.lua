@@ -13,8 +13,8 @@ Display.__index = Display
 local function print_boot_screen(layout)
     local _, height = layout:get_monitor_size()
 
-    local text = "TUMA is booting..."
-    layout:scroll_text(1, height, text, 1)
+    local text = "Turtle manager is booting..."
+    layout:scroll_text(1, height, text, 2)
 end
 
 function Display:new(monitor)
