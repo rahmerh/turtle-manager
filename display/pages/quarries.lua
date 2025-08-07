@@ -1,15 +1,17 @@
-local InfoBlock = require("display.elements.info_block")
 local Pager = require("display.elements.pager")
+local Button = require("display.elements.button")
 
 local list = require("lib.list")
 
 local quarries_page = {}
 quarries_page.__index = quarries_page
 
-function quarries_page:new(monitor, layout)
+function quarries_page:new(monitor, layout, page_switcher)
     local result = setmetatable({
         monitor = monitor,
         layout = layout,
+        info_blocks = {},
+        page_switcher = page_switcher
     }, self)
 
     result.default_block_size = {
@@ -27,13 +29,21 @@ function quarries_page:new(monitor, layout)
 end
 
 function quarries_page:handle_click(x, y)
-    if self.pager then
-        self.pager:handle_click(x, y)
+    if self.pager and self.pager:handle_click(x, y) then
+        return true
     end
+
+    for _, b in ipairs(self.info_blocks) do
+        if b:handle_click(x, y) then
+            return true
+        end
+    end
+
+    return false
 end
 
 function quarries_page:render(data)
-    local quarries = list.filter_map_by(data, "role", "quarry")
+    local quarries = list.filter_map_by(data.turtles, "role", "quarry")
     local quarry_list = {}
 
     for key, turtle in pairs(quarries) do
@@ -67,21 +77,16 @@ function quarries_page:render(data)
             y_offset = 2
         end
 
-        local block_colour
+        local button_colour
         if turtle.metadata.status == "Offline" then
-            block_colour = colours.red
+            button_colour = colours.red
         elseif turtle.metadata.status == "Stale" then
-            block_colour = colours.yellow
+            button_colour = colours.yellow
         elseif turtle.metadata.status == "Completed" then
-            block_colour = colours.green
+            button_colour = colours.green
         else
-            block_colour = colours.white
+            button_colour = colours.white
         end
-
-        local opts = {
-            block_colour = block_colour,
-            text_colour = colours.black
-        }
 
         local location_line
         if turtle.metadata.current_location then
@@ -91,23 +96,28 @@ function quarries_page:render(data)
                 turtle.metadata.current_location.z)
         end
 
-        local boundaries = {
-            x = x_offset,
-            y = y_offset,
-            width = self.default_block_size.width,
-            height = self.default_block_size.height
-        }
-
         local lines = {
             turtle.id,
             turtle.metadata.status,
             location_line
         }
 
-        local block = InfoBlock:new(self.monitor, boundaries, opts, lines, self.layout)
-        block:render()
+        local button = Button:new(self.monitor, self.layout, {
+            x = x_offset,
+            y = y_offset,
+            width = self.default_block_size.width,
+            height = self.default_block_size.height,
+            text = lines,
+            button_color = button_colour,
+            text_color = colours.black,
+            on_click = function()
+                self.page_switcher("quarry_info", turtle.id)
+            end
+        })
+        table.insert(self.info_blocks, button)
+        button:render()
 
-        y_offset = y_offset + self.default_block_size.height + 2
+        y_offset = y_offset + self.default_block_size.height + 1
 
         index = index + 1
 

@@ -14,6 +14,11 @@ function layout:get_monitor_size()
     return self.monitor.getSize()
 end
 
+function layout:get_page_width()
+    local width, _ = self.monitor.getSize()
+    return width - self.sidebar_width
+end
+
 function layout:set_bg_colour(colour)
     self.bg_colour = colour
 end

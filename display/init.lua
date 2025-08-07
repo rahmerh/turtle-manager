@@ -21,20 +21,28 @@ function Display:new(monitor)
     if not monitor then
         return nil, errors.NIL_PARAM
     end
+
+    local page_switcher = function(page_id, selected_id)
+        Display.selected_page = page_id
+        Display.selected_id = selected_id
+    end
+
     local layout = Layout:new(monitor)
-    local sidebar = Sidebar:new(monitor, function(page_id) Display.selected_page = page_id end, layout)
+    local sidebar = Sidebar:new(monitor, page_switcher, layout)
     layout:set_sidebar_width(sidebar.width)
 
     Display.selected_page = "quarries"
 
     layout:render_background()
+    monitor.setTextColour(colours.black)
+
     print_boot_screen(layout)
 
     return setmetatable({
         monitor = monitor,
         layout = layout,
         sidebar = sidebar,
-        page = Page:new(monitor, layout),
+        page = Page:new(monitor, layout, page_switcher),
     }, self)
 end
 
@@ -47,7 +55,10 @@ function Display:render()
 
     self.layout:render_background()
     self.sidebar:render()
-    self.page:render(self.selected_page, self.turtles)
+    self.page:render(self.selected_page, {
+        turtles = self.turtles,
+        selected_id = self.selected_id
+    })
 end
 
 function Display:add_or_update_turtle(id, turtle)

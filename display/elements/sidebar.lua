@@ -16,7 +16,7 @@ function sidebar:new(monitor, page_switcher, layout)
     }, sidebar)
 
     bar.buttons = {
-        Button:new(monitor, {
+        Button:new(monitor, layout, {
             x = 2,
             y = 2,
             width = width - 2,
@@ -30,7 +30,7 @@ function sidebar:new(monitor, page_switcher, layout)
                 end
             end
         }),
-        Button:new(monitor, {
+        Button:new(monitor, layout, {
             x = 2,
             y = 6,
             width = width - 2,
@@ -44,7 +44,7 @@ function sidebar:new(monitor, page_switcher, layout)
                 end
             end
         }),
-        Button:new(monitor, {
+        Button:new(monitor, layout, {
             x = 2,
             y = monitor_height - 3,
             width = width - 2,

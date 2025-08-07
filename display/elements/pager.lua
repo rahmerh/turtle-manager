@@ -31,7 +31,7 @@ function pager:new(monitor, layout)
     local page_middle       = calculate_page_middle(layout)
 
     result.buttons          = {
-        Button:new(monitor, {
+        Button:new(monitor, layout, {
             x = page_middle - 15,
             y = monitor_height - 1,
             width = 5,
@@ -45,7 +45,7 @@ function pager:new(monitor, layout)
                 end
             end
         }),
-        Button:new(monitor, {
+        Button:new(monitor, layout, {
             x = page_middle + 10,
             y = monitor_height - 1,
             width = 5,

@@ -46,4 +46,13 @@ function list.sort_by(array, field, descending)
     return array
 end
 
+function list.find(array, field, value)
+    for _, item in ipairs(array) do
+        if item[field] == value then
+            return item
+        end
+    end
+    return nil
+end
+
 return list

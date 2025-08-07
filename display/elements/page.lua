@@ -1,5 +1,6 @@
 local QuarriesPage = require("display.pages.quarries")
 local RunnersPage = require("display.pages.runners")
+local QuarryDetailsPage = require("display.pages.quarry_details")
 
 local page = {}
 page.__index = page
@@ -10,17 +11,20 @@ local function get_page_from_selected(self, selected)
         result = self.quarries_page
     elseif selected == "runners" then
         result = self.runners_page
+    elseif selected == "quarry_info" then
+        result = self.quarry_info_page
     end
 
     return result
 end
 
-function page:new(monitor, layout)
+function page:new(monitor, layout, page_switcher)
     return setmetatable({
         monitor = monitor,
         layout = layout,
-        quarries_page = QuarriesPage:new(monitor, layout),
-        runners_page = RunnersPage:new(monitor, layout),
+        quarries_page = QuarriesPage:new(monitor, layout, page_switcher),
+        runners_page = RunnersPage:new(monitor, layout, page_switcher),
+        quarry_info_page = QuarryDetailsPage:new(monitor, layout, page_switcher)
     }, self)
 end
 

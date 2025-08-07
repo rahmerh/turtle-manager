@@ -62,7 +62,7 @@ end
 
 wireless.registry.register_self_as(manager_id, "quarry")
 
-local start_heartbeat, _ = wireless.heartbeat.loop(manager_id, 1, function()
+local start_heartbeat, stop_heartbeat = wireless.heartbeat.loop(manager_id, 1, function()
     return {
         status = job.status(),
         current_layer = job.current_layer(),
@@ -165,5 +165,3 @@ local function main()
 end
 
 parallel.waitForAny(start_heartbeat, main)
-
-job.set_status(job.statuses.idle)

@@ -169,17 +169,17 @@ function quarry.scan_fluid_columns(boundaries, movement_context)
 end
 
 function quarry.mine_bedrock_layer(start_x, start_z, width, depth, movement_context)
-    movement.move_to(start_x, -60, start_z, movement_context)
+    movement.move_to(start_x, -59, start_z, movement_context)
     movement.turn_to_direction("north")
 
     local to_move_forward = depth - 1
-    local current_coordinates = movement.get_current_coordinates()
-    if current_coordinates.y ~= -60 then
-        while scanner.is_block("minecraft:bedrock", "down") do
-            local moved_forward = movement.move_forward(movement_context)
-            if moved_forward then
-                to_move_forward = to_move_forward - 1
-            end
+
+    while movement.get_current_coordinates().y > -60 do
+        local moved_down = movement.move_down(movement_context)
+        if not moved_down then
+            break
+        else
+            miner.mine_down()
         end
     end
 
@@ -188,7 +188,9 @@ function quarry.mine_bedrock_layer(start_x, start_z, width, depth, movement_cont
             miner.mine()
 
             while scanner.is_block("minecraft:bedrock", "forward") do
+                miner.mine_up()
                 movement.move_up(movement_context)
+                miner.mine()
             end
 
             local moved_forward = movement.move_forward(movement_context)
@@ -196,7 +198,12 @@ function quarry.mine_bedrock_layer(start_x, start_z, width, depth, movement_cont
                 to_move_forward = to_move_forward - 1
             end
 
+            miner.mine_up()
             miner.mine_down()
+
+            if inventory.are_all_slots_full() then
+                quarry.unload(movement_context.manager_id)
+            end
 
             while movement.get_current_coordinates().y > -60 do
                 local moved_down = movement.move_down(movement_context)
@@ -222,6 +229,7 @@ function quarry.mine_bedrock_layer(start_x, start_z, width, depth, movement_cont
             end
 
             movement.move_forward(movement_context)
+            miner.mine_up()
             miner.mine_down()
             movement.turn_left()
         else
@@ -234,6 +242,7 @@ function quarry.mine_bedrock_layer(start_x, start_z, width, depth, movement_cont
             end
 
             movement.move_forward(movement_context)
+            miner.mine_up()
             miner.mine_down()
             movement.turn_right()
         end
