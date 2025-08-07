@@ -35,7 +35,13 @@ function Layout:does_element_fit_horizontally(x, width)
 end
 
 function Layout:calculate_x_to_float_text_in(text, width)
-    return (width / 2) - (string.len(text) / 2)
+    local x = (width / 2) - (string.len(text) / 2)
+
+    if width % 2 == 0 then
+        x = x + 1
+    end
+
+    return x
 end
 
 function Layout:scroll_text(x, y, text, duration)

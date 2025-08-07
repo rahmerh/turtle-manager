@@ -1,4 +1,5 @@
 local InfoBlock = require("display.elements.info_block")
+local Pager = require("display.elements.pager")
 
 local list = require("lib.list")
 
@@ -8,12 +9,19 @@ runners_page.__index = runners_page
 function runners_page:new(monitor, layout)
     return setmetatable({
         monitor = monitor,
-        layout = layout
+        layout = layout,
+        current_page = 1,
+        total_pages = 1
     }, self)
 end
 
 function runners_page:render(data)
     local quarries = list.filter_by(data, "role", "runner")
+
+    if self.total_pages > 1 then
+        local pager = Pager:new(self.monitor, self.layout)
+        pager:render()
+    end
 
     local y_offset = 2
     local x_offset = self.layout.sidebar_width + 2
@@ -29,7 +37,7 @@ function runners_page:render(data)
         end
 
         if not self.layout:does_element_fit_horizontally(x_offset, boundaries.width) then
-            -- TODO: Add pager
+            self.total_pages = self.total_pages + 1
             return
         end
 
@@ -39,6 +47,10 @@ function runners_page:render(data)
         local block_colour
         if turtle.metadata.status == "Idle" then
             block_colour = colours.white
+        elseif turtle.metadata.status == "Offline" then
+            block_colour = colours.red
+        elseif turtle.metadata.status == "Stale" then
+            block_colour = colours.yellow
         else
             block_colour = colours.green
         end

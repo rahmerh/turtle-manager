@@ -1,4 +1,4 @@
-local button = require("display.elements.button")
+local Button = require("display.elements.button")
 
 local sidebar = {}
 sidebar.__index = sidebar
@@ -16,8 +16,7 @@ function sidebar:new(monitor, page_switcher, layout)
     }, sidebar)
 
     bar.buttons = {
-        button:new(monitor, {
-            monitor = monitor,
+        Button:new(monitor, {
             x = 2,
             y = 2,
             width = width - 2,
@@ -31,7 +30,7 @@ function sidebar:new(monitor, page_switcher, layout)
                 end
             end
         }),
-        button:new(monitor, {
+        Button:new(monitor, {
             x = 2,
             y = 6,
             width = width - 2,

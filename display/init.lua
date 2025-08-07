@@ -68,7 +68,11 @@ function Display:loop(refresh_rate)
 
         if event[1] == "monitor_touch" then
             local _, _, x, y = table.unpack(event)
-            self.sidebar:handle_click(x, y)
+
+            local click_in_sidebar = self.sidebar:handle_click(x, y)
+            if not click_in_sidebar then
+                self.page:handle_click(self.selected_page, x, y)
+            end
         elseif event[1] == "terminate" then
             self.monitor.clear()
             return

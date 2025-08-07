@@ -2,6 +2,8 @@ local mover = require("movement.mover")
 local fueler = require("movement.fueler")
 local locator = require("movement.locator")
 
+local errors = require("lib.errors")
+
 local M = {}
 
 function M.move_to(x, y, z, ctx)
@@ -23,7 +25,7 @@ function M.move_to(x, y, z, ctx)
 
         attempts = attempts + 1
         if attempts > retries then
-            return nil, "TEMP"
+            return nil, errors.BLOCKED
         end
 
         ::continue::
@@ -48,7 +50,7 @@ function M.move_forward(ctx)
 
         attempts = attempts + 1
         if attempts > retries then
-            return nil, "TEMP"
+            return nil, errors.BLOCKED
         end
     end
 end
@@ -71,7 +73,7 @@ function M.move_back(ctx)
 
         attempts = attempts + 1
         if attempts > retries then
-            return nil, "TEMP"
+            return nil, errors.BLOCKED
         end
     end
 end
@@ -94,7 +96,7 @@ function M.move_up(ctx)
 
         attempts = attempts + 1
         if attempts > retries then
-            return nil, "TEMP"
+            return nil, errors.BLOCKED
         end
     end
 end
@@ -109,15 +111,15 @@ function M.move_down(ctx)
             return ok
         end
 
+        attempts = attempts + 1
+        if attempts > retries then
+            return nil, errors.BLOCKED
+        end
+
         local action = fueler.handle_movement_result(ok, err, ctx)
 
         if action ~= "retry" then
             break
-        end
-
-        attempts = attempts + 1
-        if attempts > retries then
-            return nil, "TEMP"
         end
     end
 end

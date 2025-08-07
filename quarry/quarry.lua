@@ -5,6 +5,8 @@ local list = require("lib.list")
 local inventory = require("lib.inventory")
 local printer = require("lib.printer")
 local miner = require("lib.miner")
+local scanner = require("lib.scanner")
+local errors = require("lib.errors")
 
 local quarry = {}
 
@@ -77,10 +79,6 @@ function quarry.starting_location_for_row(layer, row, boundaries)
     }
 end
 
-function quarry.is_fluid_block(name)
-    return list.contains(fluids, name)
-end
-
 local function detect_fluid_in_next_column(movement_context)
     local fluid_detected = false
 
@@ -103,6 +101,10 @@ local function detect_fluid_in_next_column(movement_context)
     if fluid_detected and moved then
         return movement.get_current_coordinates()
     end
+end
+
+function quarry.is_fluid_block(name)
+    return list.contains(fluids, name)
 end
 
 function quarry.scan_fluid_columns(movement_context)
@@ -170,6 +172,185 @@ function quarry.scan_fluid_columns(movement_context)
     turtle.select(selected)
     movement.move_to(start_pos.x, start_pos.y, start_pos.z, { dig = true })
     movement.turn_to_direction(start_facing)
+end
+
+function quarry.mine_bedrock_layer(x, z, width, depth, movement_context)
+    local coordinates = movement.get_current_coordinates()
+
+    if coordinates.y > -59 then
+        movement.move_to(x, -59, z, { dig = true })
+        movement.turn_to_direction("north")
+
+        for row = 1, width do
+            for _ = 1, depth - 1 do
+                miner.mine_up()
+                miner.mine()
+
+                movement.move_forward(movement_context)
+
+                if inventory.are_all_slots_full() then
+                    quarry.unload(movement_context.manager_id)
+                end
+            end
+
+            if row % 2 == 0 then
+                movement.turn_left()
+                miner.mine()
+                miner.mine_up()
+                movement.move_forward(movement_context)
+                movement.turn_left()
+            else
+                movement.turn_right()
+                miner.mine()
+                miner.mine_up()
+                movement.move_forward(movement_context)
+                movement.turn_right()
+            end
+        end
+    end
+
+    movement.move_to(x, -59, z, movement_context)
+    movement.turn_to_direction("north")
+
+    local movement_context_no_retries = {
+        manager_id = movement_context.manager_id,
+        retries = 0
+    }
+
+    for row = 1, width do
+        local to_move_forward = depth - 1
+
+        while true do
+            if to_move_forward <= 0 then
+                break
+            end
+
+            if inventory.are_all_slots_full() then
+                quarry.unload(movement_context.manager_id)
+            end
+
+            local moved_down = 0
+            while true do
+                miner.mine()
+
+                local ok, err = movement.move_down(movement_context_no_retries)
+
+                if ok then
+                    moved_down = moved_down + 1
+                end
+
+                local mined_err
+                if not ok and err == errors.BLOCKED then
+                    _, mined_err = miner.mine_down()
+                end
+
+                if err == errors.BLOCKED and mined_err == errors.BLOCKED then
+                    break
+                end
+
+                if ok and moved_down >= 2 then
+                    movement.turn_left()
+                    movement.turn_left()
+                    miner.mine()
+                    movement.turn_right()
+                    movement.turn_right()
+                end
+            end
+
+            if not scanner.is_free("up") then
+                miner.mine_up()
+            end
+
+            while scanner.is_block("minecraft:bedrock", "up") do
+                local moved_back = movement.move_back(movement_context_no_retries)
+                if moved_back then
+                    to_move_forward = to_move_forward + 1
+                end
+
+                movement.move_up(movement_context_no_retries)
+            end
+
+            while scanner.is_block("minecraft:bedrock", "forward") and scanner.is_free("up") do
+                movement.move_up(movement_context_no_retries)
+                local moved_forward = movement.move_forward(movement_context_no_retries)
+
+                if moved_forward then
+                    miner.mine()
+                    to_move_forward = to_move_forward - 1
+                end
+
+                if to_move_forward <= 0 then
+                    break
+                end
+            end
+
+            if to_move_forward <= 0 then
+                break
+            end
+
+            while scanner.is_block("minecraft:bedrock", "down") and scanner.is_free("forward") do
+                local moved_forward = movement.move_forward(movement_context_no_retries)
+                if moved_forward then
+                    miner.mine()
+                    to_move_forward = to_move_forward - 1
+                end
+
+                if to_move_forward <= 0 then
+                    break
+                end
+            end
+        end
+
+        while movement.get_current_coordinates().y < -59 do
+            movement.move_up(movement_context_no_retries)
+        end
+
+        if row % 2 == 0 then
+            movement.turn_left()
+            miner.mine()
+            movement.move_forward(movement_context)
+            miner.mine_up()
+            miner.mine_down()
+            movement.turn_left()
+        else
+            movement.turn_right()
+            miner.mine()
+            movement.move_forward(movement_context)
+            miner.mine_up()
+            miner.mine_down()
+            movement.turn_right()
+        end
+    end
+end
+
+function quarry.unload(manager_id)
+    local has_chests = inventory.is_item_in_slot("minecraft:chest", 2)
+
+    if not has_chests then
+        printer.print_info("Requesting chests...")
+        local desired = { ["minecraft:chest"] = 64 }
+        wireless.resupply.request(manager_id, movement.get_current_coordinates(), desired)
+        local runner_id, job_id = wireless.resupply.await_arrival()
+        inventory.drop_slots(2, 2, "up")
+        wireless.resupply.signal_ready(runner_id, job_id)
+        wireless.resupply.await_done()
+    end
+
+    movement.move_back()
+    movement.move_up()
+
+    turtle.select(2)
+    turtle.placeDown()
+    inventory.drop_slots(3, 16, "down")
+
+    wireless.pickup.request(manager_id, movement.get_current_coordinates())
+
+    if not scanner.is_free("forward") then
+        miner.mine()
+    end
+
+    movement.move_forward()
+    movement.move_down()
 end
 
 return quarry

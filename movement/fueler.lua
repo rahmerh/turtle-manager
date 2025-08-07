@@ -64,7 +64,7 @@ end
 
 function fueler.handle_movement_result(ok, err, ctx)
     if ok then return "retry" end
-    if err ~= errors.NO_FUEL then return nil, err end
+    if err ~= errors.NO_FUEL then return ok, err end
 
     if fueler.refuel_from_inventory() then
         return "retry"

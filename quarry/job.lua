@@ -99,13 +99,21 @@ end
 
 function job.complete()
     local deadline = time.alive_duration_in_seconds() + 30
-    while not fs.delete(JOB_FILE) do
+    local deleted = false
+    while not deleted do
+        local success, err = pcall(fs.delete, JOB_FILE)
+        if success then
+            deleted = true
+            break
+        end
+
         sleep(0.1)
 
-        local now = time.alive_duration_in_seconds()
-        if now > deadline then
-            printer.print_error(("Could not delete '%s', please remove this manually (`rm %s`)")
-                :format(JOB_FILE, JOB_FILE))
+        if time.alive_duration_in_seconds() > deadline then
+            printer.print_error(("Could not delete '%s', (%s) please remove this manually (`rm %s`)"):format(JOB_FILE,
+                err,
+                JOB_FILE))
+            break
         end
     end
 end

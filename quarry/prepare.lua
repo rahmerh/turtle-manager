@@ -67,7 +67,7 @@ local data = {
         layers = tonumber(layers)
     },
     resumable = true,
-    status = "new"
+    status = "Created"
 }
 
 job.create(data)

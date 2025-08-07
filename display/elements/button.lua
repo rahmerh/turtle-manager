@@ -2,14 +2,16 @@ local button = {}
 button.__index = button
 
 function button:new(monitor, opts)
-    assert(opts.x and
-        opts.y and
-        opts.width and
-        opts.height and
-        opts.text and
-        opts.text_color and
-        opts.button_color and
-        opts.on_click, "Missing button config")
+    local required_fields = {
+        "x", "y", "width", "height", "text", "text_color", "button_color", "on_click"
+    }
+
+    for _, field in ipairs(required_fields) do
+        if opts[field] == nil then
+            error("Missing button config: '" .. field .. "' is required", 2)
+        end
+    end
+
     return setmetatable({
         monitor = monitor,
         x = opts.x,
@@ -45,6 +47,10 @@ function button:render()
     end
 
     local middle_y = self.y + math.floor((self.height - 1) / 2)
+
+    if self.height % 2 == 0 then
+        middle_y = middle_y + 1
+    end
 
     local text_len = string.len(self.text)
     if text_len > self.width then
