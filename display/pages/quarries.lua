@@ -1,10 +1,10 @@
-local Pager = require("display.elements.pager")
-local Button = require("display.elements.button")
-local Container = require("display.elements.container")
+local Pager           = require("display.elements.pager")
+local Button          = require("display.elements.button")
+local Container       = require("display.elements.container")
 
-local list = require("lib.list")
+local list            = require("lib.list")
 
-local quarries_page = {}
+local quarries_page   = {}
 quarries_page.__index = quarries_page
 
 function quarries_page:new(monitor, layout, page_switcher)
@@ -12,22 +12,18 @@ function quarries_page:new(monitor, layout, page_switcher)
         monitor = monitor,
         layout = layout,
         info_blocks = {},
-        page_switcher = page_switcher
+        page_switcher = page_switcher,
     }, self)
 
-    result.default_block_size = {
+    result.default_button_size = {
         width = 20,
         height = 5
     }
 
-    result.blocks_per_page = layout:calculate_blocks_per_page(
-        result.default_block_size.width,
-        result.default_block_size.height)
-
     result.pager = Pager:new(monitor, layout)
 
     local _, monitor_height = layout:get_monitor_size()
-    result.container = Container:new(monitor, layout, {
+    result.container = Container:new(monitor, "horizontal_rows", {
         x = layout.page_offset,
         y = 1
     }, {
@@ -38,21 +34,26 @@ function quarries_page:new(monitor, layout, page_switcher)
         left = 1
     })
 
+    local max_elements = result.container:calculate_capacity(
+        result.default_button_size.width,
+        result.default_button_size.height)
+
+    result.page_size = max_elements
+
     return result
 end
 
 function quarries_page:handle_click(x, y)
-    if self.pager and self.pager:handle_click(x, y) then
-        return true
+    local click_handled = false
+    if self.pager then
+        click_handled = self.pager:handle_click(x, y)
     end
 
-    for _, b in ipairs(self.info_blocks) do
-        if b:handle_click(x, y) then
-            return true
-        end
+    if not click_handled then
+        click_handled = self.container:handle_click(x, y)
     end
 
-    return false
+    return click_handled
 end
 
 function quarries_page:render(data)
@@ -68,34 +69,12 @@ function quarries_page:render(data)
 
     quarry_list = list.sort_by(quarry_list, "id", true)
 
-    local quarry_count = 0
-    for _ in pairs(quarries) do
-        quarry_count = quarry_count + 1
-    end
-
-    local total_pages = math.ceil(quarry_count / self.blocks_per_page)
-    if total_pages > 1 then
-        self.pager:set_total_pages(total_pages)
-
-        local _, monitor_height = self.layout:get_monitor_size()
-
-        local pager_x = self.layout:center_x_within(self.pager:total_width(), self.layout:get_page_width())
-        local pager_y = monitor_height - 3
-
-        self.container:add_element(self.pager, pager_x, pager_y)
-    end
-
-    local x_offset, y_offset = 0, 0
-    local index = 1
+    local skip = (self.pager.current_page - 1) * self.page_size
+    local index = 0
     for _, turtle in ipairs(quarry_list) do
-        if not self.pager:should_display(index, self.blocks_per_page) then
+        if index < skip then
             index = index + 1
             goto continue
-        end
-
-        if not self.layout:does_element_fit_vertically(y_offset, self.default_block_size.height) then
-            x_offset = x_offset + self.default_block_size.width + 1
-            y_offset = 0
         end
 
         local button_colour
@@ -124,20 +103,34 @@ function quarries_page:render(data)
         }
 
         local button = Button:new(self.monitor, self.layout, {
-            width = self.default_block_size.width,
-            height = self.default_block_size.height,
+            size = {
+                width = self.default_button_size.width,
+                height = self.default_button_size.height,
+            },
             text = lines,
             button_color = button_colour,
             text_color = colours.black,
-            on_click = function() end
+            on_click = function()
+                self.page_switcher("quarry_info", turtle.id)
+            end
         })
 
-        self.container:add_element(button, x_offset, y_offset)
-
-        y_offset = y_offset + button.height + 2
+        self.container:add_element(button)
         index = index + 1
 
         ::continue::
+    end
+
+    self.pager:set_total_pages(math.ceil(#quarry_list / self.page_size))
+    if self.pager.total_pages > 1 then
+        self.pager:set_total_pages(self.pager.total_pages)
+
+        local _, monitor_height = self.layout:get_monitor_size()
+
+        local pager_x = self.layout:center_x_within(self.pager:total_width(), self.layout:get_page_width())
+        local pager_y = monitor_height - 1
+
+        self.pager:render(pager_x + self.layout.page_offset, pager_y)
     end
 
     self.container:render()

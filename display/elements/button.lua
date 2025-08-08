@@ -3,7 +3,7 @@ button.__index = button
 
 function button:new(monitor, layout, opts)
     local required_fields = {
-        "width", "height", "text", "text_color", "button_color", "on_click"
+        "size", "text", "text_color", "button_color", "on_click"
     }
 
     for _, field in ipairs(required_fields) do
@@ -15,8 +15,7 @@ function button:new(monitor, layout, opts)
     return setmetatable({
         monitor = monitor,
         layout = layout,
-        width = opts.width,
-        height = opts.height,
+        size = opts.size,
         text = opts.text,
         button_color = opts.button_color,
         text_color = opts.text_color,
@@ -25,11 +24,15 @@ function button:new(monitor, layout, opts)
 end
 
 function button:is_clicked(x, y)
-    return x >= self.x and x < self.x + self.width
-        and y >= self.y and y < self.y + self.height
+    return x >= self.x and x < self.x + self.size.width
+        and y >= self.y and y < self.y + self.size.height
 end
 
 function button:handle_click(x, y)
+    if not x or not y then
+        error("Both x and y required.")
+    end
+
     if self:is_clicked(x, y) and self.on_click then
         self.on_click()
         return true
@@ -42,31 +45,31 @@ function button:render(x, y)
     self.x = x
     self.y = y
     self.monitor.setBackgroundColor(self.button_color)
-    for i = 0, self.height - 1 do
+    for i = 0, self.size.height - 1 do
         self.monitor.setCursorPos(x, y + i)
-        self.monitor.write(string.rep(" ", self.width))
+        self.monitor.write(string.rep(" ", self.size.width))
     end
 
-    local middle_y = y + math.floor((self.height - 1) / 2)
+    local middle_y = y + math.floor((self.size.height - 1) / 2)
 
-    if self.height % 2 == 0 then
+    if self.size.height % 2 == 0 then
         middle_y = middle_y + 1
     end
 
     self.monitor.setTextColor(self.text_color)
     if type(self.text) == "string" then
         local text_len = string.len(self.text)
-        if text_len > self.width then
-            error(("Text can't be langer than the button's width (%d)"):format(self.width))
+        if text_len > self.size.width then
+            error(("Text can't be langer than the button's width (%d)"):format(self.size.width))
         end
 
-        local middle_x = x + (self.width / 2) - (text_len / 2)
+        local middle_x = x + (self.size.width / 2) - (text_len / 2)
 
         self.monitor.setCursorPos(middle_x, middle_y)
         self.monitor.write(self.text)
     elseif type(self.text) == "table" then
         for i = 1, #self.text do
-            local middle_x = self.layout:center_x_within(string.len(self.text[i]), self.width)
+            local middle_x = self.layout:center_x_within(string.len(self.text[i]), self.size.width)
             self.monitor.setCursorPos(x + middle_x, y + i)
             self.monitor.write(self.text[i])
         end

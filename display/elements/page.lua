@@ -2,16 +2,22 @@ local QuarriesPage = require("display.pages.quarries")
 local RunnersPage = require("display.pages.runners")
 local QuarryDetailsPage = require("display.pages.quarry_details")
 
-local page = {}
+local page = {
+    pages = {
+        quarries = "quarries",
+        runners = "runners",
+        quarry_info = "quarry_info"
+    }
+}
 page.__index = page
 
 local function get_page_from_selected(self, selected)
     local result
-    if selected == "quarries" then
+    if selected == page.pages.quarries then
         result = self.quarries_page
-    elseif selected == "runners" then
+    elseif selected == page.pages.runners then
         result = self.runners_page
-    elseif selected == "quarry_info" then
+    elseif selected == page.pages.quarry_info then
         result = self.quarry_info_page
     end
 

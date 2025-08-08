@@ -1,9 +1,10 @@
-local Pager = require("display.elements.pager")
-local Button = require("display.elements.button")
+local Pager          = require("display.elements.pager")
+local Button         = require("display.elements.button")
+local Container      = require("display.elements.container")
 
-local list = require("lib.list")
+local list           = require("lib.list")
 
-local runners_page = {}
+local runners_page   = {}
 runners_page.__index = runners_page
 
 function runners_page:new(monitor, layout, page_switcher)
@@ -16,86 +17,123 @@ function runners_page:new(monitor, layout, page_switcher)
         page_switcher = page_switcher
     }, self)
 
-    result.default_block_size = {
+    result.default_button_size = {
         width = 20,
         height = 5
     }
+
+    result.pager = Pager:new(monitor, layout)
+
+    local _, monitor_height = layout:get_monitor_size()
+    result.container = Container:new(monitor, "horizontal_rows", {
+        x = layout.page_offset,
+        y = 1
+    }, {
+        width = layout:get_page_width(),
+        height = monitor_height
+    }, {
+        top = 1,
+        left = 1
+    })
+
+    local max_elements = result.container:calculate_capacity(
+        result.default_button_size.width,
+        result.default_button_size.height)
+
+    result.page_size = max_elements
 
     return result
 end
 
 function runners_page:handle_click(x, y)
-    if self.pager and self.pager:handle_click(x, y) then
-        return true
+    local click_handled = false
+    if self.pager then
+        click_handled = self.pager:handle_click(x, y)
     end
 
-    for _, b in ipairs(self.info_blocks) do
-        if b:handle_click(x, y) then
-            return true
-        end
+    if not click_handled then
+        click_handled = self.container:handle_click(x, y)
     end
 
-    return false
+    return click_handled
 end
 
 function runners_page:render(data)
-    local quarries = list.filter_map_by(data.turtles, "role", "runner")
+    self.container:clear()
 
-    if self.total_pages > 1 then
-        local pager = Pager:new(self.monitor, self.layout)
-        pager:render()
+    local runners = list.filter_map_by(data.turtles, "role", "runner")
+    local runner_list = {}
+
+    for key, turtle in pairs(runners) do
+        turtle.id = key
+        table.insert(runner_list, turtle)
     end
 
-    local y_offset = 2
-    local x_offset = self.layout.sidebar_width + 2
-    for key, turtle in pairs(quarries) do
-        local boundaries = {
-            width = 20,
-            height = 5
-        }
+    runner_list = list.sort_by(runner_list, "id", true)
 
-        if not self.layout:does_element_fit_vertically(y_offset, boundaries.height) then
-            x_offset = x_offset + boundaries.width + 1
-            y_offset = 2
+    local skip = (self.pager.current_page - 1) * self.page_size
+    local index = 0
+    for _, turtle in ipairs(runner_list) do
+        if index < skip then
+            index = index + 1
+            goto continue
         end
-
-        if not self.layout:does_element_fit_horizontally(x_offset, boundaries.width) then
-            self.total_pages = self.total_pages + 1
-            return
-        end
-
-        boundaries.x = x_offset
-        boundaries.y = y_offset
 
         local button_colour
-        if turtle.metadata.status == "Idle" then
-            button_colour = colours.white
-        elseif turtle.metadata.status == "Offline" then
+        if turtle.metadata.status == "Offline" then
             button_colour = colours.red
         elseif turtle.metadata.status == "Stale" then
             button_colour = colours.yellow
-        else
+        elseif turtle.metadata.status == "Completed" then
             button_colour = colours.green
+        else
+            button_colour = colours.white
         end
 
-        local lines = { key, turtle.role, turtle.metadata.status }
+        local location_line
+        if turtle.metadata.current_location then
+            location_line = ("%d %d %d"):format(
+                turtle.metadata.current_location.x,
+                turtle.metadata.current_location.y,
+                turtle.metadata.current_location.z)
+        end
+
+        local lines = {
+            turtle.id,
+            turtle.metadata.status,
+            location_line
+        }
 
         local button = Button:new(self.monitor, self.layout, {
-            x = x_offset,
-            y = y_offset,
-            width = self.default_block_size.width,
-            height = self.default_block_size.height,
+            size = {
+                width = self.default_button_size.width,
+                height = self.default_button_size.height,
+            },
             text = lines,
             button_color = button_colour,
             text_color = colours.black,
-            on_click = function()
-            end
+            on_click = function() end
         })
-        table.insert(self.info_blocks, button)
-        button:render()
 
-        y_offset = y_offset + boundaries.height + 2
+        self.container:add_element(button)
+        index = index + 1
+
+        ::continue::
     end
+
+    self.pager:set_total_pages(math.ceil(#runner_list / self.page_size))
+    if self.pager.total_pages > 1 then
+        self.pager:set_total_pages(self.pager.total_pages)
+
+        local _, monitor_height = self.layout:get_monitor_size()
+
+        local pager_x = self.layout:center_x_within(self.pager:total_width(), self.layout:get_page_width())
+        local pager_y = monitor_height - 1
+
+        self.pager:render(pager_x + self.layout.page_offset, pager_y)
+    end
+
+    self.container:render()
 end
 
 return runners_page

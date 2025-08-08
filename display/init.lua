@@ -5,6 +5,7 @@ local Ruler = require("display.elements.ruler")
 local Layout = require("display.layout")
 
 local errors = require("lib.errors")
+local printer = require("lib.printer")
 
 local Display = {
     turtles = {}
@@ -23,6 +24,7 @@ function Display:new(monitor)
         return nil, errors.NIL_PARAM
     end
 
+    Display.selected_page = Page.pages.quarries
     local page_switcher = function(page_id, selected_id)
         Display.selected_page = page_id
         Display.selected_id = selected_id
@@ -30,9 +32,6 @@ function Display:new(monitor)
 
     local layout = Layout:new(monitor)
     local sidebar = Sidebar:new(monitor, page_switcher, layout)
-    layout:set_page_offset(sidebar.width + 1)
-
-    Display.selected_page = "quarries"
 
     layout:render_background()
     monitor.setTextColour(colours.black)
@@ -54,15 +53,39 @@ function Display:render()
 
     self.monitor.clear()
 
-    self.layout:render_background()
-    self.sidebar:render()
-    self.page:render(self.selected_page, {
-        turtles = self.turtles,
-        selected_id = self.selected_id
-    })
+    local ok, err
 
-    -- local ruler = Ruler:new(self.monitor, self.layout)
-    -- ruler:render()
+    ok, err = pcall(function()
+        self.layout:render_background()
+    end)
+    if not ok then
+        printer.print_error("[Layout] " .. tostring(err))
+    end
+
+    ok, err = pcall(function()
+        self.sidebar:render()
+    end)
+    if not ok then
+        printer.print_error("[Sidebar] " .. tostring(err))
+    end
+
+    ok, err = pcall(function()
+        self.page:render(self.selected_page, {
+            turtles = self.turtles,
+            selected_id = self.selected_id
+        })
+    end)
+    if not ok then
+        printer.print_error("[Page] " .. tostring(err))
+    end
+
+    -- ok, err = pcall(function()
+    --     local ruler = Ruler:new(self.monitor, self.layout)
+    --     ruler:render()
+    -- end)
+    -- if not ok then
+    --     printer.print_error("[Ruler] " .. tostring(err))
+    -- end
 end
 
 function Display:add_or_update_turtle(id, turtle)
@@ -84,9 +107,21 @@ function Display:loop(refresh_rate)
         if event[1] == "monitor_touch" then
             local _, _, x, y = table.unpack(event)
 
-            local click_in_sidebar = self.sidebar:handle_click(x, y)
-            if not click_in_sidebar then
-                self.page:handle_click(self.selected_page, x, y)
+            local ok, err = pcall(function()
+                local click_in_sidebar = self.sidebar:handle_click(x, y)
+                if not click_in_sidebar then
+                    local click_ok, click_err = pcall(function()
+                        self.page:handle_click(self.selected_page, x, y)
+                    end)
+
+                    if not click_ok then
+                        printer.print_error("[Page Click] " .. tostring(click_err))
+                    end
+                end
+            end)
+
+            if not ok then
+                printer.print_error("[Sidebar Click] " .. tostring(err))
             end
         elseif event[1] == "terminate" then
             self.monitor.clear()

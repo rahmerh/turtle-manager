@@ -1,7 +1,5 @@
 local Button = require("display.elements.button")
 
-local errors = require("lib.errors")
-
 local pager = {}
 pager.__index = pager
 
@@ -14,8 +12,10 @@ function pager:new(monitor, layout)
     }, self)
 
     local left_button   = Button:new(monitor, layout, {
-        width = 5,
-        height = 2,
+        size = {
+            width = 5,
+            height = 2,
+        },
         text = "<",
         button_color = colours.grey,
         text_color = colours.white,
@@ -26,8 +26,10 @@ function pager:new(monitor, layout)
         end
     })
     local right_button  = Button:new(monitor, layout, {
-        width = 5,
-        height = 2,
+        size = {
+            width = 5,
+            height = 2,
+        },
         text = ">",
         button_color = colours.grey,
         text_color = colours.white,
@@ -48,12 +50,6 @@ function pager:set_total_pages(total_pages)
     self.total_pages = total_pages
 end
 
-function pager:should_display(index, blocks_per_page)
-    local start_index = (self.current_page - 1) * blocks_per_page + 1
-    local end_index = self.current_page * blocks_per_page
-    return index >= start_index and index <= end_index
-end
-
 function pager:handle_click(x, y)
     local handled = self.left_button:handle_click(x, y)
 
@@ -65,7 +61,7 @@ function pager:handle_click(x, y)
 end
 
 function pager:total_width()
-    return self.left_button.width + string.len(self.pager_text_format) + self.right_button.width
+    return self.left_button.size.width + string.len(self.pager_text_format) + self.right_button.size.width
 end
 
 function pager:render(x, y)
@@ -83,11 +79,11 @@ function pager:render(x, y)
 
     self.left_button:render(x, y)
 
-    self.monitor.setCursorPos(x + self.left_button.width, y + 1)
+    self.monitor.setCursorPos(x + self.left_button.size.width, y + 1)
     self.monitor.setBackgroundColour(self.layout.bg_colour)
     self.monitor.write(pager_text)
 
-    self.right_button:render(x + self.left_button.width + text_width, y)
+    self.right_button:render(x + self.left_button.size.width + text_width, y)
 end
 
 return pager

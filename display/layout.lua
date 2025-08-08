@@ -27,18 +27,6 @@ function layout:set_page_offset(offset)
     self.page_offset = offset
 end
 
-function layout:does_element_fit_vertically(y, height)
-    local _, monitor_height = self:get_monitor_size()
-
-    return (y + height) <= monitor_height
-end
-
-function layout:does_element_fit_horizontally(x, width)
-    local monitor_width, _ = self:get_monitor_size()
-
-    return (x + width) <= monitor_width
-end
-
 function layout:center_x_within(width, width_within)
     local x = (width_within / 2) - (width / 2)
 
@@ -47,29 +35,6 @@ function layout:center_x_within(width, width_within)
     end
 
     return x
-end
-
-function layout:calculate_blocks_per_page(block_width, block_height)
-    -- TODO: Normalize padding
-    local y_offset = 2
-    local x_offset = self.page_offset + 1
-
-    local fit_count = 0
-    while true do
-        if not self:does_element_fit_vertically(y_offset, block_height) then
-            x_offset = x_offset + block_width + 1
-            y_offset = 2
-        end
-
-        if not self:does_element_fit_horizontally(x_offset, block_width) then
-            break
-        end
-
-        y_offset = y_offset + block_height + 2
-        fit_count = fit_count + 1
-    end
-
-    return fit_count
 end
 
 function layout:scroll_text(x, y, text, duration)
