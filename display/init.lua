@@ -22,33 +22,34 @@ function Display:new(monitor)
         Display.selected_id = selected_id
     end
 
-    local monitor_helper = MonitorHelper:new(monitor)
-    local _, monitor_height = monitor_helper:get_monitor_size()
+    local m = MonitorHelper:new(monitor)
+    local _, monitor_height = m:get_monitor_size()
 
-    local sidebar = Sidebar:new(monitor_helper, page_switcher)
+    local sidebar = Sidebar:new(m, page_switcher)
 
     -- Boot screen
+    m:render_background()
     local text = "Turtle manager is booting..."
-    monitor.setTextColour(colours.black)
-    monitor_helper:scroll_text(1, monitor_height, text, 2)
+    m:set_fg_colour(colours.black)
+    m:scroll_text(1, monitor_height, text, 2)
 
     return setmetatable({
-        monitor_helper = monitor_helper,
+        m = m,
         sidebar = sidebar,
-        page = Page:new(monitor_helper, page_switcher),
+        page = Page:new(m, page_switcher),
     }, self)
 end
 
 function Display:render()
-    if not self.monitor_helper then
+    if not self.m then
         return nil, errors.NO_MONITOR_ATTACHED
     end
 
-    self.monitor_helper:clear()
+    self.m:clear()
 
     local ok, err
     ok, err = pcall(function()
-        self.monitor_helper:render_background()
+        self.m:render_background()
     end)
 
     if not ok then

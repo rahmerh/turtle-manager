@@ -41,7 +41,7 @@ function runners_page:new(m, page_switcher)
 
     result.container = Container:new(
         m,
-        "horizontal_rows",
+        Container.layouts.horizontal_rows,
         position,
         size,
         padding)

@@ -64,12 +64,12 @@ function sidebar:new(m, page_switcher)
     })
 
     container:add_element(quarries_button, {
-        x = 2,
-        y = 2
+        x_offset = 1,
+        y_offset = 1
     })
     container:add_element(runners_button, {
-        x = 2,
-        y = 6
+        x_offset = 1,
+        y_offset = 5
     })
 
     return setmetatable({

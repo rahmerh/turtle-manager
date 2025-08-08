@@ -11,8 +11,8 @@ function quarry_details_page:new(m, page_switcher)
 
     local monitor_width, monitor_height = m:get_monitor_size()
     local size = {
-        width = monitor_width - m:get_page_offset(),
-        height = monitor_height
+        width = monitor_width - m:get_page_offset() - 1,
+        height = monitor_height - 2
     }
 
     local container = Container:new(m, Container.layouts.vertical_columns, position, size)

@@ -102,9 +102,17 @@ end
 --- Adds an element to the container, depending on the layout it requires more information.
 ---@param element any element to add.
 ---@return boolean true if it fails, false if not.
-function container:add_element(element, position)
+function container:add_element(element, position_offset)
     if type(element) ~= "table" or not element.render then
         error("Invalid element, can't render this.")
+    end
+
+    local position
+    if position_offset then
+        position = {
+            x = self.position.x + position_offset.x_offset,
+            y = self.position.y + position_offset.y_offset
+        }
     end
 
     local entry = {
