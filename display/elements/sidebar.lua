@@ -4,10 +4,10 @@ local Container = require("display.elements.container")
 local sidebar = {}
 sidebar.__index = sidebar
 
-function sidebar:new(monitor, page_switcher, layout)
-    local monitor_width, monitor_height = layout:get_monitor_size(monitor)
+function sidebar:new(m, page_switcher)
+    local monitor_width, monitor_height = m:get_monitor_size()
     local width = math.floor(monitor_width / 5)
-    layout:set_page_offset(width + 1)
+    m:set_page_offset(width + 1)
 
     local position = {
         x = 1,
@@ -27,13 +27,13 @@ function sidebar:new(monitor, page_switcher, layout)
     }
 
     local container = Container:new(
-        monitor,
+        m,
         Container.layouts.manual,
         position,
         size,
         padding)
 
-    local quarries_button = Button:new(monitor, layout, {
+    local quarries_button = Button:new(m, {
         size = {
             width = width - 2,
             height = 3,
@@ -48,7 +48,7 @@ function sidebar:new(monitor, page_switcher, layout)
         end
     })
 
-    local runners_button = Button:new(monitor, layout, {
+    local runners_button = Button:new(m, {
         size = {
             width = width - 2,
             height = 3,
@@ -73,7 +73,7 @@ function sidebar:new(monitor, page_switcher, layout)
     })
 
     return setmetatable({
-        monitor = monitor,
+        m = m,
         page_switcher = page_switcher,
         container = container
     }, sidebar)
@@ -88,12 +88,11 @@ function sidebar:handle_click(x, y)
 end
 
 function sidebar:render()
-    local _, monitor_height = self.monitor.getSize()
+    local _, monitor_height = self.m:get_monitor_size()
 
-    self.monitor.setBackgroundColour(colours.grey)
+    self.m:set_bg_colour(colours.grey)
     for i = 1, monitor_height do
-        self.monitor.setCursorPos(1, i)
-        self.monitor.write(string.rep(" ", self.container.size.width))
+        self.m:write_at(string.rep(" ", self.container.size.width), 1, i)
     end
 
     self.container:render()

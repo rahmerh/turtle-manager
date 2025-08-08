@@ -3,15 +3,14 @@ local Button = require("display.elements.button")
 local pager = {}
 pager.__index = pager
 
-function pager:new(monitor, layout)
+function pager:new(m)
     local result        = setmetatable({
-        monitor = monitor,
-        layout = layout,
+        m = m,
         current_page = 1,
         pager_text_format = "  Page %d of %d  ",
     }, self)
 
-    local left_button   = Button:new(monitor, layout, {
+    local left_button   = Button:new(m, {
         size = {
             width = 5,
             height = 2,
@@ -25,7 +24,7 @@ function pager:new(monitor, layout)
             end
         end
     })
-    local right_button  = Button:new(monitor, layout, {
+    local right_button  = Button:new(m, {
         size = {
             width = 5,
             height = 2,
@@ -78,11 +77,8 @@ function pager:render(x, y)
     local text_width = string.len(pager_text)
 
     self.left_button:render(x, y)
-
-    self.monitor.setCursorPos(x + self.left_button.size.width, y + 1)
-    self.monitor.setBackgroundColour(self.layout.bg_colour)
-    self.monitor.write(pager_text)
-
+    self.m:set_bg_colour(self.m:get_default_bg_colour())
+    self.m:write_at(pager_text, x + self.left_button.size.width, y + 1)
     self.right_button:render(x + self.left_button.size.width + text_width, y)
 end
 

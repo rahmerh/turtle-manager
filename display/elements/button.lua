@@ -1,7 +1,7 @@
 local button = {}
 button.__index = button
 
-function button:new(monitor, layout, opts)
+function button:new(m, opts)
     local required_fields = {
         "size", "text", "text_color", "button_color", "on_click"
     }
@@ -13,8 +13,7 @@ function button:new(monitor, layout, opts)
     end
 
     return setmetatable({
-        monitor = monitor,
-        layout = layout,
+        m = m,
         size = opts.size,
         text = opts.text,
         button_color = opts.button_color,
@@ -44,10 +43,10 @@ end
 function button:render(x, y)
     self.x = x
     self.y = y
-    self.monitor.setBackgroundColor(self.button_color)
+
+    self.m:set_bg_colour(self.button_color)
     for i = 0, self.size.height - 1 do
-        self.monitor.setCursorPos(x, y + i)
-        self.monitor.write(string.rep(" ", self.size.width))
+        self.m:write_at(string.rep(" ", self.size.width), x, y + i)
     end
 
     local middle_y = y + math.floor((self.size.height - 1) / 2)
@@ -56,7 +55,7 @@ function button:render(x, y)
         middle_y = middle_y + 1
     end
 
-    self.monitor.setTextColor(self.text_color)
+    self.m:set_fg_colour(self.text_color)
     if type(self.text) == "string" then
         local text_len = string.len(self.text)
         if text_len > self.size.width then
@@ -65,13 +64,11 @@ function button:render(x, y)
 
         local middle_x = x + (self.size.width / 2) - (text_len / 2)
 
-        self.monitor.setCursorPos(middle_x, middle_y)
-        self.monitor.write(self.text)
+        self.m:write_at(self.text, middle_x, middle_y)
     elseif type(self.text) == "table" then
         for i = 1, #self.text do
-            local middle_x = self.layout:center_x_within(string.len(self.text[i]), self.size.width)
-            self.monitor.setCursorPos(x + middle_x, y + i)
-            self.monitor.write(self.text[i])
+            local middle_x = self.m.center_x_within(string.len(self.text[i]), self.size.width)
+            self.m:write_at(self.text[i], x + middle_x, y + i)
         end
     end
 end

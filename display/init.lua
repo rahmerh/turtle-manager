@@ -1,8 +1,7 @@
 local Sidebar = require("display.elements.sidebar")
 local Page = require("display.elements.page")
-local Ruler = require("display.elements.ruler")
 
-local Layout = require("display.layout")
+local MonitorHelper = require("display.monitor_helper")
 
 local errors = require("lib.errors")
 local printer = require("lib.printer")
@@ -11,13 +10,6 @@ local Display = {
     turtles = {}
 }
 Display.__index = Display
-
-local function print_boot_screen(layout)
-    local _, height = layout:get_monitor_size()
-
-    local text = "Turtle manager is booting..."
-    layout:scroll_text(1, height, text, 2)
-end
 
 function Display:new(monitor)
     if not monitor then
@@ -30,34 +22,35 @@ function Display:new(monitor)
         Display.selected_id = selected_id
     end
 
-    local layout = Layout:new(monitor)
-    local sidebar = Sidebar:new(monitor, page_switcher, layout)
+    local monitor_helper = MonitorHelper:new(monitor)
+    local _, monitor_height = monitor_helper:get_monitor_size()
 
-    layout:render_background()
+    local sidebar = Sidebar:new(monitor_helper, page_switcher)
+
+    -- Boot screen
+    local text = "Turtle manager is booting..."
     monitor.setTextColour(colours.black)
-
-    print_boot_screen(layout)
+    monitor_helper:scroll_text(1, monitor_height, text, 2)
 
     return setmetatable({
-        monitor = monitor,
-        layout = layout,
+        monitor_helper = monitor_helper,
         sidebar = sidebar,
-        page = Page:new(monitor, layout, page_switcher),
+        page = Page:new(monitor_helper, page_switcher),
     }, self)
 end
 
 function Display:render()
-    if not self.monitor then
+    if not self.monitor_helper then
         return nil, errors.NO_MONITOR_ATTACHED
     end
 
-    self.monitor.clear()
+    self.monitor_helper:clear()
 
     local ok, err
-
     ok, err = pcall(function()
-        self.layout:render_background()
+        self.monitor_helper:render_background()
     end)
+
     if not ok then
         printer.print_error("[Layout] " .. tostring(err))
     end
@@ -65,6 +58,7 @@ function Display:render()
     ok, err = pcall(function()
         self.sidebar:render()
     end)
+
     if not ok then
         printer.print_error("[Sidebar] " .. tostring(err))
     end
@@ -75,17 +69,10 @@ function Display:render()
             selected_id = self.selected_id
         })
     end)
+
     if not ok then
         printer.print_error("[Page] " .. tostring(err))
     end
-
-    -- ok, err = pcall(function()
-    --     local ruler = Ruler:new(self.monitor, self.layout)
-    --     ruler:render()
-    -- end)
-    -- if not ok then
-    --     printer.print_error("[Ruler] " .. tostring(err))
-    -- end
 end
 
 function Display:add_or_update_turtle(id, turtle)
@@ -124,7 +111,6 @@ function Display:loop(refresh_rate)
                 printer.print_error("[Sidebar Click] " .. tostring(err))
             end
         elseif event[1] == "terminate" then
-            self.monitor.clear()
             return
         end
     end

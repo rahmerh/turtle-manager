@@ -3,19 +3,19 @@ local Container             = require("display.elements.container")
 local quarry_details_page   = {}
 quarry_details_page.__index = quarry_details_page
 
-function quarry_details_page:new(monitor, layout, page_switcher)
+function quarry_details_page:new(m, page_switcher)
     local position = {
-        x = layout.page_offset + 1,
+        x = m:get_page_offset() + 1,
         y = 2
     }
 
-    local _, monitor_height = layout:get_monitor_size()
+    local monitor_width, monitor_height = m:get_monitor_size()
     local size = {
-        width = layout:get_page_width() - 2,
-        height = monitor_height - 2
+        width = monitor_width - m:get_page_offset(),
+        height = monitor_height
     }
 
-    local container = Container:new(monitor, Container.layouts.vertical_columns, position, size)
+    local container = Container:new(m, Container.layouts.vertical_columns, position, size)
     container:set_bg_colour(colours.grey)
 
     local buttons_container_size = {
@@ -24,7 +24,7 @@ function quarry_details_page:new(monitor, layout, page_switcher)
     }
 
     local buttons_container = Container:new(
-        monitor,
+        m,
         Container.layouts.manual,
         position,
         buttons_container_size)
@@ -32,8 +32,6 @@ function quarry_details_page:new(monitor, layout, page_switcher)
     container:add_element(buttons_container)
 
     return setmetatable({
-        monitor = monitor,
-        layout = layout,
         page_switcher = page_switcher,
         container = container
     }, self)

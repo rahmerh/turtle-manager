@@ -24,13 +24,11 @@ local function get_page_from_selected(self, selected)
     return result
 end
 
-function page:new(monitor, layout, page_switcher)
+function page:new(m, page_switcher)
     return setmetatable({
-        monitor = monitor,
-        layout = layout,
-        quarries_page = QuarriesPage:new(monitor, layout, page_switcher),
-        runners_page = RunnersPage:new(monitor, layout, page_switcher),
-        quarry_info_page = QuarryDetailsPage:new(monitor, layout, page_switcher)
+        quarries_page = QuarriesPage:new(m, page_switcher),
+        runners_page = RunnersPage:new(m, page_switcher),
+        quarry_info_page = QuarryDetailsPage:new(m, page_switcher)
     }, self)
 end
 

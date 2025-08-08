@@ -75,7 +75,7 @@ local function render_elements_manually(self)
     end
 end
 
-function container:new(monitor, layout, position, size, padding)
+function container:new(m, layout, position, size, padding)
     local padding_sides = { "top", "right", "bottom", "left" }
 
     -- Normalize missing padding fields
@@ -89,7 +89,7 @@ function container:new(monitor, layout, position, size, padding)
     end
 
     return setmetatable({
-        monitor = monitor,
+        m = m,
         layout = layout,
         position = position,
         size = size,
@@ -164,10 +164,10 @@ end
 --- Won't render any elements if they're off screen. Paging has to be done by the parent.
 function container:render()
     if self.bg_colour then
-        self.monitor.setBackgroundColour(self.bg_colour)
+        self.m:set_bg_colour(self.bg_colour)
+
         for i = 0, self.size.height - 1 do
-            self.monitor.setCursorPos(self.position.x, self.position.y + i)
-            self.monitor.write(string.rep(" ", self.size.width))
+            self.m:write_at(string.rep(" ", self.size.width), self.position.x, self.position.y + i)
         end
     end
 

@@ -7,10 +7,9 @@ local list           = require("lib.list")
 local runners_page   = {}
 runners_page.__index = runners_page
 
-function runners_page:new(monitor, layout, page_switcher)
+function runners_page:new(m, page_switcher)
     local result = setmetatable({
-        monitor = monitor,
-        layout = layout,
+        m = m,
         current_page = 1,
         total_pages = 1,
         info_blocks = {},
@@ -22,19 +21,30 @@ function runners_page:new(monitor, layout, page_switcher)
         height = 5
     }
 
-    result.pager = Pager:new(monitor, layout)
+    result.pager = Pager:new(m)
 
-    local _, monitor_height = layout:get_monitor_size()
-    result.container = Container:new(monitor, "horizontal_rows", {
-        x = layout.page_offset,
+    local position = {
+        x = m:get_page_offset(),
         y = 1
-    }, {
-        width = layout:get_page_width(),
+    }
+
+    local monitor_width, monitor_height = m:get_monitor_size()
+    local size = {
+        width = monitor_width - m:get_page_offset(),
         height = monitor_height
-    }, {
+    }
+
+    local padding = {
         top = 1,
         left = 1
-    })
+    }
+
+    result.container = Container:new(
+        m,
+        "horizontal_rows",
+        position,
+        size,
+        padding)
 
     local max_elements = result.container:calculate_capacity(
         result.default_button_size.width,
@@ -104,7 +114,7 @@ function runners_page:render(data)
             location_line
         }
 
-        local button = Button:new(self.monitor, self.layout, {
+        local button = Button:new(self.m, {
             size = {
                 width = self.default_button_size.width,
                 height = self.default_button_size.height,
@@ -125,12 +135,13 @@ function runners_page:render(data)
     if self.pager.total_pages > 1 then
         self.pager:set_total_pages(self.pager.total_pages)
 
-        local _, monitor_height = self.layout:get_monitor_size()
+        local monitor_width, monitor_height = self.m:get_monitor_size()
 
-        local pager_x = self.layout:center_x_within(self.pager:total_width(), self.layout:get_page_width())
+        local page_width = monitor_width - self.m:get_page_offset()
+        local pager_x = self.m.center_x_within(self.pager:total_width(), page_width)
         local pager_y = monitor_height - 1
 
-        self.pager:render(pager_x + self.layout.page_offset, pager_y)
+        self.pager:render(pager_x + self.m:get_page_offset(), pager_y)
     end
 
     self.container:render()
