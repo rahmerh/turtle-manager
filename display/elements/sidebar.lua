@@ -15,47 +15,47 @@ function sidebar:new(monitor, page_switcher, layout)
         page_switcher = page_switcher
     }, sidebar)
 
-    bar.buttons = {
-        Button:new(monitor, layout, {
-            x = 2,
-            y = 2,
-            width = width - 2,
-            height = 3,
-            text = "Quarries",
-            button_color = colours.lightBlue,
-            text_color = colours.black,
-            on_click = function()
-                if bar.page_switcher then
-                    bar.page_switcher("quarries")
-                end
-            end
-        }),
-        Button:new(monitor, layout, {
-            x = 2,
-            y = 6,
-            width = width - 2,
-            height = 3,
-            text = "Runners",
-            button_color = colours.lightBlue,
-            text_color = colours.black,
-            on_click = function()
-                if bar.page_switcher then
-                    bar.page_switcher("runners")
-                end
-            end
-        }),
-        Button:new(monitor, layout, {
-            x = 2,
-            y = monitor_height - 3,
-            width = width - 2,
-            height = 3,
-            text = "Settings",
-            button_color = colours.lightBlue,
-            text_color = colours.black,
-            on_click = function()
-            end
-        }),
-    }
+    -- bar.buttons = {
+    --     Button:new(monitor, layout, {
+    --         x = 2,
+    --         y = 2,
+    --         width = width - 2,
+    --         height = 3,
+    --         text = "Quarries",
+    --         button_color = colours.lightBlue,
+    --         text_color = colours.black,
+    --         on_click = function()
+    --             if bar.page_switcher then
+    --                 bar.page_switcher("quarries")
+    --             end
+    --         end
+    --     }),
+    --     Button:new(monitor, layout, {
+    --         x = 2,
+    --         y = 6,
+    --         width = width - 2,
+    --         height = 3,
+    --         text = "Runners",
+    --         button_color = colours.lightBlue,
+    --         text_color = colours.black,
+    --         on_click = function()
+    --             if bar.page_switcher then
+    --                 bar.page_switcher("runners")
+    --             end
+    --         end
+    --     }),
+    --     Button:new(monitor, layout, {
+    --         x = 2,
+    --         y = monitor_height - 3,
+    --         width = width - 2,
+    --         height = 3,
+    --         text = "Settings",
+    --         button_color = colours.lightBlue,
+    --         text_color = colours.black,
+    --         on_click = function()
+    --         end
+    --     }),
+    -- }
 
     return bar
 end
@@ -70,18 +70,17 @@ function sidebar:handle_click(x, y)
 end
 
 function sidebar:render()
-    local _, h = self.monitor.getSize()
+    local _, monitor_height = self.monitor.getSize()
+
     self.monitor.setBackgroundColour(colours.grey)
-    for i = 1, h do
+    for i = 1, monitor_height do
         self.monitor.setCursorPos(1, i)
         self.monitor.write(string.rep(" ", self.width))
     end
 
-    for _, b in ipairs(self.buttons) do
-        b:render()
-    end
-
-    self.monitor.setBackgroundColour(colours.black)
+    -- for _, b in ipairs(self.buttons) do
+    --     b:render()
+    -- end
 end
 
 return sidebar

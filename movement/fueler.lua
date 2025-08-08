@@ -3,6 +3,7 @@ local locator       = require("movement.locator")
 
 local inventory     = require("lib.inventory")
 local errors        = require("lib.errors")
+local printer       = require("lib.printer")
 
 local fueler        = {}
 
@@ -78,6 +79,7 @@ function fueler.handle_movement_result(ok, err, ctx)
         return nil, errors.NO_FUEL
     end
 
+    printer.print_info("Requesting fuel...")
     wireless.resupply.request(manager_id, current_coordinates, desired)
     local runner_id, job_id = wireless.resupply.await_arrival()
     inventory.drop_slots(1, 1, "up")

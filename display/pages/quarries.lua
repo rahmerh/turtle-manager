@@ -1,5 +1,6 @@
 local Pager = require("display.elements.pager")
 local Button = require("display.elements.button")
+local Container = require("display.elements.container")
 
 local list = require("lib.list")
 
@@ -25,6 +26,18 @@ function quarries_page:new(monitor, layout, page_switcher)
 
     result.pager = Pager:new(monitor, layout)
 
+    local _, monitor_height = layout:get_monitor_size()
+    result.container = Container:new(monitor, layout, {
+        x = layout.page_offset,
+        y = 1
+    }, {
+        width = layout:get_page_width(),
+        height = monitor_height
+    }, {
+        top = 1,
+        left = 1
+    })
+
     return result
 end
 
@@ -43,6 +56,8 @@ function quarries_page:handle_click(x, y)
 end
 
 function quarries_page:render(data)
+    self.container:clear()
+
     local quarries = list.filter_map_by(data.turtles, "role", "quarry")
     local quarry_list = {}
 
@@ -59,12 +74,18 @@ function quarries_page:render(data)
     end
 
     local total_pages = math.ceil(quarry_count / self.blocks_per_page)
-    self.pager:set_total_pages(total_pages)
-    self.pager:render()
+    if total_pages > 1 then
+        self.pager:set_total_pages(total_pages)
 
-    local y_offset = 2
-    local x_offset = self.layout.sidebar_width + 2
+        local _, monitor_height = self.layout:get_monitor_size()
 
+        local pager_x = self.layout:center_x_within(self.pager:total_width(), self.layout:get_page_width())
+        local pager_y = monitor_height - 3
+
+        self.container:add_element(self.pager, pager_x, pager_y)
+    end
+
+    local x_offset, y_offset = 0, 0
     local index = 1
     for _, turtle in ipairs(quarry_list) do
         if not self.pager:should_display(index, self.blocks_per_page) then
@@ -74,7 +95,7 @@ function quarries_page:render(data)
 
         if not self.layout:does_element_fit_vertically(y_offset, self.default_block_size.height) then
             x_offset = x_offset + self.default_block_size.width + 1
-            y_offset = 2
+            y_offset = 0
         end
 
         local button_colour
@@ -103,26 +124,23 @@ function quarries_page:render(data)
         }
 
         local button = Button:new(self.monitor, self.layout, {
-            x = x_offset,
-            y = y_offset,
             width = self.default_block_size.width,
             height = self.default_block_size.height,
             text = lines,
             button_color = button_colour,
             text_color = colours.black,
-            on_click = function()
-                self.page_switcher("quarry_info", turtle.id)
-            end
+            on_click = function() end
         })
-        table.insert(self.info_blocks, button)
-        button:render()
 
-        y_offset = y_offset + self.default_block_size.height + 1
+        self.container:add_element(button, x_offset, y_offset)
 
+        y_offset = y_offset + button.height + 2
         index = index + 1
 
         ::continue::
     end
+
+    self.container:render()
 end
 
 return quarries_page

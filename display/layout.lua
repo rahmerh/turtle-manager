@@ -16,15 +16,15 @@ end
 
 function layout:get_page_width()
     local width, _ = self.monitor.getSize()
-    return width - self.sidebar_width
+    return width - self.page_offset + 1
 end
 
 function layout:set_bg_colour(colour)
     self.bg_colour = colour
 end
 
-function layout:set_sidebar_width(width)
-    self.sidebar_width = width
+function layout:set_page_offset(offset)
+    self.page_offset = offset
 end
 
 function layout:does_element_fit_vertically(y, height)
@@ -39,8 +39,8 @@ function layout:does_element_fit_horizontally(x, width)
     return (x + width) <= monitor_width
 end
 
-function layout:calculate_x_to_float_text_in(text, width)
-    local x = (width / 2) - (string.len(text) / 2)
+function layout:center_x_within(width, width_within)
+    local x = (width_within / 2) - (width / 2)
 
     if width % 2 == 0 then
         x = x + 1
@@ -52,7 +52,7 @@ end
 function layout:calculate_blocks_per_page(block_width, block_height)
     -- TODO: Normalize padding
     local y_offset = 2
-    local x_offset = self.sidebar_width + 2
+    local x_offset = self.page_offset + 1
 
     local fit_count = 0
     while true do

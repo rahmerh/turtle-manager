@@ -1,5 +1,6 @@
 local Sidebar = require("display.elements.sidebar")
 local Page = require("display.elements.page")
+local Ruler = require("display.elements.ruler")
 
 local Layout = require("display.layout")
 
@@ -29,7 +30,7 @@ function Display:new(monitor)
 
     local layout = Layout:new(monitor)
     local sidebar = Sidebar:new(monitor, page_switcher, layout)
-    layout:set_sidebar_width(sidebar.width)
+    layout:set_page_offset(sidebar.width + 1)
 
     Display.selected_page = "quarries"
 
@@ -59,6 +60,9 @@ function Display:render()
         turtles = self.turtles,
         selected_id = self.selected_id
     })
+
+    -- local ruler = Ruler:new(self.monitor, self.layout)
+    -- ruler:render()
 end
 
 function Display:add_or_update_turtle(id, turtle)

@@ -3,7 +3,7 @@ button.__index = button
 
 function button:new(monitor, layout, opts)
     local required_fields = {
-        "x", "y", "width", "height", "text", "text_color", "button_color", "on_click"
+        "width", "height", "text", "text_color", "button_color", "on_click"
     }
 
     for _, field in ipairs(required_fields) do
@@ -15,8 +15,6 @@ function button:new(monitor, layout, opts)
     return setmetatable({
         monitor = monitor,
         layout = layout,
-        x = opts.x,
-        y = opts.y,
         width = opts.width,
         height = opts.height,
         text = opts.text,
@@ -40,14 +38,16 @@ function button:handle_click(x, y)
     return false
 end
 
-function button:render()
+function button:render(x, y)
+    self.x = x
+    self.y = y
     self.monitor.setBackgroundColor(self.button_color)
     for i = 0, self.height - 1 do
-        self.monitor.setCursorPos(self.x, self.y + i)
+        self.monitor.setCursorPos(x, y + i)
         self.monitor.write(string.rep(" ", self.width))
     end
 
-    local middle_y = self.y + math.floor((self.height - 1) / 2)
+    local middle_y = y + math.floor((self.height - 1) / 2)
 
     if self.height % 2 == 0 then
         middle_y = middle_y + 1
@@ -60,14 +60,14 @@ function button:render()
             error(("Text can't be langer than the button's width (%d)"):format(self.width))
         end
 
-        local middle_x = self.x + (self.width / 2) - (text_len / 2)
+        local middle_x = x + (self.width / 2) - (text_len / 2)
 
         self.monitor.setCursorPos(middle_x, middle_y)
         self.monitor.write(self.text)
     elseif type(self.text) == "table" then
         for i = 1, #self.text do
-            local middle_x = self.layout:calculate_x_to_float_text_in(self.text[i], self.width)
-            self.monitor.setCursorPos(self.x + middle_x, self.y + i)
+            local middle_x = self.layout:center_x_within(string.len(self.text[i]), self.width)
+            self.monitor.setCursorPos(x + middle_x, y + i)
             self.monitor.write(self.text[i])
         end
     end
