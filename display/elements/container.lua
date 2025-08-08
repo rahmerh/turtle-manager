@@ -110,8 +110,8 @@ function container:add_element(element, position_offset)
     local position
     if position_offset then
         position = {
-            x = self.position.x + position_offset.x_offset,
-            y = self.position.y + position_offset.y_offset
+            x = self.position.x + (position_offset.x_offset or 0),
+            y = self.position.y + (position_offset.y_offset or 0)
         }
     end
 
@@ -123,10 +123,6 @@ function container:add_element(element, position_offset)
     table.insert(self.children, entry)
 
     return true
-end
-
-function container:set_bg_colour(colour)
-    self.bg_colour = colour
 end
 
 function container:calculate_capacity(element_width, element_height)
@@ -171,14 +167,6 @@ end
 --- Renders the elements registered in the container, following the layout's structure.
 --- Won't render any elements if they're off screen. Paging has to be done by the parent.
 function container:render()
-    if self.bg_colour then
-        self.m:set_bg_colour(self.bg_colour)
-
-        for i = 0, self.size.height - 1 do
-            self.m:write_at(string.rep(" ", self.size.width), self.position.x, self.position.y + i)
-        end
-    end
-
     if self.layout == self.layouts.horizontal_rows then
         render_elements_horizontally(self)
     elseif self.layout == self.layouts.vertical_columns then

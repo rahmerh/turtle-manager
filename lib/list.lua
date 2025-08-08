@@ -46,6 +46,18 @@ function list.sort_by(array, field, descending)
     return array
 end
 
+function list.convert_map_to_array(map, key_field_name)
+    local result = {}
+
+    for key, value in pairs(map) do
+        value[key_field_name] = key
+
+        table.insert(result, value)
+    end
+
+    return result
+end
+
 function list.find(array, field, value)
     for _, item in ipairs(array) do
         if item[field] == value then

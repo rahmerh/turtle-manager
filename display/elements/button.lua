@@ -3,7 +3,7 @@ button.__index = button
 
 function button:new(m, opts)
     local required_fields = {
-        "size", "text", "text_color", "button_color", "on_click"
+        "size", "text", "text_colour", "button_colour", "on_click"
     }
 
     for _, field in ipairs(required_fields) do
@@ -16,9 +16,10 @@ function button:new(m, opts)
         m = m,
         size = opts.size,
         text = opts.text,
-        button_color = opts.button_color,
-        text_color = opts.text_color,
-        on_click = opts.on_click
+        button_colour = opts.button_colour,
+        text_colour = opts.text_colour,
+        on_click = opts.on_click,
+        is_selected = false
     }, self)
 end
 
@@ -40,13 +41,30 @@ function button:handle_click(x, y)
     return false
 end
 
+function button:select()
+    self.is_selected = true
+end
+
+function button:unselect()
+    self.is_selected = false
+end
+
 function button:render(x, y)
     self.x = x
     self.y = y
 
-    self.m:set_bg_colour(self.button_color)
+    local initial_bg_color = self.m:get_bg_colour()
+    local initial_fg_color = self.m:get_fg_colour()
+
+    self.m:set_bg_colour(self.button_colour)
     for i = 0, self.size.height - 1 do
         self.m:write_at(string.rep(" ", self.size.width), x, y + i)
+    end
+
+    if self.is_selected then
+        self.m:set_fg_colour(colours.black)
+        self.m:write_at(string.rep("-", self.size.width), x, self.size.height)
+        self.m:set_fg_colour(initial_fg_color)
     end
 
     local middle_y = y + math.floor((self.size.height - 1) / 2)
@@ -55,7 +73,7 @@ function button:render(x, y)
         middle_y = middle_y + 1
     end
 
-    self.m:set_fg_colour(self.text_color)
+    self.m:set_fg_colour(self.text_colour)
     if type(self.text) == "string" then
         local text_len = string.len(self.text)
         if text_len > self.size.width then
@@ -71,6 +89,8 @@ function button:render(x, y)
             self.m:write_at(self.text[i], x + middle_x, y + i)
         end
     end
+    self.m:set_fg_colour(initial_fg_color)
+    self.m:set_bg_colour(initial_bg_color)
 end
 
 return button

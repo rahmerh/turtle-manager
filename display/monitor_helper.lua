@@ -54,12 +54,20 @@ function monitor_helper:set_bg_colour(colour)
     self.monitor.setBackgroundColour(colour)
 end
 
+function monitor_helper:get_bg_colour()
+    return self.monitor.getBackgroundColour()
+end
+
 function monitor_helper:get_default_bg_colour()
     return colours.lightGrey
 end
 
 function monitor_helper:set_fg_colour(colour)
     self.monitor.setTextColour(colour)
+end
+
+function monitor_helper:get_fg_colour()
+    return self.monitor.getTextColour()
 end
 
 function monitor_helper:write_at(text, x, y)

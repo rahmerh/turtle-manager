@@ -2,6 +2,8 @@ local Pager           = require("display.elements.pager")
 local Button          = require("display.elements.button")
 local Container       = require("display.elements.container")
 
+local colour_helper   = require("display.colour_helper")
+
 local list            = require("lib.list")
 
 local quarries_page   = {}
@@ -87,16 +89,7 @@ function quarries_page:render(data)
             goto continue
         end
 
-        local button_colour
-        if turtle.metadata.status == "Offline" then
-            button_colour = colours.red
-        elseif turtle.metadata.status == "Stale" then
-            button_colour = colours.yellow
-        elseif turtle.metadata.status == "Completed" then
-            button_colour = colours.green
-        else
-            button_colour = colours.white
-        end
+        local button_colour = colour_helper.quarry_status_to_colour(turtle.metadata.status)
 
         local location_line
         if turtle.metadata.current_location then
@@ -118,8 +111,8 @@ function quarries_page:render(data)
                 height = self.default_button_size.height,
             },
             text = lines,
-            button_color = button_colour,
-            text_color = colours.black,
+            button_colour = button_colour,
+            text_colour = colours.black,
             on_click = function()
                 self.page_switcher("quarry_info", turtle.id)
             end

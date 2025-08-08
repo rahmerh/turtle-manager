@@ -1,37 +1,37 @@
 local printer = {}
 
-local defaultColor = colors.white
+local defaultColour = colours.white
 
-local function printColored(color, ...)
-    term.setTextColor(color)
+local function printColoured(colour, ...)
+    term.setTextColour(colour)
     print(...)
-    term.setTextColor(defaultColor)
+    term.setTextColour(defaultColour)
 end
 
-local function writeColored(color, ...)
-    term.setTextColor(color)
+local function writeColoured(colour, ...)
+    term.setTextColour(colour)
     write(...)
-    term.setTextColor(defaultColor)
+    term.setTextColour(defaultColour)
 end
 
 printer.print_error = function(msg)
-    printColored(colors.red, msg)
+    printColoured(colours.red, msg)
 end
 
 printer.print_warning = function(msg)
-    printColored(colors.yellow, msg)
+    printColoured(colours.yellow, msg)
 end
 
 printer.print_success = function(msg)
-    printColored(colors.green, msg)
+    printColoured(colours.green, msg)
 end
 
 printer.print_info = function(msg)
-    printColored(colors.lightBlue, msg)
+    printColoured(colours.lightBlue, msg)
 end
 
 printer.write_prompt = function(msg)
-    writeColored(colors.white, msg)
+    writeColoured(colours.white, msg)
 end
 
 return printer

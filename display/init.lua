@@ -57,7 +57,7 @@ function Display:render()
     end
 
     ok, err = pcall(function()
-        self.sidebar:render()
+        self.sidebar:render(self.selected_page)
     end)
 
     if not ok then

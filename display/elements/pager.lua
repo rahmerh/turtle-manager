@@ -16,8 +16,8 @@ function pager:new(m)
             height = 2,
         },
         text = "<",
-        button_color = colours.grey,
-        text_color = colours.white,
+        button_colour = colours.grey,
+        text_colour = colours.white,
         on_click = function()
             if result.current_page > 1 then
                 result.current_page = result.current_page - 1
@@ -30,8 +30,8 @@ function pager:new(m)
             height = 2,
         },
         text = ">",
-        button_color = colours.grey,
-        text_color = colours.white,
+        button_colour = colours.grey,
+        text_colour = colours.white,
         on_click = function()
             if result.current_page < result.total_pages then
                 result.current_page = result.current_page + 1
