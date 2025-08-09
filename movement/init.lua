@@ -133,4 +133,6 @@ M.turn_right              = mover.turn_right
 
 M.get_current_coordinates = locator.get_current_coordinates
 
+M.get_fuel_level          = fueler.get_fuel_level
+
 return M

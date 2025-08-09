@@ -1,14 +1,14 @@
-local Ruler = {}
-Ruler.__index = Ruler
+local ruler = {}
+ruler.__index = ruler
 
-function Ruler:new(m)
+function ruler:new(m)
     return setmetatable({
         m = m
     }, self)
 end
 
-function Ruler:render()
-    local width, height = self.layout:get_monitor_size()
+function ruler:render()
+    local width, height = self.m:get_monitor_size()
 
     -- Horizontal ruler at bottom
     for x = 0, width - 1 do
@@ -17,7 +17,7 @@ function Ruler:render()
         else
             self.m:set_bg_colour(colours.yellow)
         end
-        self.m:write_at(" ", 1, height)
+        self.m:write_at(" ", x + 1, height)
     end
 
     -- Vertical ruler on the left
@@ -31,4 +31,4 @@ function Ruler:render()
     end
 end
 
-return Ruler
+return ruler

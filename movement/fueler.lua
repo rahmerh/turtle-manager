@@ -29,6 +29,10 @@ local function scan_for_fuel()
     end
 end
 
+function fueler.get_fuel_level()
+    return turtle.getFuelLevel()
+end
+
 function fueler.refuel_from_inventory()
     if turtle.getFuelLevel() > 0 then
         return true

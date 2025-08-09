@@ -24,33 +24,27 @@ local function get_page_from_selected(self, selected)
     return result
 end
 
-function page:new(m, page_switcher)
+function page:new(m, size, page_switcher)
     return setmetatable({
-        quarries_page = QuarriesPage:new(m, page_switcher),
-        runners_page = RunnersPage:new(m, page_switcher),
-        quarry_info_page = QuarryDetailsPage:new(m, page_switcher)
+        quarries_page = QuarriesPage:new(m, size, page_switcher),
+        runners_page = RunnersPage:new(m, size, page_switcher),
+        quarry_info_page = QuarryDetailsPage:new(m, size, page_switcher)
     }, self)
 end
 
-function page:handle_click(selected, x, y)
-    local selected_page = get_page_from_selected(self, selected)
-
-    if not selected_page then
+function page:handle_click(x, y)
+    if not self.selected_page then
         return false
     end
 
-    selected_page:handle_click(x, y)
+    self.selected_page:handle_click(x, y)
 
     return true
 end
 
-function page:render(selected, data)
-    if not data then
-        return
-    end
-
-    local selected_page = get_page_from_selected(self, selected)
-    selected_page:render(data)
+function page:render(x, y, data)
+    self.selected_page = get_page_from_selected(self, data.selected_page)
+    self.selected_page:render(x, y, data)
 end
 
 return page

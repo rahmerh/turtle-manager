@@ -1,16 +1,15 @@
-local movement = require("movement")
-local wireless = require("wireless")
+local movement      = require("movement")
+local wireless      = require("wireless")
 
-local list = require("lib.list")
-local inventory = require("lib.inventory")
-local printer = require("lib.printer")
-local miner = require("lib.miner")
-local scanner = require("lib.scanner")
-local errors = require("lib.errors")
+local list          = require("lib.list")
+local inventory     = require("lib.inventory")
+local printer       = require("lib.printer")
+local miner         = require("lib.miner")
+local scanner       = require("lib.scanner")
 
-local quarry = {}
+local quarry        = {}
 
-local fluids = {
+local fluids        = {
     "minecraft:water",
     "minecraft:lava"
 }
@@ -79,93 +78,8 @@ function quarry.starting_location_for_row(layer, row, boundaries)
     }
 end
 
-local function detect_fluid_in_next_column(boundaries, movement_context)
-    local fluid_detected = false
-
-    local ok, info = turtle.inspect()
-    if ok and quarry.is_fluid_block(info.name) then
-        fluid_detected = true
-    end
-
-    local moved, _ = movement.move_forward(movement_context)
-
-    if not fluid_detected then
-        local ok_up, info_up = turtle.inspectUp()
-        local ok_down, info_down = turtle.inspectDown()
-        if ok_up and quarry.is_fluid_block(info_up.name) or
-            ok_down and quarry.is_fluid_block(info_down.name) then
-            fluid_detected = true
-        end
-    end
-
-    if fluid_detected and moved then
-        return movement.get_current_coordinates()
-    end
-end
-
 function quarry.is_fluid_block(name)
     return list.contains(fluids, name)
-end
-
-function quarry.scan_fluid_columns(boundaries, movement_context)
-    local water_columns = {}
-
-    local start_pos = movement.get_current_coordinates()
-    table.insert(water_columns, start_pos)
-
-    local start_facing = movement.determine_orientation()
-    local selected = turtle.getSelectedSlot()
-
-    while true do
-        local coordinates = detect_fluid_in_next_column(boundaries, movement_context)
-        if coordinates and not list.contains(water_columns, coordinates) then
-            table.insert(water_columns, coordinates)
-        else
-            break
-        end
-    end
-
-    for _ = 1, #water_columns + 1 do
-        local cobble_slot = inventory.find_item("minecraft:cobblestone")
-
-        if not cobble_slot then
-            printer.print_info("Requesting cobblestone...")
-            local desired = { ["minecraft:cobblestone"] = 64 }
-            wireless.resupply.request(movement_context.manager_id, movement.get_current_coordinates(), desired)
-            local runner_id, job_id = wireless.resupply.await_arrival()
-            inventory.drop_slots(3, 3, "up")
-            wireless.resupply.signal_ready(runner_id, job_id)
-            wireless.resupply.await_done()
-            cobble_slot = inventory.find_item("minecraft:cobblestone")
-        end
-
-        local info = inventory.details_from_slot(cobble_slot)
-        if info.count < 3 then
-            local next_cobble_slot = inventory.find_item("minecraft:cobblestone", 1)
-
-            inventory.merge_into_slot(next_cobble_slot, cobble_slot)
-        end
-
-        turtle.select(cobble_slot)
-
-        turtle.placeDown()
-        turtle.placeUp()
-
-        movement.move_back()
-
-        turtle.place()
-    end
-
-    miner.mine_up()
-    miner.mine_down()
-    miner.mine()
-    movement.move_forward()
-    miner.mine_up()
-    miner.mine_down()
-
-    turtle.select(selected)
-    movement.move_to(start_pos.x, start_pos.y, start_pos.z, { dig = true })
-    movement.turn_to_direction(start_facing)
 end
 
 function quarry.mine_bedrock_layer(start_x, start_z, width, depth, movement_context)

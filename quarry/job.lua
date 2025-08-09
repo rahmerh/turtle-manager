@@ -7,8 +7,9 @@ local JOB_FILE = "job.conf"
 local job = {
     _data = nil,
     statuses = {
+        created = "Created",
         idle = "Idle",
-        starting = "Starting quarry",
+        starting = "Moving into position",
         in_progress = "In progress",
     }
 }

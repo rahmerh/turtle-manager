@@ -1,5 +1,8 @@
 local Sidebar = require("display.elements.sidebar")
 local Page = require("display.elements.page")
+local Container = require("display.elements.container")
+local Background = require("display.elements.background")
+local Ruler = require("display.elements.ruler")
 
 local MonitorHelper = require("display.monitor_helper")
 
@@ -7,37 +10,99 @@ local errors = require("lib.errors")
 local printer = require("lib.printer")
 
 local Display = {
-    turtles = {}
+    turtles = {},
+    debug = false
 }
 Display.__index = Display
 
-function Display:new(monitor)
-    if not monitor then
-        return nil, errors.NIL_PARAM
-    end
+local function traceback(err)
+    return debug.traceback(tostring(err), 2)
+end
 
-    Display.selected_page = Page.pages.quarries
-    local page_switcher = function(page_id, selected_id)
-        Display.selected_page = page_id
-        Display.selected_id = selected_id
+local function log_error(tag, message)
+    fs.makeDir("logs")
+
+    local timestamp = textutils.formatTime(os.epoch("utc") / 1000, true)
+    local filename = ("logs/error_%s_%d.log"):format(
+        timestamp:gsub("[: ]", "-"),
+        math.random(1000, 9999)
+    )
+
+    local file = fs.open(filename, "w")
+    if file then
+        file.writeLine(("[%s] %s"):format(tag, message))
+        file.close()
     end
+end
+
+local function guard(tag, fn)
+    local ok, err = xpcall(fn, traceback)
+    if not ok then
+        printer.print_error(("[%s] %s"):format(tag, err))
+        log_error(tag, err)
+        return false, err
+    end
+    return true
+end
+
+function Display:new(monitor)
+    if not monitor then return nil, errors.NIL_PARAM end
 
     local m = MonitorHelper:new(monitor)
-    local _, monitor_height = m:get_monitor_size()
+    Display.selected_page = Page.pages.quarries
 
-    local sidebar = Sidebar:new(m, page_switcher)
+    local result
+    guard("Boot", function()
+        local monitor_width, monitor_height = m:get_monitor_size()
+        local background = Background:new(m, { width = monitor_width, height = monitor_height })
+        background:solid(colours.lightGrey)
+        background:render(1, 1)
 
-    -- Boot screen
-    m:render_background()
-    local text = "Turtle manager is booting..."
-    m:set_fg_colour(colours.black)
-    m:scroll_text(1, monitor_height, text, 2)
+        m:set_fg_colour(colours.black)
+        m:scroll_text(1, monitor_height, "Turtle manager is booting...", 2)
 
-    return setmetatable({
-        m = m,
-        sidebar = sidebar,
-        page = Page:new(m, page_switcher),
-    }, self)
+        result = setmetatable({ m = m, turtles = {} }, Display)
+        result:on_resize()
+    end)
+
+    return result
+end
+
+function Display:on_resize()
+    local monitor_width, monitor_height = self.m:get_monitor_size()
+    self.m:reset_text_scale()
+
+    local size = { width = monitor_width, height = monitor_height }
+    local monitor_container = Container:new(self.m, Container.layouts.manual, size)
+
+    local background = Background:fill_container(monitor_container, false)
+    background:solid(colours.lightGrey)
+    monitor_container:add_element(background)
+
+    local sidebar_size = {
+        width = 15,
+        height = monitor_height
+    }
+
+    local page_switcher = function(page_id, selected_id)
+        self.selected_page = page_id
+        self.selected_id = selected_id
+    end
+
+    local sidebar = Sidebar:new(self.m, sidebar_size, page_switcher)
+    monitor_container:add_element(sidebar)
+
+    local page_size = {
+        width = monitor_width - sidebar_size.width,
+        height = monitor_height
+    }
+
+    local page = Page:new(self.m, page_size, page_switcher)
+    monitor_container:add_element(page, {
+        x_offset = sidebar.size.width
+    })
+
+    self.monitor_container = monitor_container
 end
 
 function Display:render()
@@ -45,34 +110,23 @@ function Display:render()
         return nil, errors.NO_MONITOR_ATTACHED
     end
 
+    local data = {
+        turtles = self.turtles,
+        selected_id = self.selected_id,
+        selected_page = self.selected_page,
+    }
+
     self.m:clear()
 
-    local ok, err
-    ok, err = pcall(function()
-        self.m:render_background()
+    guard("Render", function()
+        self.monitor_container:render(1, 1, data)
     end)
 
-    if not ok then
-        printer.print_error("[Layout] " .. tostring(err))
-    end
-
-    ok, err = pcall(function()
-        self.sidebar:render(self.selected_page)
-    end)
-
-    if not ok then
-        printer.print_error("[Sidebar] " .. tostring(err))
-    end
-
-    ok, err = pcall(function()
-        self.page:render(self.selected_page, {
-            turtles = self.turtles,
-            selected_id = self.selected_id
-        })
-    end)
-
-    if not ok then
-        printer.print_error("[Page] " .. tostring(err))
+    if self.debug then
+        guard("Ruler", function()
+            local ruler = Ruler:new(self.m)
+            ruler:render()
+        end)
     end
 end
 
@@ -82,36 +136,20 @@ end
 
 function Display:loop(refresh_rate)
     refresh_rate = refresh_rate or 1
-    local last_render = os.clock()
+    local timer_id = os.startTimer(refresh_rate)
 
     while true do
-        if os.clock() - last_render >= refresh_rate then
+        local event, p1, p2, p3 = os.pullEventRaw()
+        if event == "timer" and p1 == timer_id then
             self:render()
-            last_render = os.clock()
-        end
-
-        local event = { os.pullEventRaw() }
-
-        if event[1] == "monitor_touch" then
-            local _, _, x, y = table.unpack(event)
-
-            local ok, err = pcall(function()
-                local click_in_sidebar = self.sidebar:handle_click(x, y)
-                if not click_in_sidebar then
-                    local click_ok, click_err = pcall(function()
-                        self.page:handle_click(self.selected_page, x, y)
-                    end)
-
-                    if not click_ok then
-                        printer.print_error("[Page Click] " .. tostring(click_err))
-                    end
-                end
+            timer_id = os.startTimer(refresh_rate)
+        elseif event == "monitor_touch" then
+            guard("Click", function()
+                self.monitor_container:handle_click(p2, p3)
             end)
-
-            if not ok then
-                printer.print_error("[Sidebar Click] " .. tostring(err))
-            end
-        elseif event[1] == "terminate" then
+        elseif event == "monitor_resize" then
+            self:on_resize()
+        elseif event == "terminate" then
             return
         end
     end

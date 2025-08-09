@@ -24,8 +24,14 @@ function button:new(m, opts)
 end
 
 function button:is_clicked(x, y)
-    return x >= self.x and x < self.x + self.size.width
-        and y >= self.y and y < self.y + self.size.height
+    if not self.x or not self.y then
+        return false
+    end
+
+    local is_in_x = x >= self.x and x < self.x + self.size.width
+    local is_in_y = y >= self.y and y < self.y + self.size.height
+
+    return is_in_x and is_in_y
 end
 
 function button:handle_click(x, y)

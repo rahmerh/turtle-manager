@@ -1,12 +1,17 @@
 local job = require("job")
+local printer = require("lib.printer")
+
+if not job.exists() then
+    printer.print_info("Quarry #" .. os.getComputerID() .. " awaiting next command.")
+    return
+end
+
 local quarry = require("quarry")
 local wireless = require("wireless")
 local movement = require("movement")
 
-local printer = require("lib.printer")
 local inventory = require("lib.inventory")
 local miner = require("lib.miner")
-local errors = require("lib.errors")
 
 printer.print_info("Booting quarry #" .. os.getComputerID())
 
@@ -62,11 +67,16 @@ end
 
 wireless.registry.register_self_as(manager_id, "quarry")
 
-local start_heartbeat, stop_heartbeat = wireless.heartbeat.loop(manager_id, 1, function()
+local start_heartbeat, _ = wireless.heartbeat.loop(manager_id, 1, function()
+    local boundaries = job.get_boundaries()
     return {
         status = job.status(),
         current_layer = job.current_layer(),
+        total_layers = boundaries.layers,
         current_row = job.current_row(),
+        width = boundaries.width,
+        depth = boundaries.depth,
+        fuel_level = movement.get_fuel_level(),
         current_location = movement.get_current_coordinates()
     }
 end)
@@ -75,6 +85,8 @@ local function main()
     local boundaries = job.get_boundaries()
 
     if not job.is_in_progress() then
+        job.set_status(job.statuses.starting)
+
         local moved, moved_error = movement.move_to(
             boundaries.starting_position.x,
             boundaries.starting_position.y,

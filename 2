@@ -19,6 +19,9 @@ function label:new(m, size, text, label_colour, text_colour)
 end
 
 function label:render(x, y)
+    self.x = x
+    self.y = y
+
     self.m:set_bg_colour(self.label_colour)
     for i = 0, self.size.height - 1 do
         self.m:write_at(string.rep(" ", self.size.width), x, y + i)

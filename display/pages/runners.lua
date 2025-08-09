@@ -9,13 +9,12 @@ local list           = require("lib.list")
 local runners_page   = {}
 runners_page.__index = runners_page
 
-function runners_page:new(m, page_switcher)
+function runners_page:new(m, size, page_switcher)
     local result = setmetatable({
         m = m,
-        current_page = 1,
-        total_pages = 1,
         info_blocks = {},
-        page_switcher = page_switcher
+        size = size,
+        page_switcher = page_switcher,
     }, self)
 
     result.default_button_size = {
@@ -25,30 +24,19 @@ function runners_page:new(m, page_switcher)
 
     result.pager = Pager:new(m)
 
-    local position = {
-        x = m:get_page_offset(),
-        y = 1
-    }
-
-    local monitor_width, monitor_height = m:get_monitor_size()
-    local size = {
-        width = monitor_width - m:get_page_offset(),
-        height = monitor_height
-    }
-
     local padding = {
         top = 1,
-        left = 1
+        left = 1,
+        right = 1,
     }
 
     result.container = Container:new(
         m,
         Container.layouts.horizontal_rows,
-        position,
         size,
         padding)
 
-    local max_elements = result.container:calculate_capacity(
+    local max_elements = result.container:calculate_row_capacity(
         result.default_button_size.width,
         result.default_button_size.height)
 
@@ -70,7 +58,7 @@ function runners_page:handle_click(x, y)
     return click_handled
 end
 
-function runners_page:render(data)
+function runners_page:render(x, y, data)
     self.container:clear()
 
     local runners = list.filter_map_by(data.turtles, "role", "runner")
@@ -115,7 +103,9 @@ function runners_page:render(data)
             text = lines,
             button_colour = button_colour,
             text_colour = colours.black,
-            on_click = function() end
+            on_click = function()
+                self.page_switcher("runner_info", turtle.id)
+            end
         })
 
         self.container:add_element(button)
@@ -128,16 +118,15 @@ function runners_page:render(data)
     if self.pager.total_pages > 1 then
         self.pager:set_total_pages(self.pager.total_pages)
 
-        local monitor_width, monitor_height = self.m:get_monitor_size()
+        local _, monitor_height = self.m:get_monitor_size()
 
-        local page_width = monitor_width - self.m:get_page_offset()
-        local pager_x = self.m.center_x_within(self.pager:total_width(), page_width)
+        local pager_x = self.m.center_x_within(self.pager:total_width(), self.size.width)
         local pager_y = monitor_height - 1
 
-        self.pager:render(pager_x + self.m:get_page_offset(), pager_y)
+        self.pager:render(x + pager_x + 1, pager_y)
     end
 
-    self.container:render()
+    self.container:render(x, y, data)
 end
 
 return runners_page

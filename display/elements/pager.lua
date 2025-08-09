@@ -64,9 +64,6 @@ function pager:total_width()
 end
 
 function pager:render(x, y)
-    self.x = x
-    self.y = y
-
     if not self.total_pages then
         error("Set total pages before rendering a pager.")
     elseif self.total_pages <= 1 then

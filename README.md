@@ -51,12 +51,11 @@ The turtles only request coal, chests and cobblestone, so make sure to always ha
 ## TODO
 
 - Dashboard
-  - Boot screen
-  - Add pager for turtle pages
+  - Turtle info page
   - Task management page
   - Map/radar page
-  - Turtle info page
   - Turtle remote control functionality
 
+- Retry failed tasks (both from turtles and manager)
 - Remove quarry fluid handling, add runner fluid handling
 - Turtles redistribute tasks

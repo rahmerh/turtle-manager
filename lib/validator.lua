@@ -1,6 +1,10 @@
 local validator = {}
 
 function validator.validate_parameter(value, expected_type, is_required, name)
+    if not is_required and not value then
+        return
+    end
+
     if is_required and not value then
         error(("%s is required."):format(name))
     end

@@ -5,21 +5,7 @@ local Background = require("display.elements.background")
 local sidebar = {}
 sidebar.__index = sidebar
 
-function sidebar:new(m, page_switcher)
-    local monitor_width, monitor_height = m:get_monitor_size()
-    local width = math.floor(monitor_width / 5)
-    m:set_page_offset(width + 1)
-
-    local position = {
-        x = 1,
-        y = 1
-    }
-
-    local size = {
-        width = width,
-        height = monitor_height
-    }
-
+function sidebar:new(m, size, page_switcher)
     local padding = {
         top = 1,
         right = 1,
@@ -30,20 +16,16 @@ function sidebar:new(m, page_switcher)
     local container = Container:new(
         m,
         Container.layouts.manual,
-        position,
         size,
         padding)
 
-    local background = Background:fill_container(container)
+    local background = Background:fill_container(container, false)
     background:solid(colours.grey)
-    container:add_element(background, {
-        x = 1,
-        y = 1
-    })
+    container:add_element(background)
 
     local quarries_button = Button:new(m, {
         size = {
-            width = width - 2,
+            width = size.width - 2,
             height = 3,
         },
         text = "Quarries",
@@ -58,7 +40,7 @@ function sidebar:new(m, page_switcher)
 
     local runners_button = Button:new(m, {
         size = {
-            width = width - 2,
+            width = size.width - 2,
             height = 3,
         },
         text = "Runners",
@@ -73,7 +55,7 @@ function sidebar:new(m, page_switcher)
 
     local settings_button = Button:new(m, {
         size = {
-            width = width - 2,
+            width = size.width - 2,
             height = 3,
         },
         text = "Settings",
@@ -101,6 +83,7 @@ function sidebar:new(m, page_switcher)
 
     return setmetatable({
         m = m,
+        size = size,
         page_switcher = page_switcher,
         container = container,
         buttons = {
@@ -112,23 +95,19 @@ function sidebar:new(m, page_switcher)
 end
 
 function sidebar:handle_click(x, y)
-    if x > self.container.size.width then
-        return false
-    end
-
     return self.container:handle_click(x, y)
 end
 
-function sidebar:render(selected_page)
+function sidebar:render(x, y, data)
     for name, button in pairs(self.buttons) do
-        if name == selected_page then
+        if name == data.selected_page then
             button.button_colour = colours.orange
         else
             button.button_colour = colours.lightBlue
         end
     end
 
-    self.container:render()
+    self.container:render(x, y, data)
 end
 
 return sidebar

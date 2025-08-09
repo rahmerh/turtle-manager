@@ -9,44 +9,34 @@ local list            = require("lib.list")
 local quarries_page   = {}
 quarries_page.__index = quarries_page
 
-function quarries_page:new(m, page_switcher)
+function quarries_page:new(m, size, page_switcher)
     local result = setmetatable({
         m = m,
         info_blocks = {},
+        size = size,
         page_switcher = page_switcher,
     }, self)
 
     result.default_button_size = {
-        width = 20,
+        width = 19,
         height = 5
     }
 
     result.pager = Pager:new(m)
 
-    local position = {
-        x = m:get_page_offset(),
-        y = 1
-    }
-
-    local monitor_width, monitor_height = m:get_monitor_size()
-    local size = {
-        width = monitor_width - m:get_page_offset() + 1,
-        height = monitor_height
-    }
-
     local padding = {
         top = 1,
-        left = 1
+        left = 3,
+        right = 1,
     }
 
     result.container = Container:new(
         m,
         Container.layouts.horizontal_rows,
-        position,
         size,
         padding)
 
-    local max_elements = result.container:calculate_capacity(
+    local max_elements = result.container:calculate_row_capacity(
         result.default_button_size.width,
         result.default_button_size.height)
 
@@ -68,7 +58,10 @@ function quarries_page:handle_click(x, y)
     return click_handled
 end
 
-function quarries_page:render(data)
+function quarries_page:render(x, y, data)
+    self.latest_x = x
+    self.latest_y = y
+
     self.container:clear()
 
     local quarries = list.filter_map_by(data.turtles, "role", "quarry")
@@ -128,16 +121,15 @@ function quarries_page:render(data)
     if self.pager.total_pages > 1 then
         self.pager:set_total_pages(self.pager.total_pages)
 
-        local monitor_width, monitor_height = self.m:get_monitor_size()
+        local _, monitor_height = self.m:get_monitor_size()
 
-        local page_width = monitor_width - self.m:get_page_offset()
-        local pager_x = self.m.center_x_within(self.pager:total_width(), page_width)
+        local pager_x = self.m.center_x_within(self.pager:total_width(), self.size.width)
         local pager_y = monitor_height - 1
 
-        self.pager:render(pager_x + self.m:get_page_offset(), pager_y)
+        self.pager:render(x + pager_x + 1, pager_y)
     end
 
-    self.container:render()
+    self.container:render(x, y, data)
 end
 
 return quarries_page
