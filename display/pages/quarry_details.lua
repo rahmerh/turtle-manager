@@ -3,6 +3,7 @@ local Button                = require("display.elements.button")
 local Label                 = require("display.elements.label")
 local Background            = require("display.elements.background")
 local Text                  = require("display.elements.text")
+local Confirm               = require("display.elements.confirm")
 
 local colour_helper         = require("display.colour_helper")
 
@@ -11,7 +12,7 @@ local list                  = require("lib.list")
 local quarry_details_page   = {}
 quarry_details_page.__index = quarry_details_page
 
-function quarry_details_page:new(m, size, page_switcher, wireless)
+function quarry_details_page:new(m, size, page_switcher, task_runner)
     local buttons_container_size = {
         width = 20,
         height = size.height
@@ -91,16 +92,7 @@ function quarry_details_page:new(m, size, page_switcher, wireless)
         "Recover",
         colours.black,
         colours.red,
-        function()
-            print("Kill")
-            local coordinates = wireless.turtle_commands.kill_turtle(60)
-            print("Killed")
-            page_switcher("quarries")
-            --
-            -- local manager_id = self.wireless.discovery.find("manager")
-            --
-            -- self.wireless.pickup.request(manager_id, coordinates)
-        end)
+        function() end)
 
     buttons_container:add_element(recover_button, {
         respect_padding = true,
@@ -126,15 +118,25 @@ function quarry_details_page:new(m, size, page_switcher, wireless)
         information_container_size,
         information_container_padding)
 
+    local recover_confirm_lines = {
+        "Are you sure?", "",
+        "This will kill the turtle and ",
+        "a runner will be dispatched",
+        "to recover it."
+    }
+
+    local confirm = Confirm:new(m, recover_confirm_lines)
+
     return setmetatable({
         m = m,
-        wireless = wireless,
         page_switcher = page_switcher,
+        task_runner = task_runner,
         buttons_container = buttons_container,
         information_container = information_container,
         status_label = status_label,
         pause_button = pause_button,
-        recover_button = recover_button
+        recover_button = recover_button,
+        confirm = confirm
     }, self)
 end
 
@@ -153,14 +155,18 @@ function quarry_details_page:render(x, y, data)
         self.pause_button.button_colour = colours.orange
 
         self.pause_button.on_click = function()
-            self.wireless.turtle_commands.resume_turtle(selected_turtle.id)
+            self.task_runner:add_task(self.task_runner.tasks.resume, { id = selected_turtle.id })
         end
+    elseif selected_turtle.metadata.status == "Offline" or selected_turtle.metadata.status == "Stale" then
+        self.pause_button.text = "Pause"
+        self.pause_button.button_colour = colours.lightGrey
+        self.pause_button.on_click = function() end
     else
         self.pause_button.text = "Pause"
         self.pause_button.button_colour = colours.lightBlue
 
         self.pause_button.on_click = function()
-            self.wireless.turtle_commands.pause_turtle(selected_turtle.id)
+            self.task_runner:add_task(self.task_runner.tasks.pause, { id = selected_turtle.id })
         end
     end
 
@@ -169,6 +175,17 @@ function quarry_details_page:render(x, y, data)
     self.status_label.label_colour = label_colour
     self.status_label.text = selected_turtle.metadata.status
 
+    if selected_turtle.metadata.status == "Offline" or selected_turtle.metadata.status == "Stale" then
+        self.recover_button.button_colour = colours.lightGrey
+        self.recover_button.on_click = function() end
+    else
+        self.recover_button.button_colour = colours.red
+        self.recover_button.on_click = function()
+            -- self.task_runner:add_task(self.task_runner.tasks.recover, { id = selected_turtle.id })
+            -- self.page_switcher("quarries")
+            self.confirm:open()
+        end
+    end
 
     self.information_container:clear()
 
@@ -239,6 +256,10 @@ function quarry_details_page:render(x, y, data)
 
     self.buttons_container:render(x, y)
     self.information_container:render(x + self.buttons_container.size.width, y)
+
+    if self.confirm:is_open() then
+        self.confirm:render()
+    end
 end
 
 return quarry_details_page

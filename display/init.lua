@@ -5,6 +5,7 @@ local Background = require("display.elements.background")
 local Ruler = require("display.elements.ruler")
 
 local MonitorHelper = require("display.monitor_helper")
+local TaskRunner = require("display.task_runner")
 
 local errors = require("lib.errors")
 local printer = require("lib.printer")
@@ -45,11 +46,13 @@ local function guard(tag, fn)
     return true
 end
 
-function Display:new(monitor, wireless)
+function Display:new(monitor)
     if not monitor then return nil, errors.NIL_PARAM end
 
     local m = MonitorHelper:new(monitor)
     Display.selected_page = Page.pages.quarries
+
+    local task_runner = TaskRunner:new()
 
     local result
     guard("Boot", function()
@@ -61,7 +64,7 @@ function Display:new(monitor, wireless)
         m:set_fg_colour(colours.black)
         m:scroll_text(1, monitor_height, "Turtle manager is booting...", 2)
 
-        result = setmetatable({ m = m, turtles = {}, wireless = wireless }, Display)
+        result = setmetatable({ m = m, task_runner = task_runner, turtles = {} }, Display)
         result:on_resize()
     end)
 
@@ -97,7 +100,7 @@ function Display:on_resize()
         height = monitor_height
     }
 
-    local page = Page:new(self.m, page_size, page_switcher, self.wireless)
+    local page = Page:new(self.m, page_size, page_switcher, self.task_runner)
     monitor_container:add_element(page, {
         x_offset = sidebar.size.width
     })

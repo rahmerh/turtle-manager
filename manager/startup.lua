@@ -109,6 +109,7 @@ local main_loops = { wireless.router.loop, mark_stale }
 
 if display then
     table.insert(main_loops, function() display:loop() end)
+    table.insert(main_loops, function() display.task_runner:loop() end)
 end
 
 printer.print_success("Manager online.")

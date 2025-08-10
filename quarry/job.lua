@@ -12,6 +12,7 @@ local job = {
         starting = "Moving into position",
         in_progress = "In progress",
         paused = "Paused",
+        offline = "Offline",
     }
 }
 

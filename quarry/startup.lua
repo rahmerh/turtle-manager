@@ -45,6 +45,7 @@ end)
 local running = true
 wireless.router.register_handler(wireless.protocols.rpc, "command:kill", function(sender, m)
     movement.pause()
+    job.set_status(job.statuses.offline)
 
     sleep(1) -- Allow turtle to stop.
 

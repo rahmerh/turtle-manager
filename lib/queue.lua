@@ -1,8 +1,5 @@
-local FILE = "tasks.db"
-
-local task_store = {}
-
-task_store.__index = task_store
+local queue = {}
+queue.__index = queue
 
 local function atomic_write(path, tbl)
     local tmp = path .. ".tmp"
@@ -22,13 +19,18 @@ local function load_file(path)
 end
 
 local function persist(self)
-    atomic_write(FILE, { first = self.first, last = self.last, items = self.items })
+    atomic_write(self.file_name, { first = self.first, last = self.last, items = self.items })
 end
 
-function task_store.new()
-    local self = setmetatable({ first = 1, last = 0, items = {} }, task_store)
+function queue.new(file_name)
+    local self = setmetatable({
+        first = 1,
+        last = 0,
+        items = {},
+        file_name = file_name
+    }, queue)
 
-    local data = load_file(FILE)
+    local data = load_file(file_name)
     if data then
         self.first = data.first or 1
         self.last  = data.last or 0
@@ -40,18 +42,18 @@ function task_store.new()
     return self
 end
 
-function task_store:enqueue(task)
+function queue:enqueue(item)
     self.last = self.last + 1
-    self.items[self.last] = task
+    self.items[self.last] = item
     persist(self)
 end
 
-function task_store:peek()
+function queue:peek()
     if self.first > self.last then return nil end
     return self.items[self.first]
 end
 
-function task_store:ack()
+function queue:ack()
     if self.first > self.last then return false end
     self.items[self.first] = nil
     self.first = self.first + 1
@@ -59,11 +61,11 @@ function task_store:ack()
     return true
 end
 
-function task_store:size()
+function queue:size()
     return self.last - self.first + 1
 end
 
-function task_store:compact()
+function queue:compact()
     if self.first == 1 then return end
     local j = 1
     for i = self.first, self.last do
@@ -74,4 +76,4 @@ function task_store:compact()
     self.first, self.last = 1, j - 1
 end
 
-return task_store
+return queue

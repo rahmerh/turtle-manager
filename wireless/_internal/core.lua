@@ -1,3 +1,5 @@
+local time = require("lib.time")
+
 local core = {}
 
 math.randomseed((os.epoch("utc") % (2 ^ 31)) + os.getComputerID()); math.random(); math.random()
@@ -21,11 +23,21 @@ function core.send(receiver, payload, protocol, id)
 end
 
 function core.await_response_on(id, timeout)
-    timeout = timeout or 1
+    timeout     = timeout or 5
 
-    local e, a, b, c = os.pullEvent(("rn:%s"):format(id))
-    print("In loop...")
-    return true, a, b, c
+    local event = ("rn:%s"):format(id)
+    local timer = os.startTimer(timeout)
+
+    while true do
+        local e, a, b, c = os.pullEvent()
+        if e == event then
+            return true, a, b, c
+        end
+
+        if timer and e == "timer" and a == timer then
+            return false, "timeout"
+        end
+    end
 end
 
 function core.receive(timeout) return rednet.receive(nil, timeout) end

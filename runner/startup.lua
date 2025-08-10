@@ -1,7 +1,7 @@
-local task_store = require("task_store")
 local wireless = require("wireless")
 local movement = require("movement")
 
+local queue = require("lib.queue")
 local printer = require("lib.printer")
 local inventory = require("lib.inventory")
 
@@ -23,7 +23,7 @@ local raw = config_file.readAll()
 config_file.close()
 local config = textutils.unserialize(raw)
 
-local queue = task_store.new()
+local task_queue = queue.new("tasks.db")
 
 wireless.open()
 local manager_id, err = wireless.discovery.find("manager")
@@ -40,7 +40,7 @@ local movement_context = {
 local start_heartbeat, _ = wireless.heartbeat.loop(manager_id, 1, function()
     return {
         status = status,
-        queued_tasks = queue:size(),
+        queued_tasks = task_queue:size(),
         current_location = movement.get_current_coordinates()
     }
 end)
@@ -48,13 +48,13 @@ end)
 wireless.router.register_handler(wireless.protocols.rpc, "pickup:dispatch", function(sender, m)
     wireless.ack(sender, m)
     printer.print_info(("[%s] Queued task 'pickup'"):format(m.data.job_id))
-    queue:enqueue(m)
+    task_queue:enqueue(m)
 end)
 
 wireless.router.register_handler(wireless.protocols.rpc, "resupply:dispatch", function(sender, m)
     wireless.ack(sender, m)
     printer.print_info(("[%s] Queued task 'resupply'"):format(m.data.job_id))
-    queue:enqueue(m)
+    task_queue:enqueue(m)
 end)
 
 local function category(operation)
@@ -88,7 +88,7 @@ local function main()
                 config.unloading_chest_pos.z)
         end
 
-        local task = queue:peek()
+        local task = task_queue:peek()
 
         if not task then
             sleep(1)
@@ -105,7 +105,7 @@ local function main()
             printer.print_warning("Unsupported task: " .. task_type)
         end
 
-        queue:ack()
+        task_queue:ack()
         status = "Idle"
 
         ::continue::
