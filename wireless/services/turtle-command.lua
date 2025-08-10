@@ -11,6 +11,10 @@ function commands.resume_turtle(receiver)
     return rpc.call(receiver, "command:resume")
 end
 
+function commands.reboot_turtle(receiver)
+    return rpc.call(receiver, "command:reboot")
+end
+
 function commands.confirm_kill(receiver, id, coordinates)
     core.send(receiver, {
             operation = "command:kill",

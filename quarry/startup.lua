@@ -28,6 +28,12 @@ if not manager_id and find_err then
     return
 end
 
+wireless.router.register_handler(wireless.protocols.rpc, "command:reboot", function(sender, m)
+    wireless.ack(sender, m)
+    printer.print_warning("Received reboot command.")
+    os.reboot()
+end)
+
 wireless.router.register_handler(wireless.protocols.rpc, "command:pause", function(sender, m)
     wireless.ack(sender, m)
     job.set_status(job.statuses.paused)
@@ -125,9 +131,8 @@ end
 local function main()
     wireless.registry.register_self_as(manager_id, "quarry", metadata)
 
+    job.set_status(job.statuses.starting)
     if not job.status() == job.statuses.created then
-        job.set_status(job.statuses.starting)
-
         local moved, moved_error = movement.move_to(
             boundaries.starting_position.x,
             boundaries.starting_position.y,
@@ -141,8 +146,6 @@ local function main()
 
     if job.status() == job.statuses.paused then
         movement.pause()
-    else
-        job.set_status(job.statuses.in_progress)
     end
 
     printer.print_info("Quarry #" .. os.getComputerID() .. " in progress...")
@@ -162,6 +165,8 @@ local function main()
         for _ = 1, rows do
             local coords = quarry.starting_location_for_row(job.current_layer(), job.current_row(), boundaries)
             local moved, moved_error = movement.move_to(coords.x, coords.y, coords.z, movement_context_with_dig)
+
+            job.set_status(job.statuses.in_progress)
 
             if not moved then
                 error("Turtle stuck: " .. moved_error)
@@ -200,6 +205,39 @@ local function main()
         end
 
         job.next_layer()
+    end
+
+    local end_y = boundaries.starting_position.y - 2 - ((boundaries.layers - 1) * 3)
+    if end_y == -56 then
+        movement.move_to(
+            boundaries.starting_position.x,
+            -58,
+            boundaries.starting_position.z,
+            movement_context_with_dig)
+        movement.turn_to_direction("north")
+
+        for row = 1, boundaries.width do
+            for _ = 1, boundaries.depth - 1 do
+                miner.mine()
+                movement.move_forward(movement_context)
+
+                if inventory.are_all_slots_full() then
+                    quarry.unload(manager_id)
+                end
+            end
+
+            if row % 2 == 0 then
+                movement.turn_left()
+                miner.mine()
+                movement.move_forward(movement_context)
+                movement.turn_left()
+            else
+                movement.turn_right()
+                miner.mine()
+                movement.move_forward(movement_context)
+                movement.turn_right()
+            end
+        end
     end
 
     quarry.mine_bedrock_layer(

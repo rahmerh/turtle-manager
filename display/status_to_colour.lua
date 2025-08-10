@@ -3,7 +3,7 @@ local status_to_colour = {}
 local fallback = colours.white
 
 local quarry_status_colours = {
-    Moving = colours.green,
+    Starting = colours.green,
     Stale = colours.yellow,
     Paused = colours.yellow,
     Offline = colours.grey,

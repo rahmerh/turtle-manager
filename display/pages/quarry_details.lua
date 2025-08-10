@@ -100,6 +100,21 @@ function quarry_details_page:new(m, size, page_switcher, task_runner)
         x_offset = 1,
     })
 
+    local reboot_button = Button:new(m, {
+            height = 3,
+            width = 13,
+        },
+        "Reboot",
+        colours.black,
+        colours.red,
+        function() end)
+
+    buttons_container:add_element(reboot_button, {
+        respect_padding = true,
+        y_offset = 13,
+        x_offset = 1,
+    })
+
     local information_container_size = {
         width = size.width - buttons_container_size.width - 2,
         height = size.height - 2
@@ -135,6 +150,7 @@ function quarry_details_page:new(m, size, page_switcher, task_runner)
         information_container = information_container,
         status_label = status_label,
         pause_button = pause_button,
+        reboot_button = reboot_button,
         recover_button = recover_button,
         confirm = confirm,
     }, self)
@@ -158,33 +174,14 @@ function quarry_details_page:render(x, y, data)
     if not selected_turtle then return end
 
     self.selected_id = data.selected_id
-
-    if selected_turtle.metadata.status == "Paused" then
-        self.pause_button.text = "Resume"
-        self.pause_button.button_colour = colours.green
-
-        self.pause_button.on_click = function()
-            self.task_runner:add_task(self.task_runner.tasks.resume, { id = selected_turtle.id })
-        end
-    elseif selected_turtle.metadata.status == "Offline" or selected_turtle.metadata.status == "Stale" then
+    if selected_turtle.metadata.status == "Offline" or selected_turtle.metadata.status == "Stale" then
         self.pause_button.text = "Pause"
         self.pause_button.button_colour = colours.lightGrey
         self.pause_button.on_click = function() end
-    else
-        self.pause_button.text = "Pause"
-        self.pause_button.button_colour = colours.lightBlue
 
-        self.pause_button.on_click = function()
-            self.task_runner:add_task(self.task_runner.tasks.pause, { id = selected_turtle.id })
-        end
-    end
+        self.reboot_button.button_colour = colours.lightGrey
+        self.reboot_button.on_click = function() end
 
-    local label_colour = stc.quarry_status_to_colour(selected_turtle.metadata.status)
-    if label_colour == colours.grey then label_colour = colours.red end
-    self.status_label.label_colour = label_colour
-    self.status_label.text = selected_turtle.metadata.status
-
-    if selected_turtle.metadata.status == "Offline" or selected_turtle.metadata.status == "Stale" then
         self.recover_button.on_click = function()
             self.task_runner:add_task(self.task_runner.tasks.recover, {
                 id = selected_turtle.id,
@@ -194,11 +191,33 @@ function quarry_details_page:render(x, y, data)
             self.page_switcher("quarries")
         end
     else
+        if selected_turtle.metadata.status == "Paused" then
+            self.pause_button.text = "Resume"
+            self.pause_button.button_colour = colours.green
+
+            self.pause_button.on_click = function()
+                self.task_runner:add_task(self.task_runner.tasks.resume, { id = selected_turtle.id })
+            end
+        else
+            self.pause_button.text = "Pause"
+            self.pause_button.button_colour = colours.lightBlue
+        end
+
         self.recover_button.button_colour = colours.red
         self.recover_button.on_click = function()
             self.confirm:open(selected_turtle.id)
         end
+
+        self.reboot_button.button_colour = colours.lightBlue
+        self.reboot_button.on_click = function()
+            self.task_runner:add_task(self.task_runner.tasks.reboot, { id = selected_turtle.id })
+        end
     end
+
+    local label_colour = stc.quarry_status_to_colour(selected_turtle.metadata.status)
+    if label_colour == colours.grey then label_colour = colours.red end
+    self.status_label.label_colour = label_colour
+    self.status_label.text = selected_turtle.metadata.status
 
     self.confirm.on_yes = function()
         self.task_runner:add_task(self.task_runner.tasks.recover, { id = selected_turtle.id })
