@@ -5,7 +5,7 @@ local Background            = require("display.elements.background")
 local Text                  = require("display.elements.text")
 local Confirm               = require("display.elements.confirm")
 
-local colour_helper         = require("display.colour_helper")
+local stc                   = require("display.status_to_colour")
 
 local list                  = require("lib.list")
 
@@ -136,11 +136,16 @@ function quarry_details_page:new(m, size, page_switcher, task_runner)
         status_label = status_label,
         pause_button = pause_button,
         recover_button = recover_button,
-        confirm = confirm
+        confirm = confirm,
     }, self)
 end
 
 function quarry_details_page:handle_click(x, y)
+    if self.confirm:is_open() then
+        -- Consume click, let confirmation handle it.
+        return self.confirm:handle_click(x, y)
+    end
+
     return self.buttons_container:handle_click(x, y)
 end
 
@@ -170,21 +175,30 @@ function quarry_details_page:render(x, y, data)
         end
     end
 
-    local label_colour = colour_helper.quarry_status_to_colour(selected_turtle.metadata.status)
+    local label_colour = stc.quarry_status_to_colour(selected_turtle.metadata.status)
     if label_colour == colours.grey then label_colour = colours.red end
     self.status_label.label_colour = label_colour
     self.status_label.text = selected_turtle.metadata.status
 
     if selected_turtle.metadata.status == "Offline" or selected_turtle.metadata.status == "Stale" then
-        self.recover_button.button_colour = colours.lightGrey
-        self.recover_button.on_click = function() end
+        self.recover_button.on_click = function()
+            self.task_runner:add_task(self.task_runner.tasks.recover, {
+                id = selected_turtle.id,
+                offline_turtle = selected_turtle
+            })
+
+            self.page_switcher("quarries")
+        end
     else
         self.recover_button.button_colour = colours.red
         self.recover_button.on_click = function()
-            -- self.task_runner:add_task(self.task_runner.tasks.recover, { id = selected_turtle.id })
-            -- self.page_switcher("quarries")
             self.confirm:open()
         end
+    end
+
+    self.confirm.on_yes = function()
+        self.task_runner:add_task(self.task_runner.tasks.recover, { id = selected_turtle.id })
+        self.page_switcher("quarries")
     end
 
     self.information_container:clear()

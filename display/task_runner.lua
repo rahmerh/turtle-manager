@@ -14,31 +14,40 @@ local task_runner   = {
 }
 task_runner.__index = task_runner
 
-local handlers      = {
-    pause = function(data)
-        local ok, err = wireless.turtle_commands.pause_turtle(data.id)
-        if not ok then error(err or "pause failed") end
-        return true
-    end,
-    resume = function(data)
-        local ok, err = wireless.turtle_commands.resume_turtle(data.id)
-        if not ok then error(err or "resume failed") end
-        return true
-    end,
-    recover = function(data)
-        local coordinates = wireless.turtle_commands.kill_turtle(data.id)
 
-        local manager_id = wireless.discovery.find("manager")
+function task_runner:new(notifier)
+    local handlers = {
+        pause = function(data)
+            local ok, err = wireless.turtle_commands.pause_turtle(data.id)
+            if not ok then error(err or "pause failed") end
+            return true
+        end,
+        resume = function(data)
+            local ok, err = wireless.turtle_commands.resume_turtle(data.id)
+            if not ok then error(err or "resume failed") end
+            return true
+        end,
+        recover = function(data)
+            local coordinates
+            if data.offline_turtle then
+                coordinates = data.offline_turtle.metadata.current_location
+            else
+                coordinates = wireless.turtle_commands.kill_turtle(data.id)
+            end
 
-        wireless.pickup.request(manager_id, coordinates)
+            local manager_id = wireless.discovery.find("manager")
 
-        return true
-    end
-}
+            wireless.pickup.request(manager_id, coordinates)
 
-function task_runner:new(db_path)
+            notifier:add_notification(("Recovering turtle #%d..."):format(data.id), 10)
+
+            return true
+        end
+    }
     return setmetatable({
-        task_queue = queue.new(db_path or "display_tasks.db"),
+        task_queue = queue.new("display_tasks.db"),
+        notifier = notifier,
+        handlers = handlers
     }, self)
 end
 
@@ -57,7 +66,7 @@ function task_runner:loop()
         if not item then
             os.pullEvent(WAKE_EVENT)
         else
-            local fn = handlers[item.task]
+            local fn = self.handlers[item.task]
             if not fn then
                 printer.print_error("Invalid task: " .. item.task)
                 self.task_queue:ack()

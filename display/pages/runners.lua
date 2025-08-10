@@ -2,7 +2,7 @@ local Pager          = require("display.elements.pager")
 local Button         = require("display.elements.button")
 local Container      = require("display.elements.container")
 
-local colour_helper  = require("display.colour_helper")
+local stc            = require("display.status_to_colour")
 
 local list           = require("lib.list")
 
@@ -79,7 +79,7 @@ function runners_page:render(x, y, data)
             goto continue
         end
 
-        local button_colour = colour_helper.runner_status_to_colour(turtle.metadata.status)
+        local button_colour = stc.runner_status_to_colour(turtle.metadata.status)
 
         local location_line
         if turtle.metadata.current_location then

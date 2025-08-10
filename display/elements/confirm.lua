@@ -17,35 +17,47 @@ function confirm:new(m, text)
         height = monitor_height - (offset.y_offset * 2)
     }
 
+    local result = setmetatable({
+        m = m,
+        size = size,
+        offset = offset,
+        should_render = false,
+    }, self)
+
     local confirm_button_size = {
         width = 10,
         height = 3
     }
+
     local yes_button = Button:new(m,
         confirm_button_size,
         "Yes",
         colours.black,
         colours.green,
-        function() print("Yes") end)
+        function()
+            if not result.on_yes then
+                error("No on_yes set for this confirm.")
+            end
+
+            result.on_yes()
+            result.should_render = false
+        end)
+    result.yes_button = yes_button
 
     local no_button = Button:new(m,
         confirm_button_size,
         "No",
         colours.black,
         colours.red,
-        function() print("No") end)
+        function()
+            result.should_render = false
+        end)
+    result.no_button = no_button
 
     local confirmation_text = Text:new(m, text, colours.black)
+    result.confirmation_text = confirmation_text
 
-    return setmetatable({
-        m = m,
-        confirmation_text = confirmation_text,
-        size = size,
-        offset = offset,
-        should_render = false,
-        yes_button = yes_button,
-        no_button = no_button
-    }, self)
+    return result
 end
 
 function confirm:is_open()
@@ -54,6 +66,25 @@ end
 
 function confirm:open()
     self.should_render = true
+end
+
+function confirm:handle_click(x, y)
+    local monitor_width, monitor_height = self.m:get_monitor_size()
+
+    local is_in_x = x >= self.offset.x_offset and x < monitor_width - self.offset.x_offset
+    local is_in_y = y >= self.offset.y_offset and y < monitor_height - self.offset.y_offset
+
+    if not is_in_x or not is_in_y then
+        self.should_render = false
+        return true
+    end
+
+    local handled = self.no_button:handle_click(x, y)
+    if not handled then
+        handled = self.yes_button:handle_click(x, y)
+    end
+
+    return handled
 end
 
 function confirm:render()

@@ -4,6 +4,7 @@
         "colours",
         "textutils",
         "parallel",
-        "rednet"
+        "rednet",
+        "sleep"
     ]
 }

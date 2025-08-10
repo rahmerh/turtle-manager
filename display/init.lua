@@ -6,6 +6,7 @@ local Ruler = require("display.elements.ruler")
 
 local MonitorHelper = require("display.monitor_helper")
 local TaskRunner = require("display.task_runner")
+local Notifier = require("display.notifier")
 
 local errors = require("lib.errors")
 local printer = require("lib.printer")
@@ -50,9 +51,9 @@ function Display:new(monitor)
     if not monitor then return nil, errors.NIL_PARAM end
 
     local m = MonitorHelper:new(monitor)
-    Display.selected_page = Page.pages.quarries
 
-    local task_runner = TaskRunner:new()
+    local notifier = Notifier:new(m)
+    local task_runner = TaskRunner:new(notifier)
 
     local result
     guard("Boot", function()
@@ -64,7 +65,13 @@ function Display:new(monitor)
         m:set_fg_colour(colours.black)
         m:scroll_text(1, monitor_height, "Turtle manager is booting...", 2)
 
-        result = setmetatable({ m = m, task_runner = task_runner, turtles = {} }, Display)
+        result = setmetatable({
+            m = m,
+            task_runner = task_runner,
+            notifier = notifier,
+            turtles = {},
+            selected_page = Page.pages.quarries
+        }, Display)
         result:on_resize()
     end)
 
@@ -123,6 +130,10 @@ function Display:render()
 
     guard("Render", function()
         self.monitor_container:render(1, 1, data)
+
+        if self.notifier:has_notifications() then
+            self.notifier:render()
+        end
     end)
 
     if self.debug then
@@ -135,25 +146,50 @@ end
 
 function Display:add_or_update_turtle(id, turtle)
     self.turtles[id] = turtle
+    os.queueEvent("ui:render")
 end
 
-function Display:loop(refresh_rate)
-    refresh_rate = refresh_rate or 1
-    local timer_id = os.startTimer(refresh_rate)
+function Display:loop()
+    local idle_fps = 2
+    local active_fps = 10
+
+    local should_render = true
+
+    local function next_delay()
+        return 1 / (self.notifier:is_animating() and active_fps or idle_fps)
+    end
+
+    local delay = next_delay()
+    local timer = os.startTimer(delay)
 
     while true do
         local event, p1, p2, p3 = os.pullEventRaw()
-        if event == "timer" and p1 == timer_id then
-            self:render()
-            timer_id = os.startTimer(refresh_rate)
+
+        if event == "timer" and p1 == timer then
+            self.notifier:update(os.clock())
+            if self.notifier:has_notifications() then
+                should_render = true
+            end
+
+            if should_render then
+                self:render()
+                should_render = false
+            end
+
+            delay = next_delay()
+            timer = os.startTimer(delay)
         elseif event == "monitor_touch" then
             guard("Click", function()
                 self.monitor_container:handle_click(p2, p3)
             end)
+            should_render = true
         elseif event == "monitor_resize" then
             self:on_resize()
+            should_render = true
         elseif event == "terminate" then
             return
+        elseif event == "ui:render" then
+            should_render = true
         end
     end
 end

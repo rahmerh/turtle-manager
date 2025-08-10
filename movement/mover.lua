@@ -215,26 +215,32 @@ mover.turn_to_direction = function(target_direction)
 end
 
 mover.move_back = function()
+    local direction = mover.determine_orientation()
+    locator.moved_in_direction(1, mover.opposite_orientation_of(direction))
+
     local ok, err = turtle.back()
 
     if not ok and err then
         err = parse_error(err)
-    else
-        local direction = mover.determine_orientation()
-        locator.moved_in_direction(1, mover.opposite_orientation_of(direction))
+
+        -- Correct GPS on failure
+        locator.moved_in_direction(1, direction)
     end
 
     return ok, err
 end
 
 mover.move_forward = function()
+    local direction = mover.determine_orientation()
+    locator.moved_in_direction(1, direction)
+
     local ok, err = turtle.forward()
 
     if not ok and err then
         err = parse_error(err)
-    else
-        local direction = mover.determine_orientation()
-        locator.moved_in_direction(1, direction)
+
+        -- Correct GPS on failure
+        locator.moved_in_direction(1, mover.opposite_orientation_of(direction))
     end
 
     return ok, err

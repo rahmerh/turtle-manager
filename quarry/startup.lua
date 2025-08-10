@@ -102,7 +102,7 @@ local metadata = {
 local start_heartbeat, _ = wireless.heartbeat.loop(manager_id, 1, function()
     local stored_fuel_units
     local fuel_slot = inventory.details_from_slot(1)
-    if fuel_slot.name == "minecraft:coal" then
+    if fuel_slot and fuel_slot.name == "minecraft:coal" then
         stored_fuel_units = fuel_slot.count * 80
     end
 
