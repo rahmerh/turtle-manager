@@ -28,6 +28,34 @@ if not manager_id and find_err then
     return
 end
 
+wireless.router.register_handler(wireless.protocols.rpc, "command:pause", function(sender, m)
+    wireless.ack(sender, m)
+    job.set_status(job.statuses.paused)
+    movement.pause()
+    printer.print_warning("Received pause command.")
+end)
+
+wireless.router.register_handler(wireless.protocols.rpc, "command:resume", function(sender, m)
+    wireless.ack(sender, m)
+    job.set_status(job.statuses.in_progress)
+    movement.resume()
+    printer.print_info("Resuming...")
+end)
+
+local running = true
+wireless.router.register_handler(wireless.protocols.rpc, "command:kill", function(sender, m)
+    movement.pause()
+
+    sleep(1) -- Allow turtle to stop.
+
+    local coordinates = movement.get_current_coordinates()
+
+    wireless.turtle_commands.confirm_kill(sender, m.id, coordinates)
+    running = false
+
+    printer.print_warning("Received kill command.")
+end)
+
 local movement_context = {
     dig = false,
     manager_id = manager_id
@@ -65,26 +93,38 @@ if next(needed_supplies) ~= nil then
     end
 end
 
-wireless.registry.register_self_as(manager_id, "quarry")
+local boundaries = job.get_boundaries()
+local metadata = {
+    boundaries = boundaries
+}
 
 local start_heartbeat, _ = wireless.heartbeat.loop(manager_id, 1, function()
-    local boundaries = job.get_boundaries()
+    local stored_fuel_units
+    local fuel_slot = inventory.details_from_slot(1)
+    if fuel_slot.name == "minecraft:coal" then
+        stored_fuel_units = fuel_slot.count * 80
+    end
+
     return {
         status = job.status(),
         current_layer = job.current_layer(),
-        total_layers = boundaries.layers,
         current_row = job.current_row(),
-        width = boundaries.width,
-        depth = boundaries.depth,
         fuel_level = movement.get_fuel_level(),
+        stored_fuel_units = stored_fuel_units,
         current_location = movement.get_current_coordinates()
     }
 end)
 
-local function main()
-    local boundaries = job.get_boundaries()
+local function kill_switch()
+    while running do
+        sleep(1)
+    end
+end
 
-    if not job.is_in_progress() then
+local function main()
+    wireless.registry.register_self_as(manager_id, "quarry", metadata)
+
+    if not job.status() == job.statuses.created then
         job.set_status(job.statuses.starting)
 
         local moved, moved_error = movement.move_to(
@@ -98,7 +138,11 @@ local function main()
         end
     end
 
-    job.set_status(job.statuses.in_progress)
+    if job.status() == job.statuses.paused then
+        movement.pause()
+    else
+        job.set_status(job.statuses.in_progress)
+    end
 
     printer.print_info("Quarry #" .. os.getComputerID() .. " in progress...")
 
@@ -176,4 +220,4 @@ local function main()
     wireless.completed.signal_completed(manager_id, movement.get_current_coordinates())
 end
 
-parallel.waitForAny(start_heartbeat, main)
+parallel.waitForAny(start_heartbeat, wireless.router.loop, main, kill_switch)

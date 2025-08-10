@@ -37,8 +37,6 @@ local movement_context = {
     manager_id = manager_id
 }
 
-wireless.registry.register_self_as(manager_id, "runner")
-
 local start_heartbeat, _ = wireless.heartbeat.loop(manager_id, 1, function()
     return {
         status = status,
@@ -65,6 +63,8 @@ local function category(operation)
 end
 
 local function main()
+    wireless.registry.register_self_as(manager_id, "runner")
+
     while true do
         local fuel = inventory.details_from_slot(1)
         if not fuel then

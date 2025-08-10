@@ -155,4 +155,17 @@ function inventory.merge_into_slot(from, to)
     turtle.select(selected)
 end
 
+function inventory.get_slots_containing_item(item)
+    local result = {}
+    for i = 1, 16 do
+        local info = turtle.getItemDetail(i)
+
+        if info and info.name == item then
+            table.insert(result, i)
+        end
+    end
+
+    return result
+end
+
 return inventory

@@ -45,7 +45,7 @@ local function guard(tag, fn)
     return true
 end
 
-function Display:new(monitor)
+function Display:new(monitor, wireless)
     if not monitor then return nil, errors.NIL_PARAM end
 
     local m = MonitorHelper:new(monitor)
@@ -61,7 +61,7 @@ function Display:new(monitor)
         m:set_fg_colour(colours.black)
         m:scroll_text(1, monitor_height, "Turtle manager is booting...", 2)
 
-        result = setmetatable({ m = m, turtles = {} }, Display)
+        result = setmetatable({ m = m, turtles = {}, wireless = wireless }, Display)
         result:on_resize()
     end)
 
@@ -97,7 +97,7 @@ function Display:on_resize()
         height = monitor_height
     }
 
-    local page = Page:new(self.m, page_size, page_switcher)
+    local page = Page:new(self.m, page_size, page_switcher, self.wireless)
     monitor_container:add_element(page, {
         x_offset = sidebar.size.width
     })

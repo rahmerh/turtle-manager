@@ -2,16 +2,16 @@ local rpc = require("wireless._internal.rpc")
 
 local pickup = {}
 
-function pickup.request(receiver, chest_position)
-    local ok, err = rpc.call(receiver, "pickup:request", chest_position)
+function pickup.request(receiver, pickup_position)
+    local ok, err = rpc.call(receiver, "pickup:request", pickup_position)
 
     -- TODO: Handle errors better.
 
     return ok, err
 end
 
-function pickup.dispatch(receiver, chest_position)
-    local ok, err = rpc.call(receiver, "pickup:dispatch", chest_position)
+function pickup.dispatch(receiver, pickup_position)
+    local ok, err = rpc.call(receiver, "pickup:dispatch", pickup_position)
 
     -- TODO: Handle errors better.
 

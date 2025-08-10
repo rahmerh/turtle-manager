@@ -4,12 +4,8 @@ local rpc      = {}
 
 local PROTOCOL = "rpc"
 
-math.randomseed((os.epoch("utc") % (2 ^ 31)) + os.getComputerID())
-math.random(); math.random()
-
 function rpc.call(receiver, operation, data)
-    local id = ("%08x%04x"):format(math.random(0, 0xffffffff), math.random(0, 0xffff))
-    local payload = { id = id, data = data, operation = operation }
+    local payload = { data = data, operation = operation }
     local ack_operation = operation .. ":ack"
 
     local tries = 3
@@ -25,7 +21,7 @@ function rpc.call(receiver, operation, data)
             local sender, response, proto = core.receive(remaining)
 
             if sender == receiver and proto == PROTOCOL and type(response) == "table" then
-                if response.operation == ack_operation and response.id == id then
+                if response.operation == ack_operation then
                     return true, response
                 end
             end

@@ -11,6 +11,7 @@ local job = {
         idle = "Idle",
         starting = "Moving into position",
         in_progress = "In progress",
+        paused = "Paused",
     }
 }
 
@@ -166,10 +167,6 @@ end
 
 function job.get_boundaries()
     return job._data.boundaries
-end
-
-function job.is_in_progress()
-    return job._data.status == job.statuses.in_progress or job._data.status == job.statuses.starting
 end
 
 return job

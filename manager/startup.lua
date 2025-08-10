@@ -19,7 +19,7 @@ wireless.discovery.host("manager")
 local monitor = peripheral.find("monitor")
 local display
 if monitor then
-    display = Display:new(monitor)
+    display = Display:new(monitor, wireless)
 
     -- Add everything from the store to the display
     local turtles = turtle_store.list()
@@ -51,6 +51,7 @@ wireless.router.register_handler(wireless.protocols.rpc, "registry:register", fu
 
     local data = {
         role = m.data.role,
+        metadata = m.data.metadata
     }
 
     turtle_store.upsert(sender, data)
@@ -77,7 +78,7 @@ local function mark_stale()
         local now = time.epoch_in_seconds()
 
         for k, v in pairs(turtles) do
-            if v.metadata.status == "Completed" then
+            if v.metadata and v.metadata.status == "Completed" then
                 goto continue
             end
 

@@ -2,7 +2,6 @@ local locator = require("movement.locator")
 
 local errors = require("lib.errors")
 local miner = require("lib.miner")
-local time = require("lib.time")
 
 local mover = {}
 
@@ -46,7 +45,7 @@ local function sort_axis(delta)
     return list
 end
 
-local function move_on_axis(axis, amount, dig)
+local function move_on_axis(axis, amount, dig, state)
     local current_direction = mover.determine_orientation()
 
     local direction
@@ -69,16 +68,23 @@ local function move_on_axis(axis, amount, dig)
                 miner.mine_up()
             end
 
+            state.handle_state()
+
             moved, err = mover.move_up()
         elseif direction == "down" then
             if dig then
                 miner.mine_down()
             end
+
+            state.handle_state()
+
             moved, err = mover.move_down()
         else
             if dig then
                 miner.mine()
             end
+
+            state.handle_state()
 
             moved, err = mover.move_forward()
         end
@@ -258,7 +264,7 @@ mover.move_down = function()
     return ok, err
 end
 
-mover.move_to = function(x, y, z, dig)
+mover.move_to = function(x, y, z, dig, state)
     dig = dig or false
 
     local attempts = 0
@@ -287,7 +293,7 @@ mover.move_to = function(x, y, z, dig)
             local value = ordered_deltas[i].value
 
             if value ~= 0 then
-                moved, err = move_on_axis(axis, value, dig)
+                moved, err = move_on_axis(axis, value, dig, state)
 
                 if err == errors.NO_FUEL then
                     return moved, err

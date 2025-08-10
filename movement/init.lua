@@ -1,6 +1,7 @@
 local mover = require("movement.mover")
 local fueler = require("movement.fueler")
 local locator = require("movement.locator")
+local state = require("movement.state")
 
 local errors = require("lib.errors")
 
@@ -12,7 +13,7 @@ function M.move_to(x, y, z, ctx)
 
     local attempts = 0
     while true do
-        local ok, err = mover.move_to(x, y, z, dig)
+        local ok, err = mover.move_to(x, y, z, dig, state)
         if ok then
             return ok
         end
@@ -34,6 +35,8 @@ end
 
 function M.move_forward(ctx)
     local retries = (ctx and ctx.retries) or 5
+
+    state.handle_state()
 
     local attempts = 0
     while true do
@@ -80,6 +83,8 @@ end
 
 function M.move_up(ctx)
     local retries = (ctx and ctx.retries) or 5
+
+    state.handle_state()
 
     local attempts = 0
     while true do
@@ -134,5 +139,8 @@ M.turn_right              = mover.turn_right
 M.get_current_coordinates = locator.get_current_coordinates
 
 M.get_fuel_level          = fueler.get_fuel_level
+
+M.pause                   = state.pause
+M.resume                  = state.resume
 
 return M

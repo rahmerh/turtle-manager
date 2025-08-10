@@ -1,24 +1,21 @@
+local validator = require("lib.validator")
+
 local button = {}
 button.__index = button
 
-function button:new(m, opts)
-    local required_fields = {
-        "size", "text", "text_colour", "button_colour", "on_click"
-    }
-
-    for _, field in ipairs(required_fields) do
-        if opts[field] == nil then
-            error("Missing button config: '" .. field .. "' is required", 2)
-        end
-    end
+function button:new(m, size, text, text_colour, button_colour, on_click)
+    validator.validate_parameter(size, "table", true, "size")
+    validator.validate_parameter(text_colour, "number", true, "text_colour")
+    validator.validate_parameter(button_colour, "number", true, "button_colour")
+    validator.validate_parameter(on_click, "function", true, "on_click")
 
     return setmetatable({
         m = m,
-        size = opts.size,
-        text = opts.text,
-        button_colour = opts.button_colour,
-        text_colour = opts.text_colour,
-        on_click = opts.on_click,
+        size = size,
+        text = text,
+        button_colour = button_colour,
+        text_colour = text_colour,
+        on_click = on_click,
         is_selected = false
     }, self)
 end

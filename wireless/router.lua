@@ -60,10 +60,21 @@ end
 
 --- Process a single message (optional timeout in seconds). Returns true if any handler handled it.
 function router.step(timeout)
-    local sender, msg, proto = core.receive(timeout)
-    if not sender then return false end
-    if type(msg) ~= "table" or type(msg.operation) ~= "string" then return false end
-    return dispatch(sender, msg, proto)
+    local sender, msg, protocol = core.receive(timeout)
+
+    if not sender then
+        return false
+    end
+
+    if type(msg) ~= "table" or type(msg.operation) ~= "string" then
+        return false
+    end
+
+    if msg.id then
+        os.queueEvent(("rn:%s"):format(msg.id), sender, msg, protocol)
+    end
+
+    return dispatch(sender, msg, protocol)
 end
 
 --- Run forever, receiving and dispatching messages.

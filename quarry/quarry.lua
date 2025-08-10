@@ -185,7 +185,9 @@ function quarry.unload(manager_id)
     turtle.placeDown()
     inventory.drop_slots(3, 16, "down")
 
-    wireless.pickup.request(manager_id, movement.get_current_coordinates())
+    local current_coordinates = movement.get_current_coordinates()
+    current_coordinates.y = current_coordinates.y - 1 -- Adjust down, since we're on top of the chest.
+    wireless.pickup.request(manager_id, current_coordinates)
 
     if not scanner.is_free("forward") then
         miner.mine()

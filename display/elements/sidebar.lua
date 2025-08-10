@@ -23,50 +23,34 @@ function sidebar:new(m, size, page_switcher)
     background:solid(colours.grey)
     container:add_element(background)
 
-    local quarries_button = Button:new(m, {
-        size = {
+    local quarries_button = Button:new(m,
+        {
             width = size.width - 2,
             height = 3,
         },
-        text = "Quarries",
-        button_colour = colours.lightBlue,
-        text_colour = colours.black,
-        on_click = function()
-            if page_switcher then
-                page_switcher("quarries")
-            end
-        end
-    })
+        "Quarries",
+        colours.black,
+        colours.lightBlue,
+        function() page_switcher("quarries") end)
 
-    local runners_button = Button:new(m, {
-        size = {
+    local runners_button = Button:new(m,
+        {
             width = size.width - 2,
             height = 3,
         },
-        text = "Runners",
-        button_colour = colours.lightBlue,
-        text_colour = colours.black,
-        on_click = function()
-            if page_switcher then
-                page_switcher("runners")
-            end
-        end
-    })
+        "Runners",
+        colours.black,
+        colours.lightBlue,
+        function() page_switcher("runners") end)
 
     local settings_button = Button:new(m, {
-        size = {
             width = size.width - 2,
             height = 3,
         },
-        text = "Settings",
-        button_colour = colours.lightBlue,
-        text_colour = colours.black,
-        on_click = function()
-            if page_switcher then
-                page_switcher("settings")
-            end
-        end
-    })
+        "Settings",
+        colours.black,
+        colours.lightBlue,
+        function() page_switcher("settings") end)
 
     container:add_element(quarries_button, {
         x_offset = 1,

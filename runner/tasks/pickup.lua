@@ -11,7 +11,7 @@ return function(task, config, movement_context)
 
     local arrived, arrived_err = movement.move_to(
         task.data.target.x,
-        task.data.target.y,
+        task.data.target.y + 1, -- Move above it.
         task.data.target.z,
         movement_context)
 

@@ -11,33 +11,30 @@ function pager:new(m)
     }, self)
 
     local left_button   = Button:new(m, {
-        size = {
             width = 5,
             height = 2,
         },
-        text = "<",
-        button_colour = colours.grey,
-        text_colour = colours.white,
-        on_click = function()
+        "<",
+        colours.white,
+        colours.grey,
+        function()
             if result.current_page > 1 then
                 result.current_page = result.current_page - 1
             end
-        end
-    })
+        end)
+
     local right_button  = Button:new(m, {
-        size = {
             width = 5,
             height = 2,
         },
-        text = ">",
-        button_colour = colours.grey,
-        text_colour = colours.white,
-        on_click = function()
+        ">",
+        colours.white,
+        colours.grey,
+        function()
             if result.current_page < result.total_pages then
                 result.current_page = result.current_page + 1
             end
-        end
-    })
+        end)
 
     result.left_button  = left_button
     result.right_button = right_button

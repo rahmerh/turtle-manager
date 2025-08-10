@@ -2,6 +2,8 @@
     "diagnostics.globals": [
         "vim",
         "colours",
-        "textutils"
+        "textutils",
+        "parallel",
+        "rednet"
     ]
 }

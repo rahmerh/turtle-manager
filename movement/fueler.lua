@@ -38,27 +38,20 @@ function fueler.refuel_from_inventory()
         return true
     end
 
-    turtle.select(1)
-    if turtle.refuel(4) then
-        return true
-    end
+    local fuel_slot = inventory.details_from_slot(1)
+    if fuel_slot.count < 64 then
+        local fuel_slots = inventory.get_slots_containing_item("minecraft:coal")
 
-    local fuel_slot = scan_for_fuel()
-    if not fuel_slot then
-        return false, errors.NO_FUEL_STORED
-    end
+        for _, slot in ipairs(fuel_slots) do
+            inventory.merge_into_slot(slot, 1)
 
-    if turtle.getItemCount(1) > 0 then
-        local empty_slot = get_next_empty_slot()
-        if not empty_slot then
-            return false, errors.INV_FULL
+            fuel_slot = inventory.details_from_slot(1)
+            if fuel_slot.count == 64 then
+                break
+            end
         end
-        turtle.select(1)
-        turtle.transferTo(empty_slot)
     end
 
-    turtle.select(fuel_slot)
-    turtle.transferTo(1)
     turtle.select(1)
     if turtle.refuel(4) then
         return true

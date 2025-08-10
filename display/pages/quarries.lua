@@ -99,17 +99,13 @@ function quarries_page:render(x, y, data)
         }
 
         local button = Button:new(self.m, {
-            size = {
                 width = self.default_button_size.width,
                 height = self.default_button_size.height,
             },
-            text = lines,
-            button_colour = button_colour,
-            text_colour = colours.black,
-            on_click = function()
-                self.page_switcher("quarry_info", turtle.id)
-            end
-        })
+            lines,
+            colours.black,
+            button_colour,
+            function() self.page_switcher("quarry_info", turtle.id) end)
 
         self.container:add_element(button)
         index = index + 1
