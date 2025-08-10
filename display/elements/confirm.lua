@@ -60,12 +60,18 @@ function confirm:new(m, text)
     return result
 end
 
-function confirm:is_open()
-    return self.should_render
+function confirm:is_opened_for(id)
+    return self.should_render and self.id == id
 end
 
-function confirm:open()
+function confirm:open(id)
     self.should_render = true
+    self.id = id
+end
+
+function confirm:close()
+    self.should_render = false
+    self.id = nil
 end
 
 function confirm:handle_click(x, y)

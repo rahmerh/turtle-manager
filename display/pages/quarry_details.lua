@@ -141,9 +141,11 @@ function quarry_details_page:new(m, size, page_switcher, task_runner)
 end
 
 function quarry_details_page:handle_click(x, y)
-    if self.confirm:is_open() then
+    if self.confirm:is_opened_for(self.selected_id) then
         -- Consume click, let confirmation handle it.
         return self.confirm:handle_click(x, y)
+    else
+        self.confirm:close()
     end
 
     return self.buttons_container:handle_click(x, y)
@@ -154,6 +156,8 @@ function quarry_details_page:render(x, y, data)
 
     local selected_turtle = list.find(turtles, "id", data.selected_id)
     if not selected_turtle then return end
+
+    self.selected_id = data.selected_id
 
     if selected_turtle.metadata.status == "Paused" then
         self.pause_button.text = "Resume"
@@ -192,7 +196,7 @@ function quarry_details_page:render(x, y, data)
     else
         self.recover_button.button_colour = colours.red
         self.recover_button.on_click = function()
-            self.confirm:open()
+            self.confirm:open(selected_turtle.id)
         end
     end
 
@@ -271,7 +275,7 @@ function quarry_details_page:render(x, y, data)
     self.buttons_container:render(x, y)
     self.information_container:render(x + self.buttons_container.size.width, y)
 
-    if self.confirm:is_open() then
+    if self.confirm:is_opened_for(selected_turtle.id) then
         self.confirm:render()
     end
 end
