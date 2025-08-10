@@ -215,7 +215,12 @@ mover.turn_to_direction = function(target_direction)
 end
 
 mover.move_back = function()
-    local direction = mover.determine_orientation()
+    local direction, direction_err = mover.determine_orientation()
+
+    if not direction then
+        return direction, direction_err
+    end
+
     locator.moved_in_direction(1, mover.opposite_orientation_of(direction))
 
     local ok, err = turtle.back()
@@ -231,7 +236,12 @@ mover.move_back = function()
 end
 
 mover.move_forward = function()
-    local direction = mover.determine_orientation()
+    local direction, direction_err = mover.determine_orientation()
+
+    if not direction then
+        return direction, direction_err
+    end
+
     locator.moved_in_direction(1, direction)
 
     local ok, err = turtle.forward()

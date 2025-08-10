@@ -161,7 +161,7 @@ function quarry_details_page:render(x, y, data)
 
     if selected_turtle.metadata.status == "Paused" then
         self.pause_button.text = "Resume"
-        self.pause_button.button_colour = colours.orange
+        self.pause_button.button_colour = colours.green
 
         self.pause_button.on_click = function()
             self.task_runner:add_task(self.task_runner.tasks.resume, { id = selected_turtle.id })

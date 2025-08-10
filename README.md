@@ -51,10 +51,9 @@ The turtles only request coal, chests and cobblestone, so make sure to always ha
 ## TODO
 
 - Dashboard
-  - Turtle info page
+  - Edit quarry settings page
   - Task management page
   - Map/radar page
-  - Turtle remote control functionality
 
 - Retry failed tasks (both from turtles and manager)
 - Remove quarry fluid handling, add runner fluid handling
