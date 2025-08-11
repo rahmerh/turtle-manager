@@ -7,6 +7,7 @@ local Text                  = require("display.elements.text")
 local ts                    = require("display.turtle_status")
 
 local list                  = require("lib.list")
+local string_util           = require("lib.string_util")
 
 local runner_details_page   = {}
 runner_details_page.__index = runner_details_page
@@ -55,19 +56,27 @@ function runner_details_page:new(m, size, page_switcher, task_runner)
         respect_padding = true
     })
 
-    local fuel_id = 4
-    local fuel = Text:new(m, "", colours.white, status_background.colour)
-    status_container:add_element(fuel_id, fuel, {
+    local position_id = 4
+    local position = Text:new(m, "", colours.white, status_background.colour)
+    status_container:add_element(position_id, position, {
         x_offset = 1,
         y_offset = 2,
         respect_padding = true
     })
 
-    local inventory_contents_id = 5
+    local fuel_id = 5
+    local fuel = Text:new(m, "", colours.white, status_background.colour)
+    status_container:add_element(fuel_id, fuel, {
+        x_offset = 1,
+        y_offset = 5,
+        respect_padding = true
+    })
+
+    local inventory_contents_id = 6
     local inventory_contents = Text:new(m, "", colours.white, status_background.colour)
     status_container:add_element(inventory_contents_id, inventory_contents, {
         x_offset = 1,
-        y_offset = 5,
+        y_offset = 8,
         respect_padding = true
     })
 
@@ -95,17 +104,22 @@ function runner_details_page:new(m, size, page_switcher, task_runner)
 
     local scrollable_size = {
         width = task_container_size.width,
-        height = task_container_size.height,
+        height = task_container_size.height - (task_container_padding.top + task_container_padding.bottom),
     }
 
     local scrollable_id = 1
-    local scrollable = ScrollableList:new(m, scrollable_size, {})
+    local scrollable = ScrollableList:new(m, scrollable_size, {
+        "Job ID",
+        "Type",
+        "Target"
+    })
     task_container:add_element(scrollable_id, scrollable, {
         respect_padding = true
     })
 
     return setmetatable({
         m = m,
+        size = size,
         page_switcher = page_switcher,
         task_runner = task_runner,
         status_container = status_container,
@@ -113,6 +127,7 @@ function runner_details_page:new(m, size, page_switcher, task_runner)
         scrollable_id = scrollable_id,
         text_elements = {
             runner_header_id = runner_header_id,
+            position_id = position_id,
             fuel_id = fuel_id,
             inventory_contents_id = inventory_contents_id,
         }
@@ -120,7 +135,13 @@ function runner_details_page:new(m, size, page_switcher, task_runner)
 end
 
 function runner_details_page:handle_click(x, y)
-    return self.status_container:handle_click(x, y)
+    local handled = self.status_container:handle_click(x, y)
+
+    if not handled then
+        handled = self.task_container:handle_click(x, y)
+    end
+
+    return handled
 end
 
 function runner_details_page:render(x, y, data)
@@ -128,6 +149,15 @@ function runner_details_page:render(x, y, data)
 
     local selected_turtle = list.find(turtles, "id", data.selected_id)
     if not selected_turtle then return end
+
+    if self.latest_selected_id ~= selected_turtle.id then
+        self.task_container:update_element(
+            self.scrollable_id,
+            "scroll_offset",
+            0)
+    end
+
+    self.latest_selected_id = selected_turtle.id
 
     local label_colour = ts.quarry_status_to_colour(selected_turtle.metadata.status)
     if label_colour == colours.grey then label_colour = colours.red end
@@ -137,6 +167,18 @@ function runner_details_page:render(x, y, data)
         self.text_elements.runner_header_id,
         "content",
         runner_header_text)
+
+    local position_lines = {
+        "Currently at:",
+        ("  %d %d %d"):format(
+            selected_turtle.metadata.current_location.x,
+            selected_turtle.metadata.current_location.y,
+            selected_turtle.metadata.current_location.z)
+    }
+    self.status_container:update_element(
+        self.text_elements.position_id,
+        "content",
+        position_lines)
 
     local fuel_lines = {
         ("Fuel level: %d"):format(selected_turtle.metadata.fuel_level),
@@ -148,39 +190,55 @@ function runner_details_page:render(x, y, data)
         fuel_lines)
 
     local inventory_lines = {
-        "Carrying:", ""
+        "Inventory:"
     }
-    local inventory = list.convert_map_to_array(selected_turtle.metadata.inventory_contents, "name")
+    local inventory_contents = list.convert_map_to_array(selected_turtle.metadata.inventory_contents, "name")
 
-    if #inventory > 0 then
-        local inventory_sorted = list.sort_by(inventory, "amount", true)
+    if #inventory_contents > 0 then
+        local inventory_sorted = list.sort_by(inventory_contents, "amount", true)
         for _, item in ipairs(inventory_sorted) do
-            local _, name = item.name:match("([^:]+):(.+)")
-            name = name:gsub("_", " ")
-            name = name:gsub("(%a)([%w_']*)", function(first, rest)
-                return first:upper() .. rest:lower()
-            end)
-
+            local name = string_util.key_to_pretty_name(item.name)
             local line = ("%s: %d"):format(name, item.amount)
-            if #inventory_lines < 10 then
-                table.insert(inventory_lines, line)
+
+            local max_line_length = self.status_container.size.width - 6
+            if string.len(line) > max_line_length then
+                local shorten = string.len(line) - max_line_length
+                name = string.sub(name, 1, string.len(name) - (2 + shorten)) .. ".."
+                line = ("%s: %d"):format(name, item.amount)
+            end
+
+            if #inventory_lines < 7 then
+                table.insert(inventory_lines, "  " .. line)
             else
-                table.insert(inventory_lines, "...")
+                table.insert(inventory_lines, "   ...")
                 break
             end
         end
     else
-        table.insert(inventory_lines, "Nothing")
+        table.insert(inventory_lines, "  Empty")
     end
     self.status_container:update_element(
         self.text_elements.inventory_contents_id,
         "content",
         inventory_lines)
 
+    local display_lines = {}
+    for _, task in ipairs(selected_turtle.metadata.tasks) do
+        local line = {
+            ["Job ID"] = task.job_id,
+            ["Type"] = string_util.capitalize(task.task_type),
+            ["Target"] = ("%d %d %d"):format(
+                task.target.x,
+                task.target.y,
+                task.target.z)
+        }
+        table.insert(display_lines, line)
+    end
+
     self.task_container:update_element(
         self.scrollable_id,
         "items",
-        selected_turtle.metadata.tasks)
+        display_lines)
 
     self.status_container:render(x, y)
     self.task_container:render(x + self.status_container.size.width, y)

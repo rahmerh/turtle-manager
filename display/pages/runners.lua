@@ -88,18 +88,11 @@ function runners_page:render(x, y, data)
 
         local button_colour = ts.runner_status_to_colour(turtle.metadata.status)
 
-        local location_line
-        if turtle.metadata.current_location then
-            location_line = ("%d %d %d"):format(
-                turtle.metadata.current_location.x,
-                turtle.metadata.current_location.y,
-                turtle.metadata.current_location.z)
-        end
-
+        local queued_tasks = turtle.metadata.queued_tasks or 0
         local lines = {
             turtle.id,
             turtle.metadata.status,
-            location_line
+            ("Queued tasks: %d"):format(queued_tasks)
         }
 
         if self.container:element_exists(turtle.id) then

@@ -11,7 +11,7 @@ return function(sender, msg)
     -- TODO: Auto pickup
     -- local id = dispatch_utils.find_least_queued(runners, sender)
 
-    return turtle_store.patch(sender, {
+    return turtle_store.update(sender, {
         metadata = {
             status           = "Completed",
             current_location = msg.coordinates

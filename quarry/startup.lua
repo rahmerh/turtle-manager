@@ -91,7 +91,8 @@ local start_heartbeat, _ = wireless.heartbeat.loop(manager_id, 1, function()
         current_row = job.current_row(),
         fuel_level = movement.get_fuel_level(),
         stored_fuel_units = stored_fuel_units,
-        current_location = movement.get_current_coordinates()
+        current_location = movement.get_current_coordinates(),
+        boundaries = boundaries,
     }
 end)
 

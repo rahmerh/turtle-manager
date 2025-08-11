@@ -11,9 +11,9 @@ end
 
 return function(task, config, movement_context)
     printer.print_info(("[%s] Resupplying turtle at " ..
-        task.data.target.x .. " " ..
-        task.data.target.y .. " " ..
-        task.data.target.z):format(task.data.job_id))
+        task.target.x .. " " ..
+        task.target.y .. " " ..
+        task.target.z):format(task.job_id))
 
     local arrived, arrived_err = movement.move_to(
         config.supply_chest_pos.x,
@@ -27,15 +27,15 @@ return function(task, config, movement_context)
     turtle.select(2)
 
     local filled_slots = {}
-    for item, amount in pairs(task.data.desired) do
+    for item, amount in pairs(task.desired) do
         local filled_slot = inventory.pull_items_from_down(item, amount)
         table.insert(filled_slots, filled_slot)
     end
 
     -- +1 to make sure we're on top of the turtle to resupply
-    movement.move_to(task.data.target.x, task.data.target.y + 1, task.data.target.z)
+    movement.move_to(task.target.x, task.target.y + 1, task.target.z)
 
-    wireless.resupply.runner_arrived(task.data.requester, task.job_id)
+    wireless.resupply.runner_arrived(task.requester, task.job_id)
     local ok, err = wireless.resupply.await_ready(task.job_id)
 
     if not ok then
@@ -62,7 +62,7 @@ return function(task, config, movement_context)
 
     turtle.select(1)
 
-    wireless.resupply.signal_done(task.data.requester, task.job_id)
+    wireless.resupply.signal_done(task.requester, task.job_id)
 
     local moved_back, moved_back_err = movement.move_to(
         config.unloading_chest_pos.x,

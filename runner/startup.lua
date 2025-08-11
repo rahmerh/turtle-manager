@@ -60,19 +60,31 @@ end)
 wireless.router.register_handler(wireless.protocols.rpc, "pickup:dispatch", function(sender, m)
     wireless.ack(sender, m)
     printer.print_info(("[%s] Queued task 'pickup'"):format(m.data.job_id))
-    task_queue:enqueue(m)
+
+    local task = {
+        job_id = m.data.job_id,
+        target = m.data.target,
+        task_type = "pickup",
+        requester = m.data.requester,
+    }
+
+    task_queue:enqueue(task)
 end)
 
 wireless.router.register_handler(wireless.protocols.rpc, "resupply:dispatch", function(sender, m)
     wireless.ack(sender, m)
     printer.print_info(("[%s] Queued task 'resupply'"):format(m.data.job_id))
-    task_queue:enqueue(m)
-end)
 
-local function category(operation)
-    local i = operation:find(":", 1, true)
-    return i and operation:sub(1, i - 1) or operation
-end
+    local task = {
+        job_id = m.data.job_id,
+        target = m.data.target,
+        task_type = "resupply",
+        requester = m.data.requester,
+        desired = m.data.desired,
+    }
+
+    task_queue:enqueue(task)
+end)
 
 local function main()
     wireless.registry.register_self_as(manager_id, "runner")
@@ -107,14 +119,12 @@ local function main()
             goto continue
         end
 
-        local task_type = category(task.operation)
-
         status = "Running"
 
-        if task_handlers[task_type] then
-            task_handlers[task_type](task, config, movement_context)
+        if task_handlers[task.task_type] then
+            task_handlers[task.task_type](task, config, movement_context)
         else
-            printer.print_warning("Unsupported task: " .. task_type)
+            printer.print_warning("Unsupported task: " .. task.task_type)
         end
 
         wireless.completed.signal_completed(manager_id, movement.get_current_coordinates())
@@ -124,6 +134,7 @@ local function main()
 
         task_queue:ack()
         status = "Idle"
+        printer.print_info(("[%s] Done."):format(task.job_id))
 
         ::continue::
     end

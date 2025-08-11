@@ -44,29 +44,37 @@ function turtle_store.get_by_role(role)
     return result
 end
 
-function turtle_store.patch(id, data)
+function turtle_store.update(id, data)
     ensure_loaded()
 
-    local function deep_patch(dst, src)
-        for k, v in pairs(src) do
-            if type(v) == "table" then
-                if next(v) ~= nil and type(dst[k]) == "table" then
-                    deep_patch(dst[k], v)
-                else
-                    dst[k] = v
-                end
-            else
-                dst[k] = v
-            end
-        end
+    local rec = turtles[id] or { id = id }
+
+    if data.last_seen then
+        rec.last_seen = data.last_seen
+    end
+    if data.status then
+        rec.status = data.status
+    end
+    if data.metadata then
+        rec.metadata = data.metadata
     end
 
-    local rec = turtles[id] or { id = id }
-    deep_patch(rec, data)
     turtles[id] = rec
 
     save()
     return rec
+end
+
+function turtle_store.set_status(id, status)
+    ensure_loaded()
+
+    if not turtles[id] then
+        return
+    end
+
+    turtles[id].metadata.status = status
+    save()
+    return turtles[id]
 end
 
 function turtle_store.upsert(id, data)

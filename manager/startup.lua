@@ -33,7 +33,7 @@ wireless.router.register_handler(wireless.protocols.telemetry, "heartbeat:beat",
 
     if not turtle then return false end
 
-    local patched = turtle_store.patch(sender, {
+    local patched = turtle_store.update(sender, {
         last_seen = time.epoch_in_seconds(),
         status    = msg.status,
         metadata  = msg.data or turtle.metadata,
@@ -83,19 +83,11 @@ local function mark_stale()
             end
 
             if not v.last_seen or now - v.last_seen >= 10 then
-                local patched = turtle_store.patch(k, {
-                    metadata = {
-                        status = "Offline"
-                    }
-                })
-                display:add_or_update_turtle(k, patched)
+                local updated = turtle_store.set_status(k, "Offline")
+                display:add_or_update_turtle(k, updated)
             elseif now - v.last_seen >= 5 then
-                local patched = turtle_store.patch(k, {
-                    metadata = {
-                        status = "Stale"
-                    }
-                })
-                display:add_or_update_turtle(k, patched)
+                local updated = turtle_store.set_status(k, "Stale")
+                display:add_or_update_turtle(k, updated)
             end
 
             ::continue::
