@@ -25,6 +25,7 @@ function scrollable_list:new(m, size, fields_per_item)
         scroll_offset           = 0,
         scrolling_window_height = size.height - (spacing * 2),
         scroll_step_size        = 2,
+        pagers_enabled          = false
     }, self)
 
     local scroll_up_button = Button:new(
@@ -53,11 +54,13 @@ function scrollable_list:new(m, size, fields_per_item)
 end
 
 function scrollable_list:handle_click(x, y)
-    local handled = self.scroll_up_button:handle_click(x, y)
-    if not handled then
-        handled = self.scroll_down_button:handle_click(x, y)
+    if self.pagers_enabled then
+        local handled = self.scroll_up_button:handle_click(x, y)
+        if not handled then
+            handled = self.scroll_down_button:handle_click(x, y)
+        end
+        return handled
     end
-    return handled
 end
 
 function scrollable_list:scroll_up()
@@ -77,6 +80,13 @@ end
 
 function scrollable_list:render(x, y)
     self.m:set_fg_colour(colours.black)
+
+    local total_list_height = #self.items * (self.item_height + self.spacing) - self.spacing
+    if total_list_height > self.scrolling_window_height then
+        self.pagers_enabled = true
+    else
+        self.pagers_enabled = false
+    end
 
     local list_x        = x + self.spacing
 
@@ -117,9 +127,11 @@ function scrollable_list:render(x, y)
         if current_top > window_bottom then break end
     end
 
-    self.scroll_up_button:render(x + self.size.width - 7, y + self.spacing)
-    self.scroll_down_button:render(x + self.size.width - 7,
-        y + self.scrolling_window_height - self.spacing)
+    if self.pagers_enabled then
+        self.scroll_up_button:render(x + self.size.width - 6, y + self.spacing)
+        self.scroll_down_button:render(x + self.size.width - 6,
+            y + self.scrolling_window_height - self.spacing)
+    end
 end
 
 return scrollable_list
