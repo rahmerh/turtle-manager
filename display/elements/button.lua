@@ -16,7 +16,7 @@ function button:new(m, size, text, text_colour, button_colour, on_click)
         button_colour = button_colour,
         text_colour = text_colour,
         on_click = on_click,
-        is_selected = false
+        disabled = false,
     }, self)
 end
 
@@ -31,7 +31,19 @@ function button:is_clicked(x, y)
     return is_in_x and is_in_y
 end
 
+function button:disable()
+    self.disabled = true
+end
+
+function button:enable()
+    self.disabled = false
+end
+
 function button:handle_click(x, y)
+    if self.disabled then
+        return
+    end
+
     if not x or not y then
         error("Both x and y required.")
     end
@@ -44,14 +56,6 @@ function button:handle_click(x, y)
     return false
 end
 
-function button:select()
-    self.is_selected = true
-end
-
-function button:unselect()
-    self.is_selected = false
-end
-
 function button:render(x, y)
     self.x = x
     self.y = y
@@ -59,15 +63,14 @@ function button:render(x, y)
     local initial_bg_color = self.m:get_bg_colour()
     local initial_fg_color = self.m:get_fg_colour()
 
-    self.m:set_bg_colour(self.button_colour)
-    for i = 0, self.size.height - 1 do
-        self.m:write_at(string.rep(" ", self.size.width), x, y + i)
+    if self.disabled then
+        self.m:set_bg_colour(colours.lightGrey)
+    else
+        self.m:set_bg_colour(self.button_colour)
     end
 
-    if self.is_selected then
-        self.m:set_fg_colour(colours.black)
-        self.m:write_at(string.rep("-", self.size.width), x, self.size.height)
-        self.m:set_fg_colour(initial_fg_color)
+    for i = 0, self.size.height - 1 do
+        self.m:write_at(string.rep(" ", self.size.width), x, y + i)
     end
 
     local middle_y = y + math.floor((self.size.height - 1) / 2)

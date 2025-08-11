@@ -5,6 +5,7 @@
         "textutils",
         "parallel",
         "rednet",
-        "sleep"
+        "sleep",
+        "turtle"
     ]
 }

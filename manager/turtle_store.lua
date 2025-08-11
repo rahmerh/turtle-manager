@@ -49,8 +49,12 @@ function turtle_store.patch(id, data)
 
     local function deep_patch(dst, src)
         for k, v in pairs(src) do
-            if type(v) == "table" and type(dst[k]) == "table" then
-                deep_patch(dst[k], v)
+            if type(v) == "table" then
+                if next(v) ~= nil and type(dst[k]) == "table" then
+                    deep_patch(dst[k], v)
+                else
+                    dst[k] = v
+                end
             else
                 dst[k] = v
             end

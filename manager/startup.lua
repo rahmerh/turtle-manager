@@ -78,7 +78,7 @@ local function mark_stale()
         local now = time.epoch_in_seconds()
 
         for k, v in pairs(turtles) do
-            if v.metadata and v.metadata.status == "Completed" then
+            if v.metadata and (v.metadata.status == "Completed" or v.metadata.status == "Offline") then
                 goto continue
             end
 

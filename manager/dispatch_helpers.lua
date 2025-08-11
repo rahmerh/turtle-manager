@@ -8,7 +8,7 @@ function dispatcher.find_least_queued(turtles, requester)
             goto skip
         end
 
-        if turtle.metadata.status == "Offline" or turtle.metadata.status == "Stale" then
+        if not turtle.metadata or turtle.metadata.status == "Offline" or turtle.metadata.status == "Stale" then
             goto skip
         end
 

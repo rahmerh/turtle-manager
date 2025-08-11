@@ -40,7 +40,7 @@ end
 local function guard(tag, fn)
     local ok, err = xpcall(fn, traceback)
     if not ok then
-        printer.print_error(("[%s] %s"):format(tag, err))
+        printer.print_error(("[%s] An error occured, see logs/"):format(tag))
         log_error(tag, err)
         return false, err
     end
@@ -87,7 +87,7 @@ function Display:on_resize()
 
     local background = Background:fill_container(monitor_container, false)
     background:solid(colours.lightGrey)
-    monitor_container:add_element(background)
+    monitor_container:add_background(background)
 
     local sidebar_size = {
         width = 15,
@@ -100,7 +100,7 @@ function Display:on_resize()
     end
 
     local sidebar = Sidebar:new(self.m, sidebar_size, page_switcher)
-    monitor_container:add_element(sidebar)
+    monitor_container:add_element(2, sidebar)
 
     local page_size = {
         width = monitor_width - sidebar_size.width,
@@ -108,7 +108,7 @@ function Display:on_resize()
     }
 
     local page = Page:new(self.m, page_size, page_switcher, self.task_runner)
-    monitor_container:add_element(page, {
+    monitor_container:add_element(3, page, {
         x_offset = sidebar.size.width
     })
 

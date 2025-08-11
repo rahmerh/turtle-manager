@@ -38,10 +38,22 @@ local movement_context = {
 }
 
 local start_heartbeat, _ = wireless.heartbeat.loop(manager_id, 1, function()
+    local stored_fuel_units
+    local fuel_slot = inventory.details_from_slot(1)
+    if fuel_slot and fuel_slot.name == "minecraft:coal" then
+        stored_fuel_units = fuel_slot.count * 80
+    end
+
+    local inventory_contents = inventory.list_contents(2, 16)
+
     return {
         status = status,
         queued_tasks = task_queue:size(),
-        current_location = movement.get_current_coordinates()
+        current_location = movement.get_current_coordinates(),
+        fuel_level = movement.get_fuel_level(),
+        stored_fuel_units = stored_fuel_units,
+        inventory_contents = inventory_contents,
+        tasks = task_queue:all(),
     }
 end)
 
@@ -97,7 +109,7 @@ local function main()
 
         local task_type = category(task.operation)
 
-        status = "Running (" .. task_type .. ")"
+        status = "Running"
 
         if task_handlers[task_type] then
             task_handlers[task_type](task, config, movement_context)
@@ -106,6 +118,9 @@ local function main()
         end
 
         wireless.completed.signal_completed(manager_id, movement.get_current_coordinates())
+
+        -- Unload inventory
+        inventory.drop_slots(2, 16, "down")
 
         task_queue:ack()
         status = "Idle"

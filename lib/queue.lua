@@ -42,6 +42,14 @@ function queue.new(file_name)
     return self
 end
 
+function queue:all()
+    local result = {}
+    for i = self.first, self.last do
+        table.insert(result, self.items[i])
+    end
+    return result
+end
+
 function queue:enqueue(item)
     self.last = self.last + 1
     self.items[self.last] = item
@@ -74,6 +82,27 @@ function queue:compact()
         j = j + 1
     end
     self.first, self.last = 1, j - 1
+end
+
+--- Nudges an entry earlier or later in the queue.
+---@param index number The absolute index in the queue (first = 1, etc.).
+---@param direction number +1 to move later, -1 to move earlier.
+function queue:nudge(index, direction)
+    local pos = self.first + index - 1
+
+    if pos < self.first or pos > self.last then
+        error("Index out of range")
+    end
+
+    local swap_with = pos + direction
+    if swap_with < self.first or swap_with > self.last then
+        return false
+    end
+
+    self.items[pos], self.items[swap_with] = self.items[swap_with], self.items[pos]
+
+    persist(self)
+    return true
 end
 
 return queue

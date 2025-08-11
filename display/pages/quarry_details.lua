@@ -5,7 +5,7 @@ local Background            = require("display.elements.background")
 local Text                  = require("display.elements.text")
 local Confirm               = require("display.elements.confirm")
 
-local stc                   = require("display.status_to_colour")
+local ts                    = require("display.turtle_status")
 
 local list                  = require("lib.list")
 
@@ -21,7 +21,7 @@ function quarry_details_page:new(m, size, page_switcher, task_runner)
     local buttons_container_padding = {
         top = 1,
         bottom = 1,
-        left = 2,
+        left = 1,
     }
 
     local buttons_container = Container:new(
@@ -32,9 +32,7 @@ function quarry_details_page:new(m, size, page_switcher, task_runner)
 
     local buttons_background = Background:fill_container(buttons_container, true)
     buttons_background:solid(colours.grey)
-    buttons_container:add_element(buttons_background, {
-        respect_padding = true
-    })
+    buttons_container:add_background(buttons_background)
 
     local back_button = Button:new(m, {
             height = 3,
@@ -45,7 +43,7 @@ function quarry_details_page:new(m, size, page_switcher, task_runner)
         colours.lightBlue,
         function() page_switcher("quarries") end)
 
-    buttons_container:add_element(back_button, {
+    buttons_container:add_element(1, back_button, {
         respect_padding = true,
         x_offset = 1,
         y_offset = buttons_container_size.height - 6,
@@ -64,7 +62,8 @@ function quarry_details_page:new(m, size, page_switcher, task_runner)
         colours.black,
         true)
 
-    buttons_container:add_element(status_label, {
+    local status_label_id = 2
+    buttons_container:add_element(status_label_id, status_label, {
         x_offset = 1,
         y_offset = 1,
         respect_padding = true
@@ -79,7 +78,8 @@ function quarry_details_page:new(m, size, page_switcher, task_runner)
         colours.lightBlue,
         function() end)
 
-    buttons_container:add_element(pause_button, {
+    local pause_button_id = 3
+    buttons_container:add_element(pause_button_id, pause_button, {
         respect_padding = true,
         y_offset = 5,
         x_offset = 1,
@@ -94,30 +94,16 @@ function quarry_details_page:new(m, size, page_switcher, task_runner)
         colours.red,
         function() end)
 
-    buttons_container:add_element(recover_button, {
+    local recover_button_id = 4
+    buttons_container:add_element(recover_button_id, recover_button, {
         respect_padding = true,
         y_offset = 9,
         x_offset = 1,
     })
 
-    local reboot_button = Button:new(m, {
-            height = 3,
-            width = 13,
-        },
-        "Reboot",
-        colours.black,
-        colours.red,
-        function() end)
-
-    buttons_container:add_element(reboot_button, {
-        respect_padding = true,
-        y_offset = 13,
-        x_offset = 1,
-    })
-
     local information_container_size = {
-        width = size.width - buttons_container_size.width - 2,
-        height = size.height - 2
+        width = size.width - buttons_container_size.width,
+        height = size.height
     }
 
     local information_container_padding = {
@@ -133,14 +119,49 @@ function quarry_details_page:new(m, size, page_switcher, task_runner)
         information_container_size,
         information_container_padding)
 
+    local information_background = Background:fill_container(information_container, true)
+    information_background:solid(colours.grey)
+    information_container:add_background(information_background)
+
     local recover_confirm_lines = {
         "Are you sure?", "",
         "This will kill the turtle and ",
         "a runner will be dispatched",
         "to recover it."
     }
-
     local confirm = Confirm:new(m, recover_confirm_lines)
+
+    local turtle_header_id = 2
+    local turtle_header = Text:new(m, "", colours.white)
+    information_container:add_element(turtle_header_id, turtle_header, {
+        respect_padding = true,
+        x_offset        = 1,
+        y_offset        = 1
+    })
+
+    local fuel_id = 3
+    local fuel = Text:new(m, "", colours.white)
+    information_container:add_element(fuel_id, fuel, {
+        respect_padding = true,
+        x_offset        = 1,
+        y_offset        = 2
+    })
+
+    local position_info_id = 4
+    local position_info = Text:new(m, "", colours.white)
+    information_container:add_element(position_info_id, position_info, {
+        respect_padding = true,
+        x_offset        = 1,
+        y_offset        = 5
+    })
+
+    local quarry_info_id = 5
+    local quarry_info = Text:new(m, "", colours.white)
+    information_container:add_element(quarry_info_id, quarry_info, {
+        respect_padding = true,
+        x_offset        = 1,
+        y_offset        = 11
+    })
 
     return setmetatable({
         m = m,
@@ -148,10 +169,17 @@ function quarry_details_page:new(m, size, page_switcher, task_runner)
         task_runner = task_runner,
         buttons_container = buttons_container,
         information_container = information_container,
-        status_label = status_label,
-        pause_button = pause_button,
-        reboot_button = reboot_button,
-        recover_button = recover_button,
+        button_elements = {
+            pause_button_id = pause_button_id,
+            recover_button_id = recover_button_id,
+        },
+        text_elements = {
+            status_label_id = status_label_id,
+            turtle_header_id = turtle_header_id,
+            fuel_id = fuel_id,
+            position_info_id = position_info_id,
+            quarry_info_id = quarry_info_id,
+        },
         confirm = confirm,
     }, self)
 end
@@ -172,104 +200,34 @@ function quarry_details_page:render(x, y, data)
 
     local selected_turtle = list.find(turtles, "id", data.selected_id)
     if not selected_turtle then return end
+    self.selected_id = selected_turtle.id
 
-    self.selected_id = data.selected_id
-    if selected_turtle.metadata.status == "Offline" or selected_turtle.metadata.status == "Stale" then
-        self.pause_button.text = "Pause"
-        self.pause_button.button_colour = colours.lightGrey
-        self.pause_button.on_click = function() end
-
-        self.reboot_button.button_colour = colours.lightGrey
-        self.reboot_button.on_click = function() end
-
-        self.recover_button.button_colour = colours.red
-        self.recover_button.on_click = function()
-            self.task_runner:add_task(self.task_runner.tasks.recover, {
-                id = selected_turtle.id,
-                offline_turtle = selected_turtle
-            })
-
-            self.page_switcher("quarries")
-        end
-    elseif selected_turtle.metadata.status == "Completed" then
-        self.pause_button.text = "Pause"
-        self.pause_button.button_colour = colours.lightGrey
-        self.pause_button.on_click = function() end
-
-        self.reboot_button.button_colour = colours.lightGrey
-        self.reboot_button.on_click = function() end
-
-        self.recover_button.button_colour = colours.red
-        self.recover_button.on_click = function()
-            self.task_runner:add_task(self.task_runner.tasks.recover, {
-                id = selected_turtle.id,
-                offline_turtle = selected_turtle
-            })
-
-            self.page_switcher("quarries")
-        end
-    else
-        if selected_turtle.metadata.status == "Paused" then
-            self.pause_button.text = "Resume"
-            self.pause_button.button_colour = colours.green
-
-            self.pause_button.on_click = function()
-                self.task_runner:add_task(self.task_runner.tasks.resume, { id = selected_turtle.id })
-            end
-        else
-            self.pause_button.text = "Pause"
-            self.pause_button.button_colour = colours.lightBlue
-        end
-
-        self.recover_button.button_colour = colours.red
-        self.recover_button.on_click = function()
-            self.confirm:open(selected_turtle.id)
-        end
-
-        self.reboot_button.button_colour = colours.lightBlue
-        self.reboot_button.on_click = function()
-            self.task_runner:add_task(self.task_runner.tasks.reboot, { id = selected_turtle.id })
-        end
-    end
-
-    local label_colour = stc.quarry_status_to_colour(selected_turtle.metadata.status)
+    local label_colour = ts.quarry_status_to_colour(selected_turtle.metadata.status)
     if label_colour == colours.grey then label_colour = colours.red end
-    self.status_label.label_colour = label_colour
-    self.status_label.text = selected_turtle.metadata.status
 
-    self.confirm.on_yes = function()
-        self.task_runner:add_task(self.task_runner.tasks.recover, { id = selected_turtle.id })
-        self.page_switcher("quarries")
-    end
+    self.buttons_container:update_element(
+        self.text_elements.status_label_id,
+        "text",
+        selected_turtle.metadata.status)
+    self.buttons_container:update_element(
+        self.text_elements.status_label_id,
+        "label_colour",
+        label_colour)
 
-    self.information_container:clear()
-
-    local information_background = Background:fill_container(self.information_container, false)
-    information_background:solid(colours.grey)
-    self.information_container:add_element(information_background, {
-        respect_padding = false,
-        x_offset = 1,
-        y_offset = 1
-    })
-
-    local turtle_id_text = "Quarry ID: #" .. selected_turtle.id
-    local turtle_id = Text:new(self.m, turtle_id_text, colours.white)
-    self.information_container:add_element(turtle_id, {
-        respect_padding = true,
-        x_offset        = 1,
-        y_offset        = 1
-    })
+    local turtle_header_text = "Quarry ID: #" .. selected_turtle.id
+    self.information_container:update_element(
+        self.text_elements.turtle_header_id,
+        "content",
+        turtle_header_text)
 
     local fuel_lines = {
         ("Current fuel level: %d"):format(selected_turtle.metadata.fuel_level),
-        ("Stored fuel units: %d"):format(selected_turtle.metadata.stored_fuel_units)
+        ("Stored fuel units: %d"):format(selected_turtle.metadata.stored_fuel_units),
     }
-    local fuel = Text:new(self.m, fuel_lines, colours.white)
-    self.information_container:add_element(fuel, {
-        respect_padding = true,
-        x_offset        = 1,
-        y_offset        = 2
-    })
+    self.information_container:update_element(
+        self.text_elements.fuel_id,
+        "content",
+        fuel_lines)
 
     local position_lines = {
         "Position information:", "",
@@ -283,12 +241,10 @@ function quarry_details_page:render(x, y, data)
         ("  Mining row: %d"):format(
             selected_turtle.metadata.current_row)
     }
-    local position_info = Text:new(self.m, position_lines, colours.white)
-    self.information_container:add_element(position_info, {
-        respect_padding = true,
-        x_offset        = 1,
-        y_offset        = 5
-    })
+    self.information_container:update_element(
+        self.text_elements.position_info_id,
+        "content",
+        position_lines)
 
     local quarry_lines = {
         "Quarry information:", "",
@@ -302,12 +258,83 @@ function quarry_details_page:render(x, y, data)
             selected_turtle.metadata.boundaries.starting_position.y,
             selected_turtle.metadata.boundaries.starting_position.z)
     }
-    local quarry_info = Text:new(self.m, quarry_lines, colours.white)
-    self.information_container:add_element(quarry_info, {
-        respect_padding = true,
-        x_offset        = 1,
-        y_offset        = 11
-    })
+    self.information_container:update_element(
+        self.text_elements.quarry_info_id,
+        "content",
+        quarry_lines)
+
+    self.confirm.on_yes = function()
+        self.task_runner:add_task(self.task_runner.tasks.recover, { id = selected_turtle.id })
+        self.page_switcher("quarries")
+    end
+
+    if ts.is_turtle_active(selected_turtle.metadata.status) then
+        self.buttons_container:update_element(
+            self.button_elements.pause_button_id,
+            "text",
+            "Pause")
+
+        self.buttons_container:update_element(
+            self.button_elements.pause_button_id,
+            "on_click",
+            function()
+                self.task_runner:add_task(self.task_runner.tasks.pause, { id = selected_turtle.id })
+            end)
+
+        self.buttons_container:update_element(
+            self.button_elements.recover_button_id,
+            "on_click",
+            function()
+                self.confirm:open(selected_turtle.id)
+            end)
+    elseif ts.is_paused(selected_turtle.metadata.status) then
+        self.buttons_container:update_element(
+            self.button_elements.pause_button_id,
+            "text",
+            "Resume")
+        self.buttons_container:update_element(
+            self.button_elements.pause_button_id,
+            "button_colour",
+            colours.green)
+
+        self.buttons_container:update_element(
+            self.button_elements.pause_button_id,
+            "on_click",
+            function()
+                self.task_runner:add_task(self.task_runner.tasks.resume, { id = selected_turtle.id })
+            end)
+
+        self.buttons_container:update_element(
+            self.button_elements.recover_button_id,
+            "on_click",
+            function()
+                self.task_runner:add_task(self.task_runner.tasks.recover, {
+                    id = selected_turtle.id,
+                    offline_turtle = selected_turtle
+                })
+
+                self.page_switcher("quarries")
+            end)
+    else -- Turtle is offline
+        self.buttons_container:update_element(
+            self.button_elements.pause_button_id,
+            "disabled",
+            true)
+
+        self.buttons_container:update_element(
+            self.button_elements.recover_button_id,
+            "on_click",
+            function()
+                self.task_runner:add_task(self.task_runner.tasks.recover, {
+                    id = selected_turtle.id,
+                    offline_turtle = selected_turtle
+                })
+
+                sleep(1)
+
+                self.page_switcher("quarries")
+            end)
+    end
 
     self.buttons_container:render(x, y)
     self.information_container:render(x + self.buttons_container.size.width, y)

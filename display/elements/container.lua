@@ -14,27 +14,33 @@ local function render_elements_horizontally(self, container_x, container_y, data
     local y = container_y + self.padding.top
 
     local row_height = 0
-    for _, entry in ipairs(self.children) do
-        local child = entry.element
+    for _, key in ipairs(self.render_order) do
+        local child = self.children[key]
+
+        if not child then
+            error("An error occured, can't find the element with key: " .. key)
+        end
+
+        local element = child.element
 
         -- If it doesn't horizontally, wrap to new row.
-        if x + child.size.width > self.size.width + container_x then
+        if x + element.size.width > self.size.width + container_x then
             x = container_x + self.padding.left
             y = y + row_height + self.spacing
             row_height = 0
         end
 
-        if y + child.size.height > self.size.height then
+        if y + element.size.height > self.size.height then
             break
         end
 
-        child:render(x, y, data)
+        element:render(x, y, data)
 
         -- Move x including spacing between elements.
-        x = x + child.size.width + self.spacing
+        x = x + element.size.width + self.spacing
 
         -- Determine largest height, adjust row height to it.
-        row_height = math.max(row_height, child.size.height)
+        row_height = math.max(row_height, element.size.height)
     end
 end
 
@@ -43,42 +49,49 @@ local function render_elements_vertically(self, container_x, container_y, data)
     local y = container_y + self.padding.top
 
     local column_width = 0
-    for _, entry in ipairs(self.children) do
-        local child = entry.element
+    for _, key in ipairs(self.render_order) do
+        local child = self.children[key]
+
+        if not child then
+            error("An error occured, can't find the element with key: " .. key)
+        end
+
+        local element = child.element
+
         -- If it doesn't fit vertically, wrap to next column.
-        if y + child.size.height > self.size.height + container_y then
+        if y + element.size.height > self.size.height + container_y then
             y = container_y + self.padding.top
             x = x + column_width + self.spacing
             column_width = 0
         end
 
-        if x + child.size.width > self.size.width then
+        if x + element.size.width > self.size.width then
             break
         end
 
-        child:render(x, y, data)
+        element:render(x, y, data)
 
         -- Move y including spacing between elements.
-        y = y + child.size.height + self.spacing
+        y = y + element.size.height + self.spacing
 
         -- Determine widest element so far in this column.
-        column_width = math.max(column_width, child.size.width)
+        column_width = math.max(column_width, element.size.width)
     end
 end
 
 local function render_elements_manually(self, container_x, container_y, data)
-    for _, entry in ipairs(self.children) do
-        local child = entry.element
+    for _, key in ipairs(self.render_order) do
+        local child = self.children[key]
 
-        local element_x = container_x + entry.offset.x_offset
-        local element_y = container_y + entry.offset.y_offset
+        local element_x = container_x + child.offset.x_offset
+        local element_y = container_y + child.offset.y_offset
 
-        if entry.offset.respect_padding then
+        if child.offset.respect_padding then
             element_x = element_x + self.padding.left
             element_y = element_y + self.padding.top
         end
 
-        child:render(element_x, element_y, data)
+        child.element:render(element_x, element_y, data)
     end
 end
 
@@ -105,17 +118,19 @@ function container:new(m, layout, size, padding)
         size = size,
         padding = corrected_padding,
         spacing = 1,
-        children = {}
+        children = {},
+        render_order = {}
     }, self)
 end
 
---- Adds an element to the container, depending on the layout it requires more information.
----@param element any element to add.
----@return boolean true if it fits in the container, false if not.
-function container:add_element(element, position_offset)
+function container:add_element(id, element, position_offset)
     -- TODO: More element validation, does it fit? Does it contain the correct fields?
     if type(element) ~= "table" or not element.render then
         error("Invalid element, can't render this.")
+    end
+
+    if self.children[id] then
+        error(("Element with id %d already exists."):format(id))
     end
 
     local offset
@@ -138,9 +153,50 @@ function container:add_element(element, position_offset)
         offset = offset
     }
 
-    table.insert(self.children, entry)
+    self.children[id] = entry
+    table.insert(self.render_order, id)
 
     return true
+end
+
+function container:add_background(background)
+    self.background = background
+end
+
+function container:element_exists(id)
+    return self.children[id] ~= nil
+end
+
+function container:update_element(id, element_field, value)
+    local entry = self.children[id]
+    if type(entry) ~= "table" then
+        error("Can't update an entry that doesn't exist: " .. tostring(id))
+    end
+    if type(entry.element) ~= "table" then
+        error("Invalid element in entry: " .. tostring(id))
+    end
+    if element_field == nil then
+        error("element_field must not be nil")
+    end
+
+    entry.element[element_field] = value
+end
+
+function container:remove_element(id)
+    local entry = self.children[id]
+
+    if not entry then
+        return
+    end
+
+    self.children[id] = nil
+
+    for i, k in ipairs(self.render_order) do
+        if k == id then
+            table.remove(self.render_order, i)
+            break
+        end
+    end
 end
 
 function container:calculate_row_capacity(element_width, element_height)
@@ -162,7 +218,7 @@ function container:handle_click(x, y)
     end
 
     local clicked = false
-    for _, entry in ipairs(self.children) do
+    for _, entry in pairs(self.children) do
         local child = entry.element
 
         if child.handle_click then
@@ -177,15 +233,24 @@ function container:handle_click(x, y)
     return clicked
 end
 
-function container:clear()
-    self.children = {}
-end
-
 --- Renders the elements registered in the container, following the layout's structure.
 --- Won't render any elements if they're off screen. Paging has to be done by the parent.
 function container:render(x, y, data)
     self.latest_x = x
     self.latest_y = y
+
+    if self.background then
+        local background_x, background_y
+        if self.background.respect_padding then
+            background_x = x + self.padding.left
+            background_y = y + self.padding.top
+        else
+            background_x = x
+            background_y = y
+        end
+
+        self.background:render(background_x, background_y)
+    end
 
     if self.layout == self.layouts.horizontal_rows then
         render_elements_horizontally(self, x, y, data)

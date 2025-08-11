@@ -21,7 +21,7 @@ function sidebar:new(m, size, page_switcher)
 
     local background = Background:fill_container(container, false)
     background:solid(colours.grey)
-    container:add_element(background)
+    container:add_background(background)
 
     local quarries_button = Button:new(m,
         {
@@ -52,15 +52,15 @@ function sidebar:new(m, size, page_switcher)
         colours.lightBlue,
         function() page_switcher("settings") end)
 
-    container:add_element(quarries_button, {
+    container:add_element(2, quarries_button, {
         x_offset = 1,
         y_offset = 1
     })
-    container:add_element(runners_button, {
+    container:add_element(3, runners_button, {
         x_offset = 1,
         y_offset = 5
     })
-    container:add_element(settings_button, {
+    container:add_element(4, settings_button, {
         x_offset = 1,
         y_offset = size.height - 4
     })

@@ -7,12 +7,13 @@ local Background = {
 }
 Background.__index = Background
 
-function Background:new(m, size)
+function Background:new(m, size, respect_padding)
     validator.validate_parameter(size, "table", true, "size")
 
     return setmetatable({
         m = m,
-        size = size
+        size = size,
+        respect_padding = respect_padding
     }, self)
 end
 
@@ -34,7 +35,7 @@ function Background:fill_container(container, respect_padding)
         size.height = size.height - container.padding.top - container.padding.bottom
     end
 
-    return Background:new(container.m, size)
+    return Background:new(container.m, size, respect_padding)
 end
 
 function Background:render(x, y)

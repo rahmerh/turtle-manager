@@ -2,7 +2,7 @@ local Pager           = require("display.elements.pager")
 local Button          = require("display.elements.button")
 local Container       = require("display.elements.container")
 
-local stc             = require("display.status_to_colour")
+local ts              = require("display.turtle_status")
 
 local list            = require("lib.list")
 
@@ -62,8 +62,6 @@ function quarries_page:render(x, y, data)
     self.latest_x = x
     self.latest_y = y
 
-    self.container:clear()
-
     local quarries = list.filter_map_by(data.turtles, "role", "quarry")
     local quarry_list = {}
 
@@ -78,11 +76,17 @@ function quarries_page:render(x, y, data)
     local index = 0
     for _, turtle in ipairs(quarry_list) do
         if index < skip then
+            if self.container:element_exists(turtle.id) then
+                self.container:remove_element(turtle.id)
+            end
+
             index = index + 1
             goto continue
+        elseif index + 1 > self.page_size then
+            self.container:remove_element(turtle.id)
         end
 
-        local button_colour = stc.quarry_status_to_colour(turtle.metadata.status)
+        local button_colour = ts.quarry_status_to_colour(turtle.metadata.status)
 
         local location_line
         if turtle.metadata.current_location then
@@ -98,17 +102,22 @@ function quarries_page:render(x, y, data)
             location_line
         }
 
-        local button = Button:new(self.m, {
-                width = self.default_button_size.width,
-                height = self.default_button_size.height,
-            },
-            lines,
-            colours.black,
-            button_colour,
-            function() self.page_switcher("quarry_info", turtle.id) end)
-
-        self.container:add_element(button)
+        if self.container:element_exists(turtle.id) then
+            self.container:update_element(turtle.id, "text", lines)
+            self.container:update_element(turtle.id, "button_colour", button_colour)
+        else
+            local button = Button:new(self.m, {
+                    width = self.default_button_size.width,
+                    height = self.default_button_size.height,
+                },
+                lines,
+                colours.black,
+                button_colour,
+                function() self.page_switcher("quarry_info", turtle.id) end)
+            self.container:add_element(turtle.id, button)
+        end
         index = index + 1
+
 
         ::continue::
     end

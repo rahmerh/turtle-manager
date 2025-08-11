@@ -73,33 +73,6 @@ local movement_context_with_dig = {
     manager_id = manager_id
 }
 
-local needed_supplies = {}
-if not inventory.is_item_in_slot("minecraft:coal", 1) then
-    needed_supplies["minecraft:coal"] = 64
-end
-if not inventory.is_item_in_slot("minecraft:chest", 2) then
-    needed_supplies["minecraft:chest"] = 64
-end
-
-if next(needed_supplies) ~= nil then
-    printer.print_info("Requesting supplies...")
-
-    wireless.resupply.request(manager_id, movement.get_current_coordinates(), needed_supplies)
-    local runner_id, job_id = wireless.resupply.await_arrival()
-    wireless.resupply.signal_ready(runner_id, job_id)
-    wireless.resupply.await_done()
-
-    local coal_slot = inventory.find_item("minecraft:coal")
-    if coal_slot ~= 1 then
-        inventory.move_to_slot(coal_slot, 1)
-    end
-
-    local chest_slot = inventory.find_item("minecraft:chest")
-    if chest_slot ~= 2 then
-        inventory.move_to_slot(chest_slot, 2)
-    end
-end
-
 local boundaries = job.get_boundaries()
 local metadata = {
     boundaries = boundaries
@@ -130,6 +103,33 @@ end
 
 local function main()
     wireless.registry.register_self_as(manager_id, "quarry", metadata)
+
+    local needed_supplies = {}
+    if not inventory.is_item_in_slot("minecraft:coal", 1) then
+        needed_supplies["minecraft:coal"] = 64
+    end
+    if not inventory.is_item_in_slot("minecraft:chest", 2) then
+        needed_supplies["minecraft:chest"] = 64
+    end
+
+    if next(needed_supplies) ~= nil then
+        printer.print_info("Requesting supplies...")
+
+        wireless.resupply.request(manager_id, movement.get_current_coordinates(), needed_supplies)
+        local runner_id, job_id = wireless.resupply.await_arrival()
+        wireless.resupply.signal_ready(runner_id, job_id)
+        wireless.resupply.await_done()
+
+        local coal_slot = inventory.find_item("minecraft:coal")
+        if coal_slot ~= 1 then
+            inventory.move_to_slot(coal_slot, 1)
+        end
+
+        local chest_slot = inventory.find_item("minecraft:chest")
+        if chest_slot ~= 2 then
+            inventory.move_to_slot(chest_slot, 2)
+        end
+    end
 
     job.set_status(job.statuses.starting)
     if not job.status() == job.statuses.created then

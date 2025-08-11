@@ -64,11 +64,13 @@ return function(task, config, movement_context)
 
     wireless.resupply.signal_done(task.data.requester, task.job_id)
 
-    movement.move_to(
+    local moved_back, moved_back_err = movement.move_to(
         config.unloading_chest_pos.x,
         config.unloading_chest_pos.y + 1,
         config.unloading_chest_pos.z,
         movement_context)
 
-    inventory.drop_slots(2, 16, "down")
+    if not moved_back and moved_back_err then
+        return moved_back, moved_back_err
+    end
 end

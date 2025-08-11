@@ -33,7 +33,5 @@ return function(task, config, movement_context)
         return moved_back, moved_back_err
     end
 
-    inventory.drop_slots(2, 16, "down")
-
     printer.print_info(("[%s] Done."):format(task.data.job_id))
 end

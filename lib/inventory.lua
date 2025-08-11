@@ -168,4 +168,30 @@ function inventory.get_slots_containing_item(item)
     return result
 end
 
+function inventory.list_contents(from, to)
+    local result = {}
+    for i = from, to do
+        local info = turtle.getItemDetail(i)
+
+        if not info then
+            goto continue
+        end
+
+        local total_amount
+        if result[info.name] then
+            total_amount = result[info.name].amount + info.count
+        else
+            total_amount = info.count
+        end
+
+        result[info.name] = {
+            amount = total_amount
+        }
+
+        ::continue::
+    end
+
+    return result
+end
+
 return inventory
