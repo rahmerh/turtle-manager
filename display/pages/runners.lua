@@ -102,7 +102,9 @@ function runners_page:render(x, y, data)
             lines,
             colours.black,
             button_colour,
-            function() end)
+            function()
+                self.page_switcher("runner_info", turtle.id)
+            end)
 
         self.container:add_element(button)
         index = index + 1

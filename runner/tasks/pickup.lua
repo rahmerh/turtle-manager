@@ -4,7 +4,8 @@ local printer = require("lib.printer")
 local inventory = require("lib.inventory")
 
 return function(task, config, movement_context)
-    printer.print_info(("[%s] Picking up chest at %d %d %d"):format(task.data.job_id,
+    -- TODO: Print what it's picking up.
+    printer.print_info(("[%s] Picking up something at %d %d %d"):format(task.data.job_id,
         task.data.target.x,
         task.data.target.y,
         task.data.target.z))

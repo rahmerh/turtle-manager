@@ -105,6 +105,8 @@ local function main()
             printer.print_warning("Unsupported task: " .. task_type)
         end
 
+        wireless.completed.signal_completed(manager_id, movement.get_current_coordinates())
+
         task_queue:ack()
         status = "Idle"
 

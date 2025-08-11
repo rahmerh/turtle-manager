@@ -58,3 +58,4 @@ The turtles only request coal, chests and cobblestone, so make sure to always ha
 - Retry failed tasks (both from turtles and manager)
 - Remove quarry fluid handling, add runner fluid handling
 - Turtles redistribute tasks
+- Continue quarry while waiting for supplies

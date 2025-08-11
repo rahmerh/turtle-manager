@@ -11,24 +11,6 @@ local ACCEPTED_FUEL = {
     ["minecraft:coal"] = true
 }
 
-local function get_next_empty_slot()
-    for i = 1, 16 do
-        local info = turtle.getItemDetail(i)
-
-        if not info then return i end
-    end
-end
-
-local function scan_for_fuel()
-    for i = 1, 16 do
-        local item = turtle.getItemDetail(i)
-
-        if item and ACCEPTED_FUEL[item.name] then
-            return i
-        end
-    end
-end
-
 function fueler.get_fuel_level()
     return turtle.getFuelLevel()
 end
@@ -39,7 +21,7 @@ function fueler.refuel_from_inventory()
     end
 
     local fuel_slot = inventory.details_from_slot(1)
-    if fuel_slot.count < 64 then
+    if fuel_slot and fuel_slot.count < 64 then
         local fuel_slots = inventory.get_slots_containing_item("minecraft:coal")
 
         for _, slot in ipairs(fuel_slots) do

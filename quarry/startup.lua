@@ -208,7 +208,8 @@ local function main()
     end
 
     local end_y = boundaries.starting_position.y - 2 - ((boundaries.layers - 1) * 3)
-    if end_y == -56 then
+    if end_y == -56 and job.current_layer() == 0 then
+        job.set_status(job.statuses.in_progress)
         movement.move_to(
             boundaries.starting_position.x,
             -58,
@@ -240,12 +241,19 @@ local function main()
         end
     end
 
-    quarry.mine_bedrock_layer(
-        boundaries.starting_position.x,
-        boundaries.starting_position.z,
-        boundaries.width,
-        boundaries.depth,
-        movement_context_with_dig)
+    if job.current_layer() == 0 then
+        job.next_layer()
+    end
+
+    if job.current_layer() == -1 then
+        job.set_status(job.statuses.in_progress)
+        quarry.mine_bedrock_layer(
+            boundaries.starting_position.x,
+            boundaries.starting_position.z,
+            boundaries.width,
+            boundaries.depth,
+            movement_context_with_dig)
+    end
 
     printer.print_success("Quarry done.")
     job.complete()

@@ -182,6 +182,24 @@ function quarry_details_page:render(x, y, data)
         self.reboot_button.button_colour = colours.lightGrey
         self.reboot_button.on_click = function() end
 
+        self.recover_button.button_colour = colours.red
+        self.recover_button.on_click = function()
+            self.task_runner:add_task(self.task_runner.tasks.recover, {
+                id = selected_turtle.id,
+                offline_turtle = selected_turtle
+            })
+
+            self.page_switcher("quarries")
+        end
+    elseif selected_turtle.metadata.status == "Completed" then
+        self.pause_button.text = "Pause"
+        self.pause_button.button_colour = colours.lightGrey
+        self.pause_button.on_click = function() end
+
+        self.reboot_button.button_colour = colours.lightGrey
+        self.reboot_button.on_click = function() end
+
+        self.recover_button.button_colour = colours.red
         self.recover_button.on_click = function()
             self.task_runner:add_task(self.task_runner.tasks.recover, {
                 id = selected_turtle.id,
