@@ -103,6 +103,16 @@ function queue:nudge(index, direction)
     return true
 end
 
+function queue:get(index)
+    local item = self.items[index]
+
+    if not item then
+        error(("No item found at inde: %d"):format(index))
+    end
+
+    return item
+end
+
 function queue:find(field, value)
     for i, item in pairs(self.items) do
         if item[field] == value then
@@ -110,6 +120,16 @@ function queue:find(field, value)
         end
     end
     return nil
+end
+
+function queue:update(index, field, value)
+    if not self.items[index] then
+        error(("No item on index: %d"):format(index))
+    end
+
+    self.items[index][field] = value
+
+    persist(self)
 end
 
 return queue

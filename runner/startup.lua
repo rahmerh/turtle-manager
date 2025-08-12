@@ -1,7 +1,7 @@
 local wireless = require("wireless")
 local movement = require("movement")
 
-local task_stages = require("task_stages")
+local CancelToken = require("cancel_token")
 
 local queue = require("lib.queue")
 local printer = require("lib.printer")
@@ -38,10 +38,18 @@ local movement_context = {
     manager_id = manager_id
 }
 
-local task_stage = task_stages.no_task
+local cancel_token
+
 local active_task
-local function report_progress(new_stage)
-    task_stage = new_stage
+local function report_progress(job_id, new_stage, cancelable)
+    local index, _ = task_queue:find("job_id", job_id)
+
+    if not index then
+        return
+    end
+
+    task_queue:update(index, "stage", new_stage)
+    task_queue:update(index, "cancelable", cancelable)
 end
 
 local runner_status = "Idle"
@@ -56,7 +64,6 @@ local start_heartbeat, _ = wireless.heartbeat.loop(manager_id, 1, function()
 
     return {
         status = runner_status,
-        task_stage = task_stage,
         queued_tasks = task_queue:size(),
         current_location = movement.get_current_coordinates(),
         fuel_level = movement.get_fuel_level(),
@@ -98,13 +105,29 @@ end)
 wireless.router.register_handler(wireless.protocols.rpc, "command:nudge_task", function(sender, m)
     wireless.ack(sender, m)
 
-    local index, _ = task_queue:find("job_id", m.data.job_id)
+    local index, task = task_queue:find("job_id", m.data.job_id)
 
-    if not index then
-        return
+    local target = task_queue:get(index + m.data.amount)
+
+    if not index or not task or not target then
+        error(("No item at %d"):format(index))
     end
 
-    if active_task ~= m.data.job_id then
+    local nudging_active_task = active_task == m.data.job_id or active_task == target.job_id
+    if nudging_active_task and (task.cancelable or target.cancelable) then
+        cancel_token:cancel()
+
+        task_queue:nudge(index, m.data.amount)
+
+        local direction
+        if m.data.amount < 0 then
+            direction = "up"
+        else
+            direction = "down"
+        end
+
+        printer.print_info(("Nudged %s %s"):format(m.data.job_id, direction))
+    elseif active_task ~= m.data.job_id then
         task_queue:nudge(index, m.data.amount)
 
         local direction
@@ -152,26 +175,34 @@ local function main()
         end
 
         runner_status = "Running"
+        cancel_token = CancelToken.new()
 
+        local which_completed
         if task_handlers[task.task_type] then
             active_task = task.job_id
-            task_handlers[task.task_type](task, config, movement_context, report_progress)
+            which_completed = parallel.waitForAny(
+                function() task_handlers[task.task_type](task, config, movement_context, report_progress) end,
+                function() cancel_token:await() end)
         else
             printer.print_warning("Unsupported task: " .. task.task_type)
         end
 
-        wireless.completed.signal_completed(manager_id, movement.get_current_coordinates())
+        if which_completed == 2 then
+            active_task = nil
+            goto continue
+        elseif which_completed == 1 then
+            wireless.completed.signal_completed(manager_id, movement.get_current_coordinates())
 
-        -- Unload inventory
-        inventory.drop_slots(2, 16, "down")
+            -- Unload inventory
+            inventory.drop_slots(2, 16, "down")
 
-        task_queue:ack()
+            task_queue:ack()
 
-        runner_status = "Idle"
-        active_task = nil
+            runner_status = "Idle"
+            active_task = nil
 
-        report_progress(task_stages.no_task)
-        printer.print_info(("[%s] Done."):format(task.job_id))
+            printer.print_info(("[%s] Done."):format(task.job_id))
+        end
 
         ::continue::
     end

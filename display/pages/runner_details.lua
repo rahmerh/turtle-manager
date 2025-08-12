@@ -228,7 +228,7 @@ function runner_details_page:render(x, y, data)
 
             table.insert(lines, ("Type: %s"):format(string_util.capitalize(task.task_type)))
             if index == 1 then
-                table.insert(lines, ("Stage: %s"):format(string_util.capitalize(selected_turtle.metadata.task_stage)))
+                table.insert(lines, ("Stage: %s"):format(task.stage))
             end
             table.insert(lines, ("Target: %d %d %d"):format(task.target.x,
                 task.target.y,
@@ -236,7 +236,8 @@ function runner_details_page:render(x, y, data)
 
             local item_block_info = {
                 job_id = task.job_id,
-                display = lines
+                cancelable = task.cancelable,
+                display = lines,
             }
 
             table.insert(items, item_block_info)

@@ -23,7 +23,7 @@ function scrollable_list:new(m, size, on_reorder_down, on_reorder_up, reorderabl
         item_width              = size.width - 10,
         scroll_offset           = 0,
         scrolling_window_height = size.height - (spacing * 2),
-        scroll_step_size        = 2,
+        scroll_step_size        = 3,
         reorderable             = reorderable,
         reorder_buttons         = {},
         on_reorder_down         = on_reorder_down,
@@ -106,6 +106,8 @@ function scrollable_list:render(x, y)
     local window_top        = y + self.spacing
     local window_bottom     = y + self.scrolling_window_height
     local current_top       = window_top - self.scroll_offset
+
+    local previous_item_is_cancelable
     for index, item in ipairs(self.items) do
         local item_top      = current_top
         local item_bottom   = current_top + self.item_height - 1
@@ -141,7 +143,8 @@ function scrollable_list:render(x, y)
             end
         end
 
-        if self.reorderable and fully_visible then
+        local cancelable = item.cancelable == nil or item.cancelable
+        if self.reorderable and fully_visible and cancelable then
             local reorder_button_x = list_x + self.item_width - nudge_button_size.width
             local down_y = current_top + self.item_height - nudge_button_size.height
 
@@ -169,13 +172,14 @@ function scrollable_list:render(x, y)
                     if self.on_reorder_up then self.on_reorder_up(item.job_id) end
                 end)
 
-            if index > 1 then
+            if index > 1 and previous_item_is_cancelable then
                 reorder_up:render(reorder_button_x, up_y)
                 table.insert(self.reorder_buttons, reorder_up)
             end
         end
 
         current_top = current_top + self.item_height + self.spacing
+        previous_item_is_cancelable = cancelable
 
         if current_top > window_bottom then break end
     end
