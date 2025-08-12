@@ -10,7 +10,8 @@ local task_runner   = {
         pause = "pause",
         resume = "resume",
         reboot = "reboot",
-        recover = "recover"
+        recover = "recover",
+        nudge_task = "nudge_task",
     },
 }
 task_runner.__index = task_runner
@@ -47,6 +48,9 @@ function task_runner:new(notifier)
             notifier:add_notification(("Recovering turtle #%d..."):format(data.id), 10)
 
             return true
+        end,
+        nudge_task = function(data)
+            wireless.turtle_commands.nudge_task(data.id, data.job_id, data.amount)
         end
     }
     return setmetatable({

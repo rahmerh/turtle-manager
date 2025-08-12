@@ -1,15 +1,17 @@
 local movement = require("movement")
 
-local printer = require("lib.printer")
-local inventory = require("lib.inventory")
+local task_stages = require("task_stages")
 
-return function(task, config, movement_context)
+local printer = require("lib.printer")
+
+return function(task, config, movement_context, report_progress)
     -- TODO: Print what it's picking up.
     printer.print_info(("[%s] Picking up something at %d %d %d"):format(task.job_id,
         task.target.x,
         task.target.y,
         task.target.z))
 
+    report_progress(task_stages.to_target)
     local arrived, arrived_err = movement.move_to(
         task.target.x,
         task.target.y + 1, -- Move above it.
@@ -23,6 +25,7 @@ return function(task, config, movement_context)
     -- Pick up chest + it's contents
     turtle.digDown()
 
+    report_progress(task_stages.to_unloading)
     local moved_back, moved_back_err = movement.move_to(
         config.unloading_chest_pos.x,
         config.unloading_chest_pos.y + 1,

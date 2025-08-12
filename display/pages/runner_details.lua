@@ -108,11 +108,10 @@ function runner_details_page:new(m, size, page_switcher, task_runner)
     }
 
     local scrollable_id = 1
-    local scrollable = ScrollableList:new(m, scrollable_size, {
-        "Job ID",
-        "Type",
-        "Target"
-    })
+    local scrollable = ScrollableList:new(m,
+        scrollable_size,
+        _,
+        _)
     task_container:add_element(scrollable_id, scrollable, {
         respect_padding = true
     })
@@ -148,7 +147,7 @@ function runner_details_page:render(x, y, data)
     local turtles = list.convert_map_to_array(data.turtles, "id")
 
     local selected_turtle = list.find(turtles, "id", data.selected_id)
-    if not selected_turtle then return end
+    if not selected_turtle or not selected_turtle.metadata then return end
 
     if self.latest_selected_id ~= selected_turtle.id then
         self.task_container:update_element(
@@ -181,8 +180,8 @@ function runner_details_page:render(x, y, data)
         position_lines)
 
     local fuel_lines = {
-        ("Fuel level: %d"):format(selected_turtle.metadata.fuel_level),
-        ("Stored fuel: %d"):format(selected_turtle.metadata.stored_fuel_units),
+        ("Fuel level: %d"):format(selected_turtle.metadata.fuel_level or 0),
+        ("Stored fuel: %d"):format(selected_turtle.metadata.stored_fuel_units or 0),
     }
     self.status_container:update_element(
         self.text_elements.fuel_id,
@@ -222,23 +221,53 @@ function runner_details_page:render(x, y, data)
         "content",
         inventory_lines)
 
-    local display_lines = {}
-    for _, task in ipairs(selected_turtle.metadata.tasks) do
-        local line = {
-            ["Job ID"] = task.job_id,
-            ["Type"] = string_util.capitalize(task.task_type),
-            ["Target"] = ("%d %d %d"):format(
-                task.target.x,
+    local items = {}
+    if selected_turtle.metadata.tasks then
+        for index, task in ipairs(selected_turtle.metadata.tasks) do
+            local lines = {}
+
+            table.insert(lines, ("Type: %s"):format(string_util.capitalize(task.task_type)))
+            if index == 1 then
+                table.insert(lines, ("Stage: %s"):format(string_util.capitalize(selected_turtle.metadata.task_stage)))
+            end
+            table.insert(lines, ("Target: %d %d %d"):format(task.target.x,
                 task.target.y,
-                task.target.z)
-        }
-        table.insert(display_lines, line)
+                task.target.z))
+
+            local item_block_info = {
+                job_id = task.job_id,
+                display = lines
+            }
+
+            table.insert(items, item_block_info)
+        end
     end
 
     self.task_container:update_element(
         self.scrollable_id,
         "items",
-        display_lines)
+        items)
+
+    self.task_container:update_element(
+        self.scrollable_id,
+        "on_reorder_down",
+        function(job_id)
+            self.task_runner:add_task(self.task_runner.tasks.nudge_task, {
+                id = selected_turtle.id,
+                job_id = job_id,
+                amount = 1
+            })
+        end)
+    self.task_container:update_element(
+        self.scrollable_id,
+        "on_reorder_up",
+        function(job_id)
+            self.task_runner:add_task(self.task_runner.tasks.nudge_task, {
+                id = selected_turtle.id,
+                job_id = job_id,
+                amount = -1
+            })
+        end)
 
     self.status_container:render(x, y)
     self.task_container:render(x + self.status_container.size.width, y)

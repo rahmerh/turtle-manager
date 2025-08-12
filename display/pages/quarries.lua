@@ -70,7 +70,7 @@ function quarries_page:render(x, y, data)
         table.insert(quarry_list, turtle)
     end
 
-    quarry_list = list.sort_by(quarry_list, "id", true)
+    quarry_list = list.sort_by(quarry_list, "id", false)
 
     local skip = (self.pager.current_page - 1) * self.page_size
     local index = 0

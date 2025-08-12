@@ -36,4 +36,11 @@ function commands.kill_turtle(receiver)
     return msg.coordinates
 end
 
+function commands.nudge_task(receiver, job_id, amount)
+    return rpc.call(receiver, "command:nudge_task", {
+        job_id = job_id,
+        amount = amount
+    })
+end
+
 return commands

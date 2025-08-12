@@ -1,6 +1,8 @@
 local movement = require("movement")
 local wireless = require("wireless")
 
+local task_stages = require("task_stages")
+
 local errors = require("lib.errors")
 local printer = require("lib.printer")
 local inventory = require("lib.inventory")
@@ -9,12 +11,13 @@ local function is_turtle(info)
     return info.name == "computercraft:turtle_advanced" or info.name == "computercraft:turtle_normal"
 end
 
-return function(task, config, movement_context)
+return function(task, config, movement_context, report_progress)
     printer.print_info(("[%s] Resupplying turtle at " ..
         task.target.x .. " " ..
         task.target.y .. " " ..
         task.target.z):format(task.job_id))
 
+    report_progress(task_stages.to_supply)
     local arrived, arrived_err = movement.move_to(
         config.supply_chest_pos.x,
         config.supply_chest_pos.y + 1,
@@ -32,14 +35,17 @@ return function(task, config, movement_context)
         table.insert(filled_slots, filled_slot)
     end
 
+    report_progress(task_stages.to_target)
     -- +1 to make sure we're on top of the turtle to resupply
     movement.move_to(task.target.x, task.target.y + 1, task.target.z)
 
+    report_progress(task_stages.resupplying)
     wireless.resupply.runner_arrived(task.requester, task.job_id)
     local ok, err = wireless.resupply.await_ready(task.job_id)
 
     if not ok then
         printer.print_error(err)
+        report_progress(task_stages.to_unloading)
         movement.move_to(
             config.unloading_chest_pos.x,
             config.unloading_chest_pos.y + 1,
@@ -64,6 +70,7 @@ return function(task, config, movement_context)
 
     wireless.resupply.signal_done(task.requester, task.job_id)
 
+    report_progress(task_stages.to_unloading)
     local moved_back, moved_back_err = movement.move_to(
         config.unloading_chest_pos.x,
         config.unloading_chest_pos.y + 1,

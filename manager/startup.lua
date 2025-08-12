@@ -82,10 +82,10 @@ local function mark_stale()
                 goto continue
             end
 
-            if not v.last_seen or now - v.last_seen >= 10 then
+            if not v.last_seen or now - v.last_seen >= 15 then
                 local updated = turtle_store.set_status(k, "Offline")
                 display:add_or_update_turtle(k, updated)
-            elseif now - v.last_seen >= 5 then
+            elseif now - v.last_seen >= 2 then
                 local updated = turtle_store.set_status(k, "Stale")
                 display:add_or_update_turtle(k, updated)
             end

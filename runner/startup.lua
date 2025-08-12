@@ -1,13 +1,14 @@
 local wireless = require("wireless")
 local movement = require("movement")
 
+local task_stages = require("task_stages")
+
 local queue = require("lib.queue")
 local printer = require("lib.printer")
 local inventory = require("lib.inventory")
 
 printer.print_info("Booting runner #" .. os.getComputerID())
 
-local status = "Idle"
 local task_handlers = {
     pickup = require("tasks.pickup"),
     resupply = require("tasks.resupply")
@@ -37,6 +38,13 @@ local movement_context = {
     manager_id = manager_id
 }
 
+local task_stage = task_stages.no_task
+local active_task
+local function report_progress(new_stage)
+    task_stage = new_stage
+end
+
+local runner_status = "Idle"
 local start_heartbeat, _ = wireless.heartbeat.loop(manager_id, 1, function()
     local stored_fuel_units
     local fuel_slot = inventory.details_from_slot(1)
@@ -47,7 +55,8 @@ local start_heartbeat, _ = wireless.heartbeat.loop(manager_id, 1, function()
     local inventory_contents = inventory.list_contents(2, 16)
 
     return {
-        status = status,
+        status = runner_status,
+        task_stage = task_stage,
         queued_tasks = task_queue:size(),
         current_location = movement.get_current_coordinates(),
         fuel_level = movement.get_fuel_level(),
@@ -86,6 +95,29 @@ wireless.router.register_handler(wireless.protocols.rpc, "resupply:dispatch", fu
     task_queue:enqueue(task)
 end)
 
+wireless.router.register_handler(wireless.protocols.rpc, "command:nudge_task", function(sender, m)
+    wireless.ack(sender, m)
+
+    local index, _ = task_queue:find("job_id", m.data.job_id)
+
+    if not index then
+        return
+    end
+
+    if active_task ~= m.data.job_id then
+        task_queue:nudge(index, m.data.amount)
+
+        local direction
+        if m.data.amount < 0 then
+            direction = "up"
+        else
+            direction = "down"
+        end
+
+        printer.print_info(("Nudged %s %s"):format(m.data.job_id, direction))
+    end
+end)
+
 local function main()
     wireless.registry.register_self_as(manager_id, "runner")
 
@@ -119,10 +151,11 @@ local function main()
             goto continue
         end
 
-        status = "Running"
+        runner_status = "Running"
 
         if task_handlers[task.task_type] then
-            task_handlers[task.task_type](task, config, movement_context)
+            active_task = task.job_id
+            task_handlers[task.task_type](task, config, movement_context, report_progress)
         else
             printer.print_warning("Unsupported task: " .. task.task_type)
         end
@@ -133,7 +166,11 @@ local function main()
         inventory.drop_slots(2, 16, "down")
 
         task_queue:ack()
-        status = "Idle"
+
+        runner_status = "Idle"
+        active_task = nil
+
+        report_progress(task_stages.no_task)
         printer.print_info(("[%s] Done."):format(task.job_id))
 
         ::continue::

@@ -221,8 +221,8 @@ function quarry_details_page:render(x, y, data)
         turtle_header_text)
 
     local fuel_lines = {
-        ("Current fuel level: %d"):format(selected_turtle.metadata.fuel_level),
-        ("Stored fuel units: %d"):format(selected_turtle.metadata.stored_fuel_units),
+        ("Current fuel level: %d"):format(selected_turtle.metadata.fuel_level or 0),
+        ("Stored fuel units: %d"):format(selected_turtle.metadata.stored_fuel_units or 0),
     }
     self.information_container:update_element(
         self.text_elements.fuel_id,
@@ -329,8 +329,6 @@ function quarry_details_page:render(x, y, data)
                     id = selected_turtle.id,
                     offline_turtle = selected_turtle
                 })
-
-                sleep(1)
 
                 self.page_switcher("quarries")
             end)

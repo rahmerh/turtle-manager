@@ -51,15 +51,16 @@ The turtles only request coal, chests and cobblestone, so make sure to always ha
 ## TODO
 
 - Dashboard
-  - Edit quarry settings page
-  - Task management page
-  - Map/radar page
+  - Edit quarry settings page.
+  - Map/radar page.
 
-- Retry failed tasks (both from turtles and manager)
-- Remove quarry fluid handling, add runner fluid handling
-- Turtles redistribute tasks
-- Continue quarry while waiting for supplies
+- Retry failed tasks (both from turtles and manager).
+- Remove quarry fluid handling, add runner fluid handling.
+- Turtles redistribute tasks.
+- Continue quarry while waiting for supplies.
+- Improve unstuck methods + report turtle is stuck on the dashboard.
+- Turtle waiting bay + shared unloading/supply stations.
 - Dashboard error screen for:
-  - General errors
-  - Monitor too small
-  - Multiple managers
+  - General errors.
+  - Monitor too small.
+  - Multiple managers.

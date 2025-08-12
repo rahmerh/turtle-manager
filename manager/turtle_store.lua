@@ -68,7 +68,7 @@ end
 function turtle_store.set_status(id, status)
     ensure_loaded()
 
-    if not turtles[id] then
+    if not turtles[id] or not turtles[id].metadata then
         return
     end
 

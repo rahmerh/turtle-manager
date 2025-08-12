@@ -85,24 +85,31 @@ function queue:compact()
 end
 
 --- Nudges an entry earlier or later in the queue.
----@param index number The absolute index in the queue (first = 1, etc.).
+---@param index number The index in the queue.
 ---@param direction number +1 to move later, -1 to move earlier.
 function queue:nudge(index, direction)
-    local pos = self.first + index - 1
-
-    if pos < self.first or pos > self.last then
+    if index < self.first or index > self.last then
         error("Index out of range")
     end
 
-    local swap_with = pos + direction
+    local swap_with = index + direction
     if swap_with < self.first or swap_with > self.last then
         return false
     end
 
-    self.items[pos], self.items[swap_with] = self.items[swap_with], self.items[pos]
+    self.items[index], self.items[swap_with] = self.items[swap_with], self.items[index]
 
     persist(self)
     return true
+end
+
+function queue:find(field, value)
+    for i, item in pairs(self.items) do
+        if item[field] == value then
+            return i, item
+        end
+    end
+    return nil
 end
 
 return queue

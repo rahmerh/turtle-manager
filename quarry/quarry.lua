@@ -134,31 +134,25 @@ function quarry.mine_bedrock_layer(start_x, start_z, width, depth, movement_cont
         end
 
         if row % 2 == 0 then
+            movement.move_up(movement_context)
+            movement.move_up(movement_context)
+
             movement.turn_left()
-
-            if scanner.is_block("minecraft:bedrock", "forward") then
-                movement.move_up(movement_context)
-            else
-                miner.mine()
-            end
-
             movement.move_forward(movement_context)
-            miner.mine_up()
-            miner.mine_down()
             movement.turn_left()
+
+            movement.move_down(movement_context)
+            movement.move_down(movement_context)
         else
+            movement.move_up(movement_context)
+            movement.move_up(movement_context)
+
             movement.turn_right()
-
-            if scanner.is_block("minecraft:bedrock", "forward") then
-                movement.move_up(movement_context)
-            else
-                miner.mine()
-            end
-
             movement.move_forward(movement_context)
-            miner.mine_up()
-            miner.mine_down()
             movement.turn_right()
+
+            movement.move_down(movement_context)
+            movement.move_down(movement_context)
         end
 
         to_move_forward = depth - 1

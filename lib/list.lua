@@ -49,6 +49,10 @@ end
 function list.convert_map_to_array(map, key_field_name)
     local result = {}
 
+    if not map then
+        return result
+    end
+
     for key, value in pairs(map) do
         value[key_field_name] = key
 
@@ -65,6 +69,14 @@ function list.find(array, field, value)
         end
     end
     return nil
+end
+
+function list.map_len(map)
+    local count = 0
+    for _ in pairs(map) do
+        count = count + 1
+    end
+    return count
 end
 
 return list
