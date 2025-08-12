@@ -229,6 +229,8 @@ function runner_details_page:render(x, y, data)
             table.insert(lines, ("Type: %s"):format(string_util.capitalize(task.task_type)))
             if index == 1 then
                 table.insert(lines, ("Stage: %s"):format(task.stage))
+            else
+                table.insert(lines, ("Requested by: #%d"):format(task.requester))
             end
             table.insert(lines, ("Target: %d %d %d"):format(task.target.x,
                 task.target.y,

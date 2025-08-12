@@ -22,6 +22,7 @@ return function(sender, msg)
     local payload = {
         target = msg.data,
         job_id = msg.id,
+        requester = sender,
     }
 
     local ok, err = wireless.pickup.dispatch(id, payload)
