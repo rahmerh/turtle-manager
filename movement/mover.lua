@@ -2,6 +2,7 @@ local locator = require("movement.locator")
 
 local errors = require("lib.errors")
 local miner = require("lib.miner")
+local scanner = require("lib.scanner")
 
 local mover = {}
 
@@ -280,6 +281,53 @@ mover.move_down = function()
     return ok, err
 end
 
+local function try_unstuck_moving_over()
+    local moved_up, moved_up_err
+    while turtle.detect() do
+        moved_up, moved_up_err = mover.move_up()
+
+        if not moved_up and moved_up_err == errors.NO_FUEL then
+            return moved_up, moved_up_err
+        end
+    end
+
+    -- It moved up, try to move forward to possibly change axis.
+    if moved_up then
+        local hopped, hopped_err = mover.move_forward()
+
+        if not hopped and hopped_err == errors.NO_FUEL then
+            return hopped, hopped_err
+        end
+
+        return true
+    end
+
+    return false
+end
+
+local function try_unstuck_moving_back_and_under()
+    local moved_back, moved_back_err
+    while not scanner.is_free("up") do
+        moved_back, moved_back_err = mover.move_back()
+
+        if not moved_back and moved_back_err == errors.NO_FUEL then
+            return moved_back, moved_back_err
+        end
+    end
+
+    if moved_back then
+        local moved_up, moved_up_err = mover.move_up()
+
+        if not moved_up and moved_up_err == errors.NO_FUEL then
+            return moved_up, moved_up_err
+        end
+
+        return true
+    end
+
+    return false
+end
+
 mover.move_to = function(x, y, z, dig, state)
     dig = dig or false
 
@@ -319,21 +367,13 @@ mover.move_to = function(x, y, z, dig, state)
 
         -- Try some unstuck manouvers
         if not moved then
-            local moved_up, moved_up_err
-            while turtle.detect() do
-                moved_up, moved_up_err = mover.move_up()
+            local got_unstuck = try_unstuck_moving_over()
 
-                if not moved_up and moved_up_err == errors.NO_FUEL then
-                    return moved_up, moved_up_err
-                end
+            if not got_unstuck then
+                got_unstuck = try_unstuck_moving_back_and_under()
             end
 
-            -- It moved up, try to move forward to possibly change axis.
-            if moved_up then
-                local hopped, hopped_err = mover.move_forward()
-                if not hopped and hopped_err == errors.NO_FUEL then
-                    return hopped, hopped_err
-                end
+            if got_unstuck then
                 attempts = 0
             end
         end
