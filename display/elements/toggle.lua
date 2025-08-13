@@ -1,7 +1,7 @@
 local toggle = {}
 toggle.__index = toggle
 
-function toggle.new(m, label, label_colours, initial_value)
+function toggle.new(m, label, label_colours, initial_value, on_toggle)
     return setmetatable({
         m = m,
         label = label,
@@ -10,6 +10,7 @@ function toggle.new(m, label, label_colours, initial_value)
         },
         label_colours = label_colours,
         state = initial_value,
+        on_toggle = on_toggle
     }, toggle)
 end
 
@@ -23,6 +24,8 @@ function toggle:handle_click(x, y)
 
     if is_in_x and is_in_y then
         self.state = not self.state
+        self.on_toggle(self.state)
+
         return true
     else
         return false

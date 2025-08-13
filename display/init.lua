@@ -48,7 +48,7 @@ local function guard(tag, fn)
     return true
 end
 
-function Display:new(monitor)
+function Display:new(monitor, settings)
     if not monitor then return nil, errors.NIL_PARAM end
 
     local m = MonitorHelper:new(monitor)
@@ -68,6 +68,7 @@ function Display:new(monitor)
 
         result = setmetatable({
             m = m,
+            settings = settings,
             task_runner = task_runner,
             notifier = notifier,
             turtles = {},
@@ -110,7 +111,7 @@ function Display:on_resize()
         height = monitor_height
     }
 
-    local page = Page:new(self.m, page_size, page_switcher, self.task_runner)
+    local page = Page:new(self.m, page_size, page_switcher, self.task_runner, self.settings)
     monitor_container:add_element(3, page, {
         x_offset = sidebar.size.width
     })

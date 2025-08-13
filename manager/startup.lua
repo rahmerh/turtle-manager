@@ -1,6 +1,8 @@
-local TurtleStore = require("turtle_store")
 local wireless = require("wireless")
 local Display = require("display")
+
+local TurtleStore = require("turtle_store")
+local Settings = require("settings")
 
 local printer = require("lib.printer")
 local time = require("lib.time")
@@ -13,6 +15,7 @@ local handlers = {
 }
 
 local turtle_store = TurtleStore.new()
+local settings = Settings.new()
 
 printer.print_info("Booting manager #" .. os.getComputerID())
 
@@ -22,7 +25,7 @@ wireless.discovery.host("manager")
 local monitor = peripheral.find("monitor")
 local display
 if monitor then
-    display = Display:new(monitor, wireless)
+    display = Display:new(monitor, settings)
 
     -- Add everything from the store to the display
     local turtles = turtle_store:list()
@@ -74,6 +77,21 @@ end)
 
 wireless.router.register_handler(wireless.protocols.rpc, "job:completed", function(sender, msg)
     local turtle = handlers.handle_job_completed(sender, msg, turtle_store)
+
+    if msg.job_type == "quarry" then
+        if settings:read(Settings.keys.AUTO_RECOVER_QUARRIES) == true then
+            local pickup_message = {
+                id = sender,
+                operation = "pickup:request",
+                data = {
+                    position = msg.coordinates,
+                    what = "turtle:" .. sender
+                }
+            }
+
+            handlers.dispatch_pickup(os.getComputerID(), pickup_message, turtle_store)
+        end
+    end
 
     if display then
         if msg.job_type == "quarry" then
