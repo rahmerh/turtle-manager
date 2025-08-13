@@ -72,6 +72,7 @@ function pager:render(x, y)
 
     self.left_button:render(x, y)
     self.m:set_bg_colour(self.m:get_default_bg_colour())
+    self.m:set_fg_colour(colours.black)
     self.m:write_at(pager_text, x + self.left_button.size.width, y + 1)
     self.right_button:render(x + self.left_button.size.width + text_width, y)
 end

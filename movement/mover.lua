@@ -283,7 +283,7 @@ end
 
 local function try_unstuck_moving_over()
     local moved_up, moved_up_err
-    while turtle.detect() do
+    while not scanner.is_free("forward") do
         moved_up, moved_up_err = mover.move_up()
 
         if not moved_up and moved_up_err == errors.NO_FUEL then
@@ -351,22 +351,38 @@ local function try_unstuck_moving_around_vertical()
     return false
 end
 
+local function calculate_delta(target_x, target_y, target_z)
+    local pos = locator.get_current_coordinates()
+
+    if not pos then
+        return nil, errors.NO_GPS
+    end
+
+    return {
+        x = target_x - pos.x,
+        y = target_y - pos.y,
+        z = target_z - pos.z
+    }
+end
+
+local function is_delta_zero(delta)
+    return delta.x == 0 and delta.y == 0 and delta.z == 0
+end
+
 mover.move_to = function(x, y, z, dig, state)
     dig = dig or false
 
     local attempts = 0
     while attempts < 50 do
-        local pos = locator.get_current_coordinates()
+        local delta, delta_err = calculate_delta(x, y, z)
 
-        if not pos then
-            return nil, errors.NO_GPS
+        if not delta and delta_err then
+            return delta, delta_err
         end
 
-        local delta = {
-            x = x - pos.x,
-            y = y - pos.y,
-            z = z - pos.z
-        }
+        if is_delta_zero(delta) then
+            return true
+        end
 
         local ordered_deltas = sort_axis(delta)
 
@@ -384,17 +400,8 @@ mover.move_to = function(x, y, z, dig, state)
             end
         end
 
-        pos = locator.get_current_coordinates()
-        if not pos then
-            return nil, errors.NO_GPS
-        end
-        delta = {
-            x = x - pos.x,
-            y = y - pos.y,
-            z = z - pos.z
-        }
-
-        if delta.x == 0 and delta.y == 0 and delta.z == 0 then
+        delta, delta_err = calculate_delta(x, y, z)
+        if is_delta_zero(delta) then
             return true
         end
 

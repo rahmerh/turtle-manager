@@ -21,9 +21,7 @@ function settings_page.new(m, settings)
 end
 
 function settings_page:handle_click(x, y)
-    local click_handled = false
-
-    click_handled = self.auto_pickup:handle_click(x, y)
+    local click_handled = self.auto_pickup:handle_click(x, y)
 
     return click_handled
 end
