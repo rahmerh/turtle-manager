@@ -13,6 +13,7 @@ function quarries_page:new(m, size, page_switcher)
     local result = setmetatable({
         m = m,
         info_blocks = {},
+        rendered_ids = {},
         size = size,
         page_switcher = page_switcher,
     }, self)
@@ -63,74 +64,70 @@ function quarries_page:render(x, y, data)
     self.latest_y = y
 
     local quarries = list.filter_map_by(data.turtles, "role", "quarry")
-    local quarry_list = {}
-
-    for key, turtle in pairs(quarries) do
-        turtle.id = key
-        table.insert(quarry_list, turtle)
-    end
-
+    local quarry_list = list.convert_map_to_array(quarries, "id")
     quarry_list = list.sort_by(quarry_list, "id", false)
 
     local skip = (self.pager.current_page - 1) * self.page_size
-    local index = 0
-    for _, turtle in ipairs(quarry_list) do
-        if index < skip then
-            if self.container:element_exists(turtle.id) then
-                self.container:remove_element(turtle.id)
+    local shown = 0
+    local valid_ids = {} -- ids that SHOULD be on screen after this render
+
+    -- Build/update only the items on the current page
+    for i = 1, #quarry_list do
+        local turtle = quarry_list[i]
+
+        if i > skip and shown < self.page_size then
+            valid_ids[turtle.id] = true
+            shown = shown + 1
+
+            local button_colour = ts.quarry_status_to_colour(turtle.metadata.status)
+
+            local location_line
+            if turtle.metadata.current_location then
+                location_line = ("%d %d %d"):format(
+                    turtle.metadata.current_location.x,
+                    turtle.metadata.current_location.y,
+                    turtle.metadata.current_location.z
+                )
             end
 
-            index = index + 1
-            goto continue
-        elseif index + 1 > self.page_size then
-            self.container:remove_element(turtle.id)
+            local lines = {
+                turtle.id,
+                turtle.metadata.status,
+                location_line
+            }
+
+            if self.container:element_exists(turtle.id) then
+                self.container:update_element(turtle.id, "text", lines)
+                self.container:update_element(turtle.id, "button_colour", button_colour)
+            else
+                local button = Button:new(self.m, {
+                        width = self.default_button_size.width,
+                        height = self.default_button_size.height,
+                    },
+                    lines,
+                    colours.black,
+                    button_colour,
+                    function() self.page_switcher("quarry_info", turtle.id) end
+                )
+                self.container:add_element(turtle.id, button)
+            end
         end
-
-        local button_colour = ts.quarry_status_to_colour(turtle.metadata.status)
-
-        local location_line
-        if turtle.metadata.current_location then
-            location_line = ("%d %d %d"):format(
-                turtle.metadata.current_location.x,
-                turtle.metadata.current_location.y,
-                turtle.metadata.current_location.z)
-        end
-
-        local lines = {
-            turtle.id,
-            turtle.metadata.status,
-            location_line
-        }
-
-        if self.container:element_exists(turtle.id) then
-            self.container:update_element(turtle.id, "text", lines)
-            self.container:update_element(turtle.id, "button_colour", button_colour)
-        else
-            local button = Button:new(self.m, {
-                    width = self.default_button_size.width,
-                    height = self.default_button_size.height,
-                },
-                lines,
-                colours.black,
-                button_colour,
-                function() self.page_switcher("quarry_info", turtle.id) end)
-            self.container:add_element(turtle.id, button)
-        end
-        index = index + 1
-
-
-        ::continue::
     end
 
+    -- Remove anything that shouldn't be on screen now
+    for id in pairs(self.rendered_ids) do
+        if not valid_ids[id] then
+            self.container:remove_element(id)
+        end
+    end
+    self.rendered_ids = valid_ids
+
+    -- Pager
     self.pager:set_total_pages(math.ceil(#quarry_list / self.page_size))
     if self.pager.total_pages > 1 then
-        self.pager:set_total_pages(self.pager.total_pages)
-
         local _, monitor_height = self.m:get_monitor_size()
-
         local pager_x = self.m.center_x_within(self.pager:total_width(), self.size.width)
         local pager_y = monitor_height - 1
-
         self.pager:render(x + pager_x + 1, pager_y)
     end
 

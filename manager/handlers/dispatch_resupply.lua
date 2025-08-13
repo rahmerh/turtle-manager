@@ -1,14 +1,13 @@
-local turtle_store = require("turtle_store")
 local wireless = require("wireless")
 
 local printer = require("lib.printer")
 local errors = require("lib.errors")
 local dispatch_utils = require("dispatch_helpers")
 
-return function(sender, msg)
+return function(sender, msg, turtle_store)
     wireless.ack(sender, msg)
 
-    local runners = turtle_store.get_by_role("runner")
+    local runners = turtle_store:get_by_role("runner")
     if not runners and next(runners) == nil then
         return nil, errors.wireless.NO_AVAILABLE_RUNNERS
     end

@@ -1,14 +1,20 @@
-local turtle_store = require("turtle_store")
+local string_util = require("lib.string_util")
 
-local errors = require("lib.errors")
+return function(sender, msg, turtle_store)
+    if msg.job_type == "quarry" then
+        -- TODO: Auto pickup
+        -- local id = dispatch_utils.find_least_queued(runners, sender)
+        local updated = turtle_store:update(sender, {
+            ["metadata.status"] = "Completed",
+            ["metadata.current_location"] = msg.coordinates,
+        })
 
-return function(sender, msg)
-    local runners = turtle_store.get_by_role("runner")
-    if not runners and next(runners) == nil then
-        return nil, errors.wireless.NO_AVAILABLE_RUNNERS
+        return updated
+    elseif msg.job_type == "pickup" and string_util.starts_with(msg.what, "turtle") then
+        local id = string_util.split_by(msg.what, ":")[2]
+
+        turtle_store:delete(tonumber(id))
+
+        return tonumber(id)
     end
-
-    -- TODO: Auto pickup
-    -- local id = dispatch_utils.find_least_queued(runners, sender)
-    return turtle_store.set_status(sender, "Completed")
 end

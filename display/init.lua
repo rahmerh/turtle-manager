@@ -1,8 +1,9 @@
 local Sidebar = require("display.elements.sidebar")
-local Page = require("display.elements.page")
 local Container = require("display.elements.container")
 local Background = require("display.elements.background")
 local Ruler = require("display.elements.ruler")
+
+local Page = require("display.pages.page")
 
 local MonitorHelper = require("display.monitor_helper")
 local TaskRunner = require("display.task_runner")
@@ -79,6 +80,8 @@ function Display:new(monitor)
 end
 
 function Display:on_resize()
+    self.m:clear()
+
     local monitor_width, monitor_height = self.m:get_monitor_size()
     self.m:reset_text_scale()
 
@@ -146,6 +149,11 @@ end
 
 function Display:add_or_update_turtle(id, turtle)
     self.turtles[id] = turtle
+    os.queueEvent("ui:render")
+end
+
+function Display:delete_turtle(id)
+    self.turtles[id] = nil
     os.queueEvent("ui:render")
 end
 

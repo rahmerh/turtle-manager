@@ -132,8 +132,9 @@ local function main()
         end
     end
 
-    job.set_status(job.statuses.starting)
-    if not job.status() == job.statuses.created then
+    if job.status() == job.statuses.created then
+        job.set_status(job.statuses.starting)
+
         local moved, moved_error = movement.move_to(
             boundaries.starting_position.x,
             boundaries.starting_position.y,
@@ -145,6 +146,7 @@ local function main()
         end
     end
 
+    job.set_status(job.statuses.starting)
     if job.status() == job.statuses.paused then
         movement.pause()
     end
@@ -265,7 +267,7 @@ local function main()
         boundaries.starting_position.z,
         movement_context)
 
-    wireless.completed.signal_completed(manager_id, movement.get_current_coordinates())
+    wireless.completed.quarry_done(manager_id, movement.get_current_coordinates())
 end
 
 parallel.waitForAny(start_heartbeat, wireless.router.loop, main, kill_switch)

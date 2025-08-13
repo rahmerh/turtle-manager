@@ -2,6 +2,7 @@ local QuarriesPage = require("display.pages.quarries")
 local RunnersPage = require("display.pages.runners")
 local QuarryDetailsPage = require("display.pages.quarry_details")
 local RunnerDetailsPage = require("display.pages.runner_details")
+local SettingsPage = require("display.pages.settings")
 
 local page = {
     pages = {
@@ -9,6 +10,7 @@ local page = {
         runners = "runners",
         quarry_info = "quarry_info",
         runner_info = "runner_info",
+        settings = "settings",
     }
 }
 page.__index = page
@@ -23,6 +25,8 @@ local function get_page_from_selected(self, selected)
         result = self.quarry_info_page
     elseif selected == page.pages.runner_info then
         result = self.runner_info_page
+    elseif selected == page.pages.settings then
+        result = self.settings_page
     end
 
     return result
@@ -34,6 +38,7 @@ function page:new(m, size, page_switcher, task_runner)
         runners_page = RunnersPage:new(m, size, page_switcher),
         quarry_info_page = QuarryDetailsPage:new(m, size, page_switcher, task_runner),
         runner_info_page = RunnerDetailsPage:new(m, size, page_switcher, task_runner),
+        settings_page = SettingsPage.new(m),
     }, self)
 end
 

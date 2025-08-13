@@ -80,6 +80,7 @@ wireless.router.register_handler(wireless.protocols.rpc, "pickup:dispatch", func
     local task = {
         job_id = m.data.job_id,
         target = m.data.target,
+        what = m.data.what,
         task_type = "pickup",
         requester = m.data.requester,
     }
@@ -191,7 +192,9 @@ local function main()
             active_task = nil
             goto continue
         elseif which_completed == 1 then
-            wireless.completed.signal_completed(manager_id, movement.get_current_coordinates())
+            if task.task_type == "pickup" then
+                wireless.completed.pickup_done(manager_id, task.what)
+            end
 
             -- Unload inventory
             inventory.drop_slots(2, 16, "down")

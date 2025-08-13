@@ -7,7 +7,9 @@ local printer = require("lib.printer")
 return function(task, config, movement_context, report_progress)
     if not task.stage then
         -- TODO: Print what it's picking up.
-        printer.print_info(("[%s] Picking up 'TODO' at %d %d %d"):format(task.job_id,
+        printer.print_info(("[%s] Picking up %s at %d %d %d"):format(
+            task.job_id,
+            task.what,
             task.target.x,
             task.target.y,
             task.target.z))

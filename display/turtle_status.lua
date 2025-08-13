@@ -1,6 +1,7 @@
 local turtle_status = {
     quarry = {
-        active = "In progress"
+        active = "In progress",
+        starting = "Starting"
     },
     runner = {
         running = "Running"
@@ -49,7 +50,7 @@ end
 
 function turtle_status.is_turtle_active(status)
     local is_running = status == turtle_status.runner.running
-    local is_in_progress = status == turtle_status.quarry.active
+    local is_in_progress = status == turtle_status.quarry.active or status == turtle_status.quarry.starting
 
     return is_running or is_in_progress
 end

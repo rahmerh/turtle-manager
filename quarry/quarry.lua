@@ -181,7 +181,7 @@ function quarry.unload(manager_id)
 
     local current_coordinates = movement.get_current_coordinates()
     current_coordinates.y = current_coordinates.y - 1 -- Adjust down, since we're on top of the chest.
-    wireless.pickup.request(manager_id, current_coordinates)
+    wireless.pickup.request(manager_id, current_coordinates, "chest")
 
     if not scanner.is_free("forward") then
         miner.mine()

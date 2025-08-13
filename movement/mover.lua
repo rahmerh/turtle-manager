@@ -328,6 +328,29 @@ local function try_unstuck_moving_back_and_under()
     return false
 end
 
+local function try_unstuck_moving_around_vertical()
+    local moved, moved_err
+    while not scanner.is_free("down") do
+        moved, moved_err = mover.move_forward()
+
+        if not moved and moved_err == errors.NO_FUEL then
+            return moved, moved_err
+        end
+    end
+
+    if moved then
+        local moved_down, moved_down_err = mover.move_down()
+
+        if not moved_down and moved_down_err == errors.NO_FUEL then
+            return moved_down, moved_down_err
+        end
+
+        return true
+    end
+
+    return false
+end
+
 mover.move_to = function(x, y, z, dig, state)
     dig = dig or false
 
@@ -345,10 +368,6 @@ mover.move_to = function(x, y, z, dig, state)
             z = z - pos.z
         }
 
-        if delta.x == 0 and delta.y == 0 and delta.z == 0 then
-            return true
-        end
-
         local ordered_deltas = sort_axis(delta)
 
         local moved, err
@@ -365,12 +384,30 @@ mover.move_to = function(x, y, z, dig, state)
             end
         end
 
+        pos = locator.get_current_coordinates()
+        if not pos then
+            return nil, errors.NO_GPS
+        end
+        delta = {
+            x = x - pos.x,
+            y = y - pos.y,
+            z = z - pos.z
+        }
+
+        if delta.x == 0 and delta.y == 0 and delta.z == 0 then
+            return true
+        end
+
         -- Try some unstuck manouvers
         if not moved then
             local got_unstuck = try_unstuck_moving_over()
 
             if not got_unstuck then
                 got_unstuck = try_unstuck_moving_back_and_under()
+            end
+
+            if not got_unstuck then
+                got_unstuck = try_unstuck_moving_around_vertical()
             end
 
             if got_unstuck then

@@ -1,92 +1,93 @@
-local time = require("lib.time")
+local TurtleStore = {}
+TurtleStore.__index = TurtleStore
 
-local turtle_store = {}
-
-local TURTLE_FILE = "turtles.db"
-
-local turtles = {}
-
-local function save()
-    local f = fs.open(TURTLE_FILE, "w")
-    f.write(textutils.serialize(turtles))
-    f.close()
-end
-
-local function ensure_loaded()
-    if not fs.exists(TURTLE_FILE) then
-        turtles = {}
-        return
-    end
-
-    local f = fs.open(TURTLE_FILE, "r")
-    local raw = f.readAll()
-    f.close()
-
-    turtles = textutils.unserialize(raw)
-end
-
-function turtle_store.get(id)
-    ensure_loaded()
-
-    return turtles[id]
-end
-
-function turtle_store.get_by_role(role)
-    ensure_loaded()
-
+local function split(path)
     local result = {}
-    for id, turtle in pairs(turtles) do
-        if turtle.role == role then
-            result[id] = turtle
-        end
+
+    for token in string.gmatch(path, "[^%.]+") do
+        local n = tonumber(token)
+        result[#result + 1] = n or token
     end
 
     return result
 end
 
-function turtle_store.update(id, data)
-    ensure_loaded()
-
-    local rec = turtles[id] or { id = id }
-
-    if data.last_seen then
-        rec.last_seen = data.last_seen
+local function walk(root, tokens)
+    local t = root
+    for i = 1, #tokens - 1 do
+        local k = tokens[i]
+        if type(t[k]) ~= "table" then
+            t[k] = {}
+        end
+        t = t[k]
     end
-    if data.status then
-        rec.status = data.status
-    end
-    if data.metadata then
-        rec.metadata = data.metadata
-    end
-
-    turtles[id] = rec
-
-    save()
-    return rec
+    return t, tokens[#tokens]
 end
 
-function turtle_store.set_status(id, status)
-    ensure_loaded()
+function TurtleStore.new(path)
+    local self = setmetatable({
+        _path = path or "turtles.db",
+        _turtles = {},
+    }, TurtleStore)
 
-    if not turtles[id] or not turtles[id].metadata then
-        return
+    if fs.exists(self._path) then
+        local f = fs.open(self._path, "r")
+        local raw = f.readAll(); f.close()
+        self._turtles = textutils.unserialize(raw) or {}
     end
 
-    turtles[id].metadata.status = status
-    save()
-    return turtles[id]
+    return self
 end
 
-function turtle_store.upsert(id, data)
-    ensure_loaded()
-
-    turtles[id] = data
-    save()
+function TurtleStore:save()
+    local file = fs.open(self._path, "w")
+    file.write(textutils.serialize(self._turtles))
+    file.close()
 end
 
-function turtle_store.list()
-    ensure_loaded()
-    return turtles
+function TurtleStore:get(id)
+    return self._turtles[id]
 end
 
-return turtle_store
+function TurtleStore:get_by_role(role)
+    local result = {}
+
+    for id, turtle in pairs(self._turtles) do
+        if turtle.role == role then result[id] = turtle end
+    end
+
+    return result
+end
+
+function TurtleStore:update(id, data)
+    if not self._turtles[id] then
+        self._turtles[id] = {}
+    end
+
+    for k, v in pairs(data) do
+        local tokens = split(k)
+        local parent, last = walk(self._turtles[id], tokens)
+
+        parent[last] = v
+    end
+
+    self:save()
+
+    return self._turtles[id]
+end
+
+function TurtleStore:upsert(id, data)
+    self._turtles[id] = data
+    self:save()
+end
+
+function TurtleStore:list()
+    return self._turtles
+end
+
+function TurtleStore:delete(id)
+    self._turtles[id] = nil
+    self:save()
+end
+
+return TurtleStore

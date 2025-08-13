@@ -14,4 +14,17 @@ function string_util.capitalize(value)
     return value:gsub("^%l", string.upper)
 end
 
+function string_util.starts_with(str, value)
+    return str:sub(1, #value) == value
+end
+
+function string_util.split_by(str, seperator)
+    local result = {}
+    local pattern = "([^" .. seperator .. "]+)"
+    for part in str:gmatch(pattern) do
+        table.insert(result, part)
+    end
+    return result
+end
+
 return string_util
