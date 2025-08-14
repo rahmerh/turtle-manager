@@ -25,7 +25,7 @@ function commands.confirm_kill(receiver, id, coordinates)
 end
 
 function commands.kill_turtle(receiver)
-    local message_id = core.send(receiver, { operation = "command:kill", }, "rpc")
+    local _, message_id = core.send(receiver, { operation = "command:kill", }, "rpc")
 
     local ok, _, msg, _ = core.await_response_on(message_id)
 

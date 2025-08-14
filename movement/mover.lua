@@ -288,6 +288,8 @@ local function try_unstuck_moving_over()
 
         if not moved_up and moved_up_err == errors.NO_FUEL then
             return moved_up, moved_up_err
+        elseif not moved_up then
+            break
         end
     end
 
@@ -305,21 +307,26 @@ local function try_unstuck_moving_over()
     return false
 end
 
-local function try_unstuck_moving_back_and_under()
+local function try_unstuck_moving_back_and_over()
     local moved_back, moved_back_err
     while not scanner.is_free("up") do
         moved_back, moved_back_err = mover.move_back()
 
         if not moved_back and moved_back_err == errors.NO_FUEL then
             return moved_back, moved_back_err
+        elseif not moved_back then
+            break
         end
     end
 
     if moved_back then
         local moved_up, moved_up_err = mover.move_up()
 
-        if not moved_up and moved_up_err == errors.NO_FUEL then
-            return moved_up, moved_up_err
+        while not scanner.is_free("forward") and scanner.is_free("up") do
+            moved_up, moved_up_err = mover.move_up()
+            if not moved_up and moved_up_err == errors.NO_FUEL then
+                return moved_up, moved_up_err
+            end
         end
 
         return true
@@ -335,6 +342,8 @@ local function try_unstuck_moving_around_vertical()
 
         if not moved and moved_err == errors.NO_FUEL then
             return moved, moved_err
+        elseif not moved then
+            break
         end
     end
 
@@ -410,7 +419,7 @@ mover.move_to = function(x, y, z, dig, state)
             local got_unstuck = try_unstuck_moving_over()
 
             if not got_unstuck then
-                got_unstuck = try_unstuck_moving_back_and_under()
+                got_unstuck = try_unstuck_moving_back_and_over()
             end
 
             if not got_unstuck then

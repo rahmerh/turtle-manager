@@ -4,12 +4,41 @@ local container = {
     layouts = {
         horizontal_rows = "horizontal_rows",
         vertical_columns = "vertical_columns",
+        vertical_flow = "vertical_flow",
         manual = "manual"
     }
 }
 container.__index = container
 
-local function render_elements_horizontally(self, container_x, container_y, data)
+local function render_vertical_flow(self, container_x, container_y, data)
+    local x = container_x + self.padding.left
+    local y = container_y + self.padding.top
+
+    for _, key in ipairs(self.render_order) do
+        local child = self.children[key]
+
+        if not child then
+            error("An error occured, can't find the element with key: " .. key)
+        end
+
+        local element = child.element
+
+        local element_x, element_y
+        if child.offset then
+            element_x = x + (child.offset.x_offset or 0)
+            element_y = y + (child.offset.y_offset or 0)
+        else
+            element_x = x
+            element_y = y
+        end
+
+        element:render(element_x, element_y, data)
+
+        y = element_y + element.size.height
+    end
+end
+
+local function render_horizontal_rows(self, container_x, container_y, data)
     local x = container_x + self.padding.left
     local y = container_y + self.padding.top
 
@@ -44,7 +73,7 @@ local function render_elements_horizontally(self, container_x, container_y, data
     end
 end
 
-local function render_elements_vertically(self, container_x, container_y, data)
+local function render_vertical_columns(self, container_x, container_y, data)
     local x = container_x + self.padding.left
     local y = container_y + self.padding.top
 
@@ -134,17 +163,17 @@ function container:add_element(id, element, position_offset)
     end
 
     local offset
-    if self.layout == self.layouts.manual and not position_offset then
-        offset = {
-            x_offset = 0,
-            y_offset = 0,
-            respect_padding = false
-        }
-    elseif self.layout == self.layouts.manual then
+    if position_offset then
         offset = {
             x_offset = (position_offset.x_offset or 0),
             y_offset = (position_offset.y_offset or 0),
             respect_padding = position_offset.respect_padding
+        }
+    else
+        offset = {
+            x_offset = 0,
+            y_offset = 0,
+            respect_padding = false
         }
     end
 
@@ -253,11 +282,13 @@ function container:render(x, y, data)
     end
 
     if self.layout == self.layouts.horizontal_rows then
-        render_elements_horizontally(self, x, y, data)
+        render_horizontal_rows(self, x, y, data)
     elseif self.layout == self.layouts.vertical_columns then
-        render_elements_vertically(self, x, y, data)
+        render_vertical_columns(self, x, y, data)
     elseif self.layout == self.layouts.manual then
         render_elements_manually(self, x, y, data)
+    elseif self.layout == self.layouts.vertical_flow then
+        render_vertical_flow(self, x, y, data)
     end
 end
 

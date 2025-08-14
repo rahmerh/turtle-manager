@@ -1,16 +1,12 @@
+local notify = require("wireless._internal.notify")
 local core = require("wireless._internal.core")
 
-local heartbeat = {}
-
-local PROTOCOL = "telemetry"
+local heartbeat = {
+    operation = "heartbeat:beat"
+}
 
 local function beat(receiver, data)
-    core.send(receiver, {
-        operation = "heartbeat:beat",
-        id = os.getComputerID(),
-        timestamp = os.epoch("utc"),
-        data = data
-    }, PROTOCOL)
+    return notify.send(receiver, heartbeat.operation, core.protocols.telemetry, data)
 end
 
 function heartbeat.loop(receiver, interval, data_fn)

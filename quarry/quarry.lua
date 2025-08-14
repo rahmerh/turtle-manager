@@ -1,23 +1,12 @@
-local movement      = require("movement")
-local wireless      = require("wireless")
+local movement  = require("movement")
+local wireless  = require("wireless")
 
-local list          = require("lib.list")
-local inventory     = require("lib.inventory")
-local printer       = require("lib.printer")
-local miner         = require("lib.miner")
-local scanner       = require("lib.scanner")
+local inventory = require("lib.inventory")
+local printer   = require("lib.printer")
+local miner     = require("lib.miner")
+local scanner   = require("lib.scanner")
 
-local quarry        = {}
-
-local fluids        = {
-    "minecraft:water",
-    "minecraft:lava"
-}
-
-local filler_blocks = {
-    "minecraft:cobblestone",
-    "minecraft:deepslate",
-}
+local quarry    = {}
 
 function quarry.get_row_direction_for_layer(width, layer)
     if width % 2 == 1 then
@@ -78,10 +67,6 @@ function quarry.starting_location_for_row(layer, row, boundaries)
     }
 end
 
-function quarry.is_fluid_block(name)
-    return list.contains(fluids, name)
-end
-
 function quarry.mine_bedrock_layer(start_x, start_z, width, depth, movement_context)
     movement.move_to(start_x, -59, start_z, movement_context)
     movement.turn_to_direction("north")
@@ -134,25 +119,13 @@ function quarry.mine_bedrock_layer(start_x, start_z, width, depth, movement_cont
         end
 
         if row % 2 == 0 then
-            movement.move_up(movement_context)
-            movement.move_up(movement_context)
-
             movement.turn_left()
             movement.move_forward(movement_context)
             movement.turn_left()
-
-            movement.move_down(movement_context)
-            movement.move_down(movement_context)
         else
-            movement.move_up(movement_context)
-            movement.move_up(movement_context)
-
             movement.turn_right()
             movement.move_forward(movement_context)
             movement.turn_right()
-
-            movement.move_down(movement_context)
-            movement.move_down(movement_context)
         end
 
         to_move_forward = depth - 1
@@ -179,9 +152,9 @@ function quarry.unload(manager_id)
     turtle.placeDown()
     inventory.drop_slots(3, 16, "down")
 
-    local current_coordinates = movement.get_current_coordinates()
-    current_coordinates.y = current_coordinates.y - 1 -- Adjust down, since we're on top of the chest.
-    wireless.pickup.request(manager_id, current_coordinates, "chest")
+    local chest_coordinates = movement.get_current_coordinates()
+    chest_coordinates.y = chest_coordinates.y - 1 -- Adjust down, since we're on top of the chest.
+    wireless.pickup.request(manager_id, chest_coordinates, "chest")
 
     if not scanner.is_free("forward") then
         miner.mine()
@@ -189,6 +162,81 @@ function quarry.unload(manager_id)
 
     movement.move_forward()
     movement.move_down()
+end
+
+function quarry.mine_layer(layer, boundaries, start_from_row, on_row_done, manager_id, fluid_tracker)
+    local direction = quarry.get_row_direction_for_layer(boundaries.width, layer)
+    local movement_context = { dig = true, manager_id = manager_id }
+
+    local rows, length
+    if direction == "north" or direction == "south" then
+        rows = boundaries.width - start_from_row
+        length = boundaries.depth - 1
+    else
+        rows = boundaries.depth - start_from_row
+        length = boundaries.width - 1
+    end
+
+    for _ = 1, rows do
+        local coords = quarry.starting_location_for_row(layer, start_from_row, boundaries)
+
+        local moved, moved_error = movement.move_to(coords.x, coords.y, coords.z, movement_context)
+
+        if not moved then error("Turtle stuck: " .. moved_error) end
+
+        local face = (start_from_row % 2 == 0) and direction or movement.opposite_of(direction)
+        movement.turn_to_direction(face)
+
+        if fluid_tracker then
+            local fluid_in_column = scanner.is_fluid("up")
+
+            if not fluid_in_column then
+                fluid_in_column = scanner.is_fluid("down")
+            end
+
+            if fluid_in_column then
+                fluid_tracker:add(movement.get_current_coordinates())
+            end
+        end
+
+        miner.mine_up(); miner.mine_down()
+        for _ = 1, length do
+            local ok, err = miner.mine()
+
+            local fluid_detected
+            if fluid_tracker then
+                fluid_detected = scanner.is_fluid("forward")
+            end
+
+            if not ok and err then
+                printer.print_error(err); return false, err
+            end
+
+            movement.move_forward(movement_context)
+            miner.mine_up(); miner.mine_down()
+
+            if fluid_tracker and not fluid_detected then
+                fluid_detected = scanner.is_fluid("up") or scanner.is_fluid("down")
+            end
+
+            if inventory.are_all_slots_full() then
+                quarry.unload(manager_id)
+            end
+
+            if fluid_tracker then
+                fluid_tracker:add(movement.get_current_coordinates())
+            end
+        end
+
+        start_from_row = start_from_row + 1
+        on_row_done()
+    end
+
+    if fluid_tracker then
+        return true, fluid_tracker:drain()
+    else
+        return true
+    end
 end
 
 return quarry

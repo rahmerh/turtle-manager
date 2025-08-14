@@ -1,4 +1,5 @@
 local job = require("job")
+
 local printer = require("lib.printer")
 
 if not job.exists() then
@@ -12,6 +13,7 @@ local movement = require("movement")
 
 local inventory = require("lib.inventory")
 local miner = require("lib.miner")
+local FluidTracker = require("lib.fluid-tracker")
 
 printer.print_info("Booting quarry #" .. os.getComputerID())
 
@@ -28,11 +30,11 @@ if not manager_id and find_err then
     return
 end
 
-wireless.router.register_handler(wireless.protocols.rpc, "command:reboot", function(sender, m)
-    wireless.ack(sender, m)
-    printer.print_warning("Received reboot command.")
-    os.reboot()
-end)
+local settings
+local boundaries = job.get_boundaries()
+local metadata = {
+    boundaries = boundaries
+}
 
 wireless.router.register_handler(wireless.protocols.rpc, "command:pause", function(sender, m)
     wireless.ack(sender, m)
@@ -48,12 +50,18 @@ wireless.router.register_handler(wireless.protocols.rpc, "command:resume", funct
     printer.print_info("Resuming...")
 end)
 
+wireless.router.register_handler(wireless.protocols.rpc, "settings:update", function(sender, m)
+    wireless.ack(sender, m)
+
+    printer.print_info(("Setting %s updated..."):format(m.data.key))
+end)
+
 local running = true
 wireless.router.register_handler(wireless.protocols.rpc, "command:kill", function(sender, m)
     movement.pause()
     job.set_status(job.statuses.offline)
 
-    sleep(1) -- Allow turtle to stop.
+    sleep(1) -- llow turtle to stop.
 
     local coordinates = movement.get_current_coordinates()
 
@@ -71,11 +79,6 @@ local movement_context = {
 local movement_context_with_dig = {
     dig = true,
     manager_id = manager_id
-}
-
-local boundaries = job.get_boundaries()
-local metadata = {
-    boundaries = boundaries
 }
 
 local start_heartbeat, _ = wireless.heartbeat.loop(manager_id, 1, function()
@@ -103,7 +106,7 @@ local function kill_switch()
 end
 
 local function main()
-    wireless.registry.register_self_as(manager_id, "quarry", metadata)
+    settings = wireless.registry.announce_at(manager_id, "quarry", metadata)
 
     local needed_supplies = {}
     if not inventory.is_item_in_slot("minecraft:coal", 1) then
@@ -146,65 +149,34 @@ local function main()
         end
     end
 
-    job.set_status(job.statuses.starting)
     if job.status() == job.statuses.paused then
         movement.pause()
     end
 
+    local track_fluids = settings.fill_quarry_fluids
+    local fluid_tracker
+    if track_fluids then
+        fluid_tracker = FluidTracker.new()
+    end
+
     printer.print_info("Quarry #" .. os.getComputerID() .. " in progress...")
 
+    local row_done_callback = function()
+        job.increment_row()
+    end
+
+    job.set_status(job.statuses.in_progress)
     while job.current_layer() > 0 do
-        local direction = quarry.get_row_direction_for_layer(boundaries.width, job.current_layer())
+        local _, fluid_columns = quarry.mine_layer(
+            job.current_layer(),
+            boundaries,
+            job.current_row(),
+            row_done_callback,
+            manager_id,
+            fluid_tracker)
 
-        local rows, length
-        if direction == "north" or direction == "south" then
-            rows = boundaries.width - job.current_row()
-            length = boundaries.depth - 1
-        else
-            rows = boundaries.depth - job.current_row()
-            length = boundaries.width - 1
-        end
-
-        for _ = 1, rows do
-            local coords = quarry.starting_location_for_row(job.current_layer(), job.current_row(), boundaries)
-            local moved, moved_error = movement.move_to(coords.x, coords.y, coords.z, movement_context_with_dig)
-
-            job.set_status(job.statuses.in_progress)
-
-            if not moved then
-                error("Turtle stuck: " .. moved_error)
-            end
-
-            local orientation_to_face
-            if job.current_row() % 2 == 0 then
-                orientation_to_face = direction
-            else
-                orientation_to_face = movement.opposite_of(direction)
-            end
-            movement.turn_to_direction(orientation_to_face)
-
-            miner.mine_up()
-            miner.mine_down()
-
-            for _ = 1, length do
-                local success, err = miner.mine()
-
-                if not success and err then
-                    printer.print_error(err)
-                    return
-                end
-
-                movement.move_forward(movement_context)
-
-                miner.mine_up()
-                miner.mine_down()
-
-                if inventory.are_all_slots_full() then
-                    quarry.unload(manager_id)
-                end
-            end
-
-            job.increment_row()
+        if track_fluids then
+            wireless.fluid_fill.report(manager_id, fluid_columns)
         end
 
         job.next_layer()

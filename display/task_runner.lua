@@ -9,7 +9,6 @@ local task_runner   = {
     tasks = {
         pause = "pause",
         resume = "resume",
-        reboot = "reboot",
         recover = "recover",
         nudge_task = "nudge_task",
     },
@@ -26,11 +25,6 @@ function task_runner:new(notifier)
         resume = function(data)
             local ok, err = wireless.turtle_commands.resume_turtle(data.id)
             if not ok then error(err or "resume failed") end
-            return true
-        end,
-        reboot = function(data)
-            local ok, err = wireless.turtle_commands.reboot_turtle(data.id)
-            if not ok then error(err or "reboot failed") end
             return true
         end,
         recover = function(data)

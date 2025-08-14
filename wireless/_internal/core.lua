@@ -1,45 +1,35 @@
-local time = require("lib.time")
-
-local core = {}
+local core = {
+    protocols = {
+        rpc = "rpc",
+        notify = "notify",
+        telemetry = "telemetry",
+    }
+}
 
 math.randomseed((os.epoch("utc") % (2 ^ 31)) + os.getComputerID()); math.random(); math.random()
 local function next_id()
-    return ("%08x%04x"):format(math.random(0, 0xffffffff), math.random(0, 0xffff))
+    return ("%d-%d-%d"):format(os.getComputerID(), os.epoch("utc"), math.random(1, 1e9))
 end
 
 function core.open() peripheral.find("modem", rednet.open) end
 
 function core.close(side) rednet.close(side) end
 
-function core.send(receiver, payload, protocol, id)
-    if not id then
-        id = next_id()
+function core.send(receiver, payload, protocol)
+    if not core.protocols[protocol] then
+        error(("Invalid protocol: %s"):format(protocol))
     end
+
+    local id = next_id()
     payload.id = id
 
-    rednet.send(receiver, payload, protocol)
+    local ok = rednet.send(receiver, payload, protocol)
 
-    return id
+    return ok, id
 end
 
-function core.await_response_on(id, timeout)
-    timeout     = timeout or 5
-
-    local event = ("rn:%s"):format(id)
-    local timer = os.startTimer(timeout)
-
-    while true do
-        local e, a, b, c = os.pullEvent()
-        if e == event then
-            return true, a, b, c
-        end
-
-        if timer and e == "timer" and a == timer then
-            return false, "timeout"
-        end
-    end
+function core.receive(timeout)
+    return rednet.receive(nil, timeout)
 end
-
-function core.receive(timeout) return rednet.receive(nil, timeout) end
 
 return core

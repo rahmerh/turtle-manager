@@ -7,6 +7,7 @@ function toggle.new(m, label, label_colours, initial_value, on_toggle)
         label = label,
         size = {
             width = 10,
+            height = 1,
         },
         label_colours = label_colours,
         state = initial_value,
@@ -32,7 +33,7 @@ function toggle:handle_click(x, y)
     end
 end
 
-function toggle:render(x, y)
+function toggle:render(x, y, _)
     local toggle_start_x = x + string.len(self.label) + 1 -- + 1 for padding
 
     self.x = toggle_start_x

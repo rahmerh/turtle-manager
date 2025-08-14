@@ -36,12 +36,16 @@ function discovery.find(role, name)
         error("Role can't be nil")
     end
 
-    local deadline = time.alive_duration_in_seconds() + 5
+    local deadline = time.alive_duration_in_seconds() + 20
 
     repeat
         local id = rednet.lookup(protocol_from_role(role), name)
-        if id then return id end
-        sleep(0.5)
+
+        if id then
+            return id
+        end
+
+        sleep(1)
     until time.alive_duration_in_seconds() >= deadline
 
     return nil, "not_found"

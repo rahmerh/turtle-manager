@@ -11,7 +11,8 @@ local string_util = require("lib.string_util")
 local handlers = {
     dispatch_pickup = require("handlers.dispatch_pickup"),
     dispatch_resupply = require("handlers.dispatch_resupply"),
-    handle_job_completed = require("handlers.handle_job_completed")
+    dispatch_fluid_fill = require("handlers.dispatch_fluid_fill"),
+    handle_job_completed = require("handlers.handle_job_completed"),
 }
 
 local turtle_store = TurtleStore.new()
@@ -34,7 +35,15 @@ if monitor then
     end
 end
 
-wireless.router.register_handler(wireless.protocols.telemetry, "heartbeat:beat", function(sender, msg)
+settings:register_on_change(function(key, value)
+    local turtles = turtle_store:list()
+
+    for id, _ in pairs(turtles) do
+        wireless.settings.update_setting_on(id, key, value)
+    end
+end)
+
+wireless.router.register_handler(wireless.protocols.telemetry, wireless.heartbeat.operation, function(sender, msg)
     local turtle = turtle_store:get(sender)
 
     if not turtle then return false end
@@ -52,19 +61,17 @@ wireless.router.register_handler(wireless.protocols.telemetry, "heartbeat:beat",
     return true
 end)
 
-wireless.router.register_handler(wireless.protocols.rpc, "registry:register", function(sender, m)
-    wireless.ack(sender, m)
-
+wireless.router.register_handler(wireless.protocols.rpc, "registry:register", function(sender, msg)
     local data = {
-        role = m.data.role,
-        metadata = m.data.metadata
+        role = msg.data.role,
+        metadata = msg.data.metadata
     }
 
     turtle_store:upsert(sender, data)
 
-    printer.print_info("New turtle registered: #" .. sender .. " '" .. data.role .. "'")
+    wireless.registry.respond(sender, msg.id, settings:list())
 
-    return true
+    printer.print_info("New turtle registered: #" .. sender .. " '" .. data.role .. "'")
 end)
 
 wireless.router.register_handler(wireless.protocols.rpc, "pickup:request", function(sender, msg)
@@ -79,7 +86,7 @@ wireless.router.register_handler(wireless.protocols.rpc, "job:completed", functi
     local turtle = handlers.handle_job_completed(sender, msg, turtle_store)
 
     if msg.job_type == "quarry" then
-        if settings:read(Settings.keys.AUTO_RECOVER_QUARRIES) == true then
+        if settings:read(settings.keys.auto_recover_quarries) == true then
             local pickup_message = {
                 id = sender,
                 operation = "pickup:request",
@@ -100,6 +107,10 @@ wireless.router.register_handler(wireless.protocols.rpc, "job:completed", functi
             display:delete_turtle(turtle)
         end
     end
+end)
+
+wireless.router.register_handler(wireless.protocols.rpc, "fluid_fill:report", function(sender, msg)
+    handlers.dispatch_fluid_fill(sender, msg, turtle_store)
 end)
 
 local function mark_stale()

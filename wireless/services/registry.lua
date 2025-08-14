@@ -8,11 +8,18 @@ local registry = {}
 --- @param manager_id integer
 --- @param role string              -- e.g. "quarry", "runner", "manager"
 --- @return true|nil, string?       -- true or nil,"no_ack"
-function registry.register_self_as(manager_id, role, metadata)
-    local ok, _ = rpc.call(manager_id, "registry:register", { role = role, metadata = metadata })
-    if not ok then return nil, errors.wireless.NO_ACK end
+function registry.announce_at(manager_id, role, metadata)
+    local id, response = rpc.call(manager_id, "registry:register", { role = role, metadata = metadata })
 
-    return true
+    if not id then
+        return nil, errors.wireless.NO_ACK
+    end
+
+    return response.data.settings
+end
+
+function registry.respond(receiver, msg_id, settings)
+    rpc.respond_on(receiver, msg_id, { settings = settings })
 end
 
 return registry

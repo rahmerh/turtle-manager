@@ -60,6 +60,7 @@ The turtles only request coal, chests and cobblestone, so make sure to always ha
 - Continue quarry while waiting for supplies.
 - Improve unstuck methods + report turtle is stuck on the dashboard.
 - Turtle waiting bay + shared unloading/supply stations.
+- Different fuel types support
 - Dashboard error screen for:
   - General errors.
   - Monitor too small.

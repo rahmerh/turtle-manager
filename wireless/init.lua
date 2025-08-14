@@ -1,15 +1,8 @@
 local core = require("wireless._internal.core")
-local rpc = require("wireless._internal.rpc")
-
-local protocols = {
-    rpc = "rpc",
-    telemetry = "telemetry"
-}
 
 return {
-    protocols = protocols,
+    protocols = core.protocols,
     open = core.open,
-    ack = rpc.ack,
     router = require("wireless.router"),
     registry = require("wireless.services.registry"),
     heartbeat = require("wireless.services.heartbeat"),
@@ -18,4 +11,6 @@ return {
     turtle_commands = require("wireless.services.turtle-command"),
     pickup = require("wireless.services.pickup"),
     resupply = require("wireless.services.resupply"),
+    fluid_fill = require("wireless.services.fluid-fill"),
+    settings = require("wireless.services.settings"),
 }

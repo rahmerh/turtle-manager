@@ -22,6 +22,7 @@ local errors = {
         NO_ACK = "wireless:no_ack",
         TIMEOUT = "wireless:timeout",
         COULD_NOT_ASSIGN = "wireless:could_not_assign",
+        INVALID_RESPONSE_MESSAGE = "wireless:invalid_response_message",
         NO_AVAILABLE_RUNNERS = "wireless:no_available_runners",
     }
 }

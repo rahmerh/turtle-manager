@@ -11,7 +11,8 @@ printer.print_info("Booting runner #" .. os.getComputerID())
 
 local task_handlers = {
     pickup = require("tasks.pickup"),
-    resupply = require("tasks.resupply")
+    resupply = require("tasks.resupply"),
+    fluid_fill = require("tasks.fluid_fill")
 }
 
 if not fs.exists("runner.conf") then
@@ -103,6 +104,20 @@ wireless.router.register_handler(wireless.protocols.rpc, "resupply:dispatch", fu
     task_queue:enqueue(task)
 end)
 
+wireless.router.register_handler(wireless.protocols.rpc, "fluid_fill:dispatch", function(sender, m)
+    wireless.ack(sender, m)
+    printer.print_info(("[%s] Queued task 'fluid fill'"):format(m.data.job_id))
+
+    local task = {
+        job_id = m.data.job_id,
+        task_type = "fluid_fill",
+        requester = m.data.requester,
+        fluid_columns = m.data.fluid_columns,
+    }
+
+    task_queue:enqueue(task)
+end)
+
 wireless.router.register_handler(wireless.protocols.rpc, "command:nudge_task", function(sender, m)
     wireless.ack(sender, m)
 
@@ -143,7 +158,7 @@ wireless.router.register_handler(wireless.protocols.rpc, "command:nudge_task", f
 end)
 
 local function main()
-    wireless.registry.register_self_as(manager_id, "runner")
+    wireless.registry.announce_at(manager_id, "runner")
 
     while true do
         local fuel = inventory.details_from_slot(1)

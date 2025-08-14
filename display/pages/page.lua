@@ -38,7 +38,7 @@ function page:new(m, size, page_switcher, task_runner, settings)
         runners_page = RunnersPage:new(m, size, page_switcher),
         quarry_info_page = QuarryDetailsPage:new(m, size, page_switcher, task_runner),
         runner_info_page = RunnerDetailsPage:new(m, size, page_switcher, task_runner),
-        settings_page = SettingsPage.new(m, settings),
+        settings_page = SettingsPage.new(m, size, settings, task_runner),
     }, self)
 end
 
