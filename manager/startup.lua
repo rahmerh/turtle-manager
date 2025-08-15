@@ -74,15 +74,15 @@ wireless.router.register_handler(wireless.protocols.rpc, "registry:register", fu
     printer.print_info("New turtle registered: #" .. sender .. " '" .. data.role .. "'")
 end)
 
-wireless.router.register_handler(wireless.protocols.rpc, "pickup:request", function(sender, msg)
+wireless.router.register_handler(wireless.protocols.notify, "pickup:request", function(sender, msg)
     handlers.dispatch_pickup(sender, msg, turtle_store)
 end)
 
-wireless.router.register_handler(wireless.protocols.rpc, "resupply:request", function(sender, msg)
+wireless.router.register_handler(wireless.protocols.notify, "resupply:request", function(sender, msg)
     handlers.dispatch_resupply(sender, msg, turtle_store)
 end)
 
-wireless.router.register_handler(wireless.protocols.rpc, "job:completed", function(sender, msg)
+wireless.router.register_handler(wireless.protocols.notify, "job:completed", function(sender, msg)
     local turtle = handlers.handle_job_completed(sender, msg, turtle_store)
 
     if msg.job_type == "quarry" then
@@ -109,7 +109,7 @@ wireless.router.register_handler(wireless.protocols.rpc, "job:completed", functi
     end
 end)
 
-wireless.router.register_handler(wireless.protocols.rpc, "fluid_fill:report", function(sender, msg)
+wireless.router.register_handler(wireless.protocols.notify, "fluid_fill:report", function(sender, msg)
     handlers.dispatch_fluid_fill(sender, msg, turtle_store)
 end)
 

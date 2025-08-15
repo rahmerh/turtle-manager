@@ -1,79 +1,61 @@
+local notify = require("wireless._internal.notify")
 local rpc = require("wireless._internal.rpc")
 local core = require("wireless._internal.core")
 
-local time = require("lib.time")
 local errors = require("lib.errors")
 
 local resupply = {}
 
--- Requester methods
 function resupply.request(receiver, turtle_position, desired_items)
-    local ok, err = rpc.call(receiver, "resupply:request", {
+    notify.send(receiver, "resupply:request", core.protocols.notify, {
         target = turtle_position,
         desired = desired_items
     })
 
-    -- TODO: Handle errors better.
+    local timeout = 60 * 60 -- 1 Hour
+    local sender, _ = core.wait_for_response_on_operation("resupply:arrived", timeout)
 
-    return ok, err
+    return sender
 end
 
-function resupply.await_arrival()
-    while true do
-        local runner_id, msg, _ = core.receive(5)
+function resupply.dispatch(receiver, turtle_position, desired_items, job_id, requested_by)
+    local id, _ = rpc.call(
+        receiver,
+        "resupply:dispatch",
+        core.protocols.rpc, {
+            target = turtle_position,
+            desired = desired_items,
+            requested_by = requested_by,
+            job_id = job_id,
+        })
 
-        if msg and msg.operation == "resupply:arrived" then
-            return runner_id, msg.job_id
-        end
+    if not id then
+        return nil, errors.wireless.NO_ACK
     end
+
+    return true
 end
 
-function resupply.signal_ready(receiver, job_id)
-    core.send(receiver, { job_id = job_id, operation = "resupply:ready" }, "rpc")
+function resupply.notify_queued(receiver, msg_id)
+    rpc.respond_on(receiver, msg_id, "resupply:dispatch", core.protocols.rpc)
+end
+
+function resupply.signal_arrived(receiver)
+    notify.send(receiver, "resupply:arrived", core.protocols.notify)
+
+    core.wait_for_response_on_operation("resupply:ready", 5)
+end
+
+function resupply.signal_ready(receiver)
+    notify.send(receiver, "resupply:ready", core.protocols.notify)
 end
 
 function resupply.await_done()
-    while true do
-        local runner_id, msg, _ = core.receive(5)
-
-        if msg and msg.operation == "resupply:done" then
-            return runner_id, msg.job_id
-        end
-    end
+    core.wait_for_response_on_operation("resupply:done", 5)
 end
 
--- Runner methods
-function resupply.runner_arrived(receiver, job_id)
-    core.send(receiver, { job_id = job_id, operation = "resupply:arrived" }, "rpc")
-end
-
-function resupply.await_ready(job_id)
-    local deadline = time.alive_duration_in_seconds() + 10
-    while true do
-        local runner_id, msg, _ = core.receive(5)
-
-        if msg and msg.operation == "resupply:ready" and job_id == msg.job_id then
-            return runner_id, msg.job_id
-        end
-
-        local now = time.alive_duration_in_seconds()
-        if now > deadline then
-            return nil, errors.wireless.TIMEOUT
-        end
-    end
-end
-
-function resupply.signal_done(receiver, job_id)
-    core.send(receiver, { job_id = job_id, operation = "resupply:done" }, "rpc")
-end
-
--- Manager methods
-function resupply.dispatch(receiver, data)
-    local ok, err = rpc.call(receiver, "resupply:dispatch", data)
-
-    -- TODO: Handle errors better.
-
-    return ok, err
+function resupply.signal_done(receiver)
+    notify.send(receiver, "resupply:done", core.protocols.notify)
 end
 
 return resupply

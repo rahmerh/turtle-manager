@@ -1,33 +1,21 @@
-local core     = require("wireless._internal.core")
+local core   = require("wireless._internal.core")
 
-local rpc      = {}
+local errors = require("lib.errors")
 
-local PROTOCOL = "rpc"
+local rpc    = {}
 
-function rpc.call(receiver, operation, data)
+function rpc.call(receiver, operation, protocol, data)
     local payload = { data = data, operation = operation }
 
     local tries = 3
     local cap = 5
     local backoff = 0.6
     for attempt = 1, tries do
-        local _, message_id = core.send(receiver, payload, PROTOCOL)
+        local _, message_id = core.send(receiver, payload, protocol)
 
-        local deadline = os.clock() + backoff
-        while true do
-            local remaining = deadline - os.clock()
-
-            if remaining <= 0 then
-                break
-            end
-
-            local sender, response, protocol = core.receive(remaining)
-
-            if sender == receiver and
-                protocol == PROTOCOL and
-                type(response) == "table" then
-                return message_id, response
-            end
+        local response = core.wait_for_response_on(message_id, backoff)
+        if response ~= nil then
+            return message_id, response
         end
 
         if attempt < tries then
@@ -38,13 +26,17 @@ function rpc.call(receiver, operation, data)
         end
     end
 
-    return nil, "e:timeout"
+    return nil, errors.wireless.TIMEOUT
 end
 
-function rpc.respond_on(receiver, id, data)
-    local response = { id = id, data = data }
+function rpc.respond_on(receiver, id, operation, protocol, data)
+    local payload = {
+        id = id,
+        data = data,
+        operation = operation,
+    }
 
-    core.send(receiver, response, PROTOCOL)
+    core.send(receiver, payload, protocol)
 end
 
 return rpc

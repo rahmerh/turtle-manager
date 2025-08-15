@@ -1,43 +1,37 @@
+local notify = require("wireless._internal.notify")
 local rpc = require("wireless._internal.rpc")
 local core = require("wireless._internal.core")
 
 local commands = {}
 
 function commands.pause_turtle(receiver)
-    return rpc.call(receiver, "command:pause")
+    notify.send(receiver, "command:pause", core.protocols.notify)
 end
 
 function commands.resume_turtle(receiver)
-    return rpc.call(receiver, "command:resume")
+    notify.send(receiver, "command:resume", core.protocols.notify)
 end
 
 function commands.reboot_turtle(receiver)
-    return rpc.call(receiver, "command:reboot")
-end
-
-function commands.confirm_kill(receiver, id, coordinates)
-    core.send(receiver, {
-            operation = "command:kill",
-            coordinates = coordinates
-        },
-        "rpc",
-        id)
+    notify.send(receiver, "command:reboot", core.protocols.notify)
 end
 
 function commands.kill_turtle(receiver)
-    local _, message_id = core.send(receiver, { operation = "command:kill", }, "rpc")
+    local msg_id, coordinates = rpc.call(receiver, "command:kill", core.protocols.rpc)
 
-    local ok, _, msg, _ = core.await_response_on(message_id)
-
-    if not ok or not msg then
+    if not msg_id or not coordinates then
         return
     end
 
-    return msg.coordinates
+    return coordinates
+end
+
+function commands.confirm_kill(receiver, id, coordinates)
+    rpc.respond_on(receiver, id, core.protocols.rpc, coordinates)
 end
 
 function commands.nudge_task(receiver, job_id, amount)
-    return rpc.call(receiver, "command:nudge_task", {
+    notify.send(receiver, "command:nudge_task", core.protocols.notify, {
         job_id = job_id,
         amount = amount
     })

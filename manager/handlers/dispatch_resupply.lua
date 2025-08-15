@@ -1,36 +1,32 @@
 local wireless = require("wireless")
 
-local printer = require("lib.printer")
 local errors = require("lib.errors")
 local dispatch_utils = require("dispatch_helpers")
 
 return function(sender, msg, turtle_store)
-    wireless.ack(sender, msg)
-
     local runners = turtle_store:get_by_role("runner")
-    if not runners and next(runners) == nil then
+
+    if not runners or next(runners) == nil then
         return nil, errors.wireless.NO_AVAILABLE_RUNNERS
     end
 
-    local id = dispatch_utils.find_least_queued(runners, sender)
+    while next(runners) do
+        local id = dispatch_utils.find_least_queued(runners, sender)
+        if not id then break end
 
-    if not id then
-        return nil, errors.wireless.NO_AVAILABLE_RUNNERS
+        local ok = wireless.resupply.dispatch(
+            id,
+            msg.data.target,
+            msg.data.desired,
+            msg.id,
+            sender)
+
+        if ok then
+            return true
+        end
+
+        runners[id] = nil
     end
 
-    local payload = {
-        target    = msg.data.target,
-        desired   = msg.data.desired,
-        requester = sender,
-        job_id    = msg.id,
-    }
-
-    local ok, err = wireless.resupply.dispatch(id, payload)
-
-    if not ok then
-        printer.print_warning(err)
-        return nil, errors.wireless.COULD_NOT_ASSIGN
-    end
-
-    return true
+    return nil, errors.wireless.COULD_NOT_ASSIGN
 end

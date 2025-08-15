@@ -36,23 +36,19 @@ local metadata = {
     boundaries = boundaries
 }
 
-wireless.router.register_handler(wireless.protocols.rpc, "command:pause", function(sender, m)
-    wireless.ack(sender, m)
+wireless.router.register_handler(wireless.protocols.rpc, "command:pause", function(_, _)
     job.set_status(job.statuses.paused)
     movement.pause()
     printer.print_warning("Received pause command.")
 end)
 
-wireless.router.register_handler(wireless.protocols.rpc, "command:resume", function(sender, m)
-    wireless.ack(sender, m)
+wireless.router.register_handler(wireless.protocols.rpc, "command:resume", function(_, _)
     job.set_status(job.statuses.in_progress)
     movement.resume()
     printer.print_info("Resuming...")
 end)
 
-wireless.router.register_handler(wireless.protocols.rpc, "settings:update", function(sender, m)
-    wireless.ack(sender, m)
-
+wireless.router.register_handler(wireless.protocols.rpc, "settings:update", function(_, m)
     printer.print_info(("Setting %s updated..."):format(m.data.key))
 end)
 
@@ -119,9 +115,12 @@ local function main()
     if next(needed_supplies) ~= nil then
         printer.print_info("Requesting supplies...")
 
-        wireless.resupply.request(manager_id, movement.get_current_coordinates(), needed_supplies)
-        local runner_id, job_id = wireless.resupply.await_arrival()
-        wireless.resupply.signal_ready(runner_id, job_id)
+        local supply_turtle_id = wireless.resupply.request(
+            manager_id,
+            movement.get_current_coordinates(),
+            needed_supplies)
+        inventory.drop_slots(1, 1, "up")
+        wireless.resupply.signal_ready(supply_turtle_id)
         wireless.resupply.await_done()
 
         local coal_slot = inventory.find_item("minecraft:coal")

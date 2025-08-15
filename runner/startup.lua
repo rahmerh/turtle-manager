@@ -75,37 +75,36 @@ local start_heartbeat, _ = wireless.heartbeat.loop(manager_id, 1, function()
 end)
 
 wireless.router.register_handler(wireless.protocols.rpc, "pickup:dispatch", function(sender, m)
-    wireless.ack(sender, m)
-    printer.print_info(("[%s] Queued task 'pickup'"):format(m.data.job_id))
-
     local task = {
         job_id = m.data.job_id,
-        target = m.data.target,
+        target = m.data.position,
         what = m.data.what,
         task_type = "pickup",
-        requester = m.data.requester,
+        requested_by = m.data.requested_by,
     }
 
     task_queue:enqueue(task)
+
+    printer.print_info(("[%s] Queued task 'pickup'"):format(m.data.job_id))
+    wireless.pickup.notify_queued(sender, m.id)
 end)
 
 wireless.router.register_handler(wireless.protocols.rpc, "resupply:dispatch", function(sender, m)
-    wireless.ack(sender, m)
-    printer.print_info(("[%s] Queued task 'resupply'"):format(m.data.job_id))
-
     local task = {
         job_id = m.data.job_id,
         target = m.data.target,
-        task_type = "resupply",
-        requester = m.data.requester,
         desired = m.data.desired,
+        task_type = "resupply",
+        requested_by = m.data.requested_by,
     }
 
     task_queue:enqueue(task)
+
+    printer.print_info(("[%s] Queued task 'resupply'"):format(m.data.job_id))
+    wireless.resupply.notify_queued(sender, m.id)
 end)
 
-wireless.router.register_handler(wireless.protocols.rpc, "fluid_fill:dispatch", function(sender, m)
-    wireless.ack(sender, m)
+wireless.router.register_handler(wireless.protocols.notify, "fluid_fill:dispatch", function(_, m)
     printer.print_info(("[%s] Queued task 'fluid fill'"):format(m.data.job_id))
 
     local task = {
@@ -118,9 +117,7 @@ wireless.router.register_handler(wireless.protocols.rpc, "fluid_fill:dispatch", 
     task_queue:enqueue(task)
 end)
 
-wireless.router.register_handler(wireless.protocols.rpc, "command:nudge_task", function(sender, m)
-    wireless.ack(sender, m)
-
+wireless.router.register_handler(wireless.protocols.notify, "command:nudge_task", function(_, m)
     local index, task = task_queue:find("job_id", m.data.job_id)
 
     local target = task_queue:get(index + m.data.amount)
@@ -164,10 +161,12 @@ local function main()
         local fuel = inventory.details_from_slot(1)
         if not fuel then
             printer.print_info("Requesting supplies...")
+
             local desired = { ["minecraft:coal"] = 64 }
-            wireless.resupply.request(manager_id, movement.get_current_coordinates(), desired)
-            local runner_id, job_id = wireless.resupply.await_arrival()
-            wireless.resupply.signal_ready(runner_id, job_id)
+
+            local supply_turtle_id = wireless.resupply.request(manager_id, movement.get_current_coordinates(), desired)
+            inventory.drop_slots(1, 1, "up")
+            wireless.resupply.signal_ready(supply_turtle_id)
             wireless.resupply.await_done()
         elseif fuel.count < 16 then
             printer.print_info("Refueling self...")

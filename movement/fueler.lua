@@ -59,10 +59,12 @@ function fueler.handle_movement_result(ok, err, ctx)
     end
 
     printer.print_info("Requesting fuel...")
-    wireless.resupply.request(manager_id, current_coordinates, desired)
-    local runner_id, job_id = wireless.resupply.await_arrival()
+    local supply_turtle_id = wireless.resupply.request(
+        manager_id,
+        current_coordinates,
+        desired)
     inventory.drop_slots(1, 1, "up")
-    wireless.resupply.signal_ready(runner_id, job_id)
+    wireless.resupply.signal_ready(supply_turtle_id)
     wireless.resupply.await_done()
 
     local slot = inventory.find_item("minecraft:coal")

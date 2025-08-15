@@ -66,12 +66,8 @@ function router.step(timeout)
         return false
     end
 
-    if type(msg) ~= "table" or type(msg.operation) ~= "string" then
+    if type(msg) ~= "table" and type(msg.operation) ~= "string" then
         return false
-    end
-
-    if msg.id then
-        os.queueEvent(("rn:%s"):format(msg.id), sender, msg, protocol)
     end
 
     return dispatch(sender, msg, protocol)

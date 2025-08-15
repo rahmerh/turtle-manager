@@ -3,13 +3,8 @@ local wireless = require("wireless")
 
 local task_stages = require("task_stages")
 
-local errors = require("lib.errors")
 local printer = require("lib.printer")
 local inventory = require("lib.inventory")
-
-local function is_turtle(info)
-    return info.name == "computercraft:turtle_advanced" or info.name == "computercraft:turtle_normal"
-end
 
 return function(task, config, movement_context, report_progress)
     local filled_slots = {}
@@ -27,11 +22,14 @@ return function(task, config, movement_context, report_progress)
             config.supply_chest_pos.y + 1,
             config.supply_chest_pos.z,
             movement_context)
+
         if not arrived and arrived_err then
             return arrived, arrived_err
         end
+
         turtle.select(2)
 
+        -- TODO: Handle if too many items requested
         for item, amount in pairs(task.desired) do
             local filled_slot = inventory.pull_items_from_down(item, amount)
             table.insert(filled_slots, filled_slot)
@@ -43,44 +41,19 @@ return function(task, config, movement_context, report_progress)
     end
 
     if task.stage == task_stages.to_target then
-        report_progress(task.job_id, task_stages.to_target, true)
-        -- +1 to make sure we're on top of the turtle to resupply
         movement.move_to(task.target.x, task.target.y + 1, task.target.z, movement_context)
+
+        wireless.resupply.signal_arrived(task.requested_by)
 
         report_progress(task.job_id, task_stages.resupplying, false)
     end
 
-
     if task.stage == task_stages.resupplying then
-        wireless.resupply.runner_arrived(task.requester, task.job_id)
-        local ok, err = wireless.resupply.await_ready(task.job_id)
-
-        if not ok then
-            printer.print_error(err)
-            report_progress(task_stages.to_unloading)
-            movement.move_to(
-                config.unloading_chest_pos.x,
-                config.unloading_chest_pos.y + 1,
-                config.unloading_chest_pos.z,
-                movement_context)
-
-            inventory.drop_slots(2, 16, "down")
-            return
+        for _, slot in ipairs(filled_slots) do
+            inventory.drop_slots(slot, slot, "down")
         end
 
-        local _, info = turtle.inspectDown()
-        if is_turtle(info) then
-            for _, slot in ipairs(filled_slots) do
-                turtle.select(slot)
-                turtle.dropDown()
-            end
-        else
-            return nil, errors.NO_INVENTORY_DOWN
-        end
-
-        turtle.select(1)
-
-        wireless.resupply.signal_done(task.requester, task.job_id)
+        wireless.resupply.signal_done(task.requested_by)
 
         report_progress(task.job_id, task_stages.to_unloading, false)
     end

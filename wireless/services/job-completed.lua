@@ -1,23 +1,20 @@
+local notify = require("wireless._internal.notify")
 local core = require("wireless._internal.core")
-
-local PROTOCOL = "rpc"
 
 local completed = {}
 
 function completed.quarry_done(receiver, last_known_location)
-    core.send(receiver, {
-        operation = "job:completed",
+    notify.send(receiver, "job:completed", core.protocols.notify, {
         job_type = "quarry",
         coordinates = last_known_location,
-    }, PROTOCOL)
+    })
 end
 
 function completed.pickup_done(receiver, what)
-    core.send(receiver, {
-        operation = "job:completed",
+    notify.send(receiver, "job:completed", core.protocols.notify, {
         job_type = "pickup",
         what = what,
-    }, PROTOCOL)
+    })
 end
 
 return completed

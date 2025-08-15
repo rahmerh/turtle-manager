@@ -194,4 +194,19 @@ function inventory.list_contents(from, to)
     return result
 end
 
+function inventory.suck_inventory_empty(direction)
+    local sucked = true
+    while sucked do
+        if direction == "up" then
+            sucked, _ = turtle.suckUp()
+        elseif direction == "down" then
+            sucked, _ = turtle.suckDown()
+        elseif direction == "forward" then
+            sucked, _ = turtle.suck()
+        else
+            error("Invalid direction: " .. direction)
+        end
+    end
+end
+
 return inventory
