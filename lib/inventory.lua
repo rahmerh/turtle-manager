@@ -17,6 +17,10 @@ end
 ---@return number|nil -- The slot it pulled items into or nil if it couldn't pull.
 ---@return nil|string -- Nil if successful or string if it couldn't pull.
 function inventory.pull_items_from_down(item, amount)
+    if amount < 1 or amount > 64 then
+        return nil, errors.INVALID_PARAM
+    end
+
     local empty_slot = first_empty_slot()
 
     if not empty_slot then
