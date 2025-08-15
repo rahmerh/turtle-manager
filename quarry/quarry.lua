@@ -179,22 +179,17 @@ function quarry.mine_layer(layer, boundaries, start_from_row, on_row_done, manag
 
     for _ = 1, rows do
         local coords = quarry.starting_location_for_row(layer, start_from_row, boundaries)
-
         local moved, moved_error = movement.move_to(coords.x, coords.y, coords.z, movement_context)
-
         if not moved then error("Turtle stuck: " .. moved_error) end
 
         local face = (start_from_row % 2 == 0) and direction or movement.opposite_of(direction)
         movement.turn_to_direction(face)
 
         if fluid_tracker then
-            local fluid_in_column = scanner.is_fluid("up")
+            local fluid_detected = scanner.is_fluid("up") or
+                scanner.is_fluid("down")
 
-            if not fluid_in_column then
-                fluid_in_column = scanner.is_fluid("down")
-            end
-
-            if fluid_in_column then
+            if fluid_detected then
                 fluid_tracker:add(movement.get_current_coordinates())
             end
         end
@@ -223,7 +218,7 @@ function quarry.mine_layer(layer, boundaries, start_from_row, on_row_done, manag
                 quarry.unload(manager_id)
             end
 
-            if fluid_tracker then
+            if fluid_detected then
                 fluid_tracker:add(movement.get_current_coordinates())
             end
         end

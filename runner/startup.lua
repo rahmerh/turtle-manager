@@ -40,6 +40,7 @@ local movement_context = {
 }
 
 local cancel_token
+local settings
 
 local active_task
 local function report_progress(job_id, new_stage, cancelable)
@@ -104,17 +105,17 @@ wireless.router.register_handler(wireless.protocols.rpc, "resupply:dispatch", fu
     wireless.resupply.notify_queued(sender, m.id)
 end)
 
-wireless.router.register_handler(wireless.protocols.notify, "fluid_fill:dispatch", function(_, m)
-    printer.print_info(("[%s] Queued task 'fluid fill'"):format(m.data.job_id))
-
+wireless.router.register_handler(wireless.protocols.rpc, "fluid_fill:dispatch", function(sender, m)
     local task = {
         job_id = m.data.job_id,
-        task_type = "fluid_fill",
-        requester = m.data.requester,
         fluid_columns = m.data.fluid_columns,
+        requested_by = m.data.requested_by,
     }
 
     task_queue:enqueue(task)
+
+    printer.print_info(("[%s] Queued task 'fluid fill'"):format(m.data.job_id))
+    wireless.fluid_fill.notify_queued(sender, m.id)
 end)
 
 wireless.router.register_handler(wireless.protocols.notify, "command:nudge_task", function(_, m)
@@ -154,8 +155,16 @@ wireless.router.register_handler(wireless.protocols.notify, "command:nudge_task"
     end
 end)
 
+wireless.router.register_handler(wireless.protocols.notify, "settings:update", function(_, m)
+    printer.print_info(("Setting update '%s': %s -> %s"):format(
+        m.data.key,
+        settings[m.data.key],
+        m.data.value))
+    settings[m.data.key] = m.data.value
+end)
+
 local function main()
-    wireless.registry.announce_at(manager_id, "runner")
+    settings = wireless.registry.announce_at(manager_id, "runner")
 
     while true do
         local fuel = inventory.details_from_slot(1)

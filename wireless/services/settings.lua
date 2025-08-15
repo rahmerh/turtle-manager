@@ -3,9 +3,10 @@ local core = require("wireless._internal.core")
 
 local settings = {}
 
-function settings.apply_settings_on(receiver, all_settings)
+function settings.update_setting_on(receiver, key, value)
     notify.send(receiver, "settings:update", core.protocols.notify, {
-        settings = all_settings
+        key = key,
+        value = value,
     })
 end
 

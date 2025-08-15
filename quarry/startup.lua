@@ -48,8 +48,12 @@ wireless.router.register_handler(wireless.protocols.rpc, "command:resume", funct
     printer.print_info("Resuming...")
 end)
 
-wireless.router.register_handler(wireless.protocols.rpc, "settings:update", function(_, m)
-    printer.print_info(("Setting %s updated..."):format(m.data.key))
+wireless.router.register_handler(wireless.protocols.notify, "settings:update", function(_, m)
+    printer.print_info(("Setting update '%s': %s -> %s"):format(
+        m.data.key,
+        settings[m.data.key],
+        m.data.value))
+    settings[m.data.key] = m.data.value
 end)
 
 local running = true
@@ -57,7 +61,7 @@ wireless.router.register_handler(wireless.protocols.rpc, "command:kill", functio
     movement.pause()
     job.set_status(job.statuses.offline)
 
-    sleep(1) -- llow turtle to stop.
+    sleep(1) -- Allow turtle to stop.
 
     local coordinates = movement.get_current_coordinates()
 
@@ -153,10 +157,7 @@ local function main()
     end
 
     local track_fluids = settings.fill_quarry_fluids
-    local fluid_tracker
-    if track_fluids then
-        fluid_tracker = FluidTracker.new()
-    end
+    local fluid_tracker = FluidTracker.new()
 
     printer.print_info("Quarry #" .. os.getComputerID() .. " in progress...")
 

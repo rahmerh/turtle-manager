@@ -38,7 +38,6 @@ function task_runner:new(notifier)
             local manager_id = wireless.discovery.find("manager")
 
             wireless.pickup.request(manager_id, coordinates, "turtle:" .. data.id)
-
             notifier:add_notification(("Recovering turtle #%d..."):format(data.id), 10)
 
             return true
