@@ -37,7 +37,6 @@ end
 
 settings:register_on_change(function(key, value)
     local turtles = turtle_store:list()
-
     for id, _ in pairs(turtles) do
         wireless.settings.update_setting_on(id, key, value)
     end
@@ -82,6 +81,10 @@ wireless.router.register_handler(wireless.protocols.notify, "resupply:request", 
     handlers.dispatch_resupply(sender, msg, turtle_store)
 end)
 
+wireless.router.register_handler(wireless.protocols.notify, "fluid_fill:report", function(sender, msg)
+    handlers.dispatch_fluid_fill(sender, msg, turtle_store)
+end)
+
 wireless.router.register_handler(wireless.protocols.notify, "job:completed", function(sender, msg)
     local turtle = handlers.handle_job_completed(sender, msg, turtle_store)
 
@@ -107,10 +110,6 @@ wireless.router.register_handler(wireless.protocols.notify, "job:completed", fun
             display:delete_turtle(turtle)
         end
     end
-end)
-
-wireless.router.register_handler(wireless.protocols.notify, "fluid_fill:report", function(sender, msg)
-    handlers.dispatch_fluid_fill(sender, msg, turtle_store)
 end)
 
 local function mark_stale()
