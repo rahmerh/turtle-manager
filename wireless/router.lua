@@ -1,31 +1,29 @@
 local core = require("wireless._internal.core")
 
 local printer = require("lib.printer")
+local errors = require("lib.errors")
 
 local router = {
     _handlers = {},
 }
 
 function router.register_handler(protocol, operation, handler)
-    router._handlers[protocol] = router._handlers[protocol] or {}
-    local by_protocol = router._handlers[protocol]
-    by_protocol[operation] = by_protocol[operation] or {}
-    table.insert(by_protocol[operation], handler)
-end
-
-local function dispatch(sender, msg, protocol)
-    local by_proto = router._handlers[protocol]; if not by_proto then return false end
-    local list = by_proto[msg.operation]; if not list then return false end
-    local handled = false
-    for _, h in ipairs(list) do
-        local ok, res, err = pcall(h, sender, msg, protocol)
-        if not ok then
-            printer.print_error("Handler crash: " .. tostring(res))
-        elseif res or err == nil then
-            handled = true
-        end
+    if type(protocol) ~= "string" then
+        error("Protocol is required/invalid.")
     end
-    return handled
+
+    if type(operation) ~= "string" then
+        error("Operation is required/invalid.")
+    end
+
+    if type(handler) ~= "function" then
+        error("Handler is required/invalid.")
+    end
+
+    router._handlers[operation] = {
+        protocol = protocol,
+        handler = handler
+    }
 end
 
 function router.step(timeout)
@@ -34,17 +32,38 @@ function router.step(timeout)
         return false
     end
 
-    if msg.id then core.stash_response(msg) end
+    if msg.id then
+        core.stash_response(sender, msg)
+    end
 
     if type(msg.operation) ~= "string" then
         return false
     end
 
-    return dispatch(sender, msg, protocol)
+    local handler = router._handlers[msg.operation]
+
+    -- No handler registered for operation.
+    if not handler then
+        return false
+    end
+
+    if not handler.protocol or handler.protocol ~= protocol then
+        return false
+    end
+
+    local ok, response, error = pcall(handler.handler, sender, msg, protocol)
+
+    if not ok then
+        printer.print_error("Handler crash: " .. tostring(response))
+    elseif response and error == nil then
+        return true
+    end
 end
 
 function router.loop()
-    while true do router.step(5) end
+    while true do
+        router.step(5)
+    end
 end
 
 return router

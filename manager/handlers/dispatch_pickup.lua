@@ -14,14 +14,15 @@ return function(sender, msg, turtle_store)
         local id = dispatch_utils.find_least_queued(runners, sender)
         if not id then break end
 
-        local ok, _ = wireless.pickup.dispatch(
+        wireless.pickup.assign(
             id,
-            msg.data.position,
+            msg.data.target,
             msg.data.what,
-            msg.id,
             sender)
 
-        if ok then
+        local response = wireless.pickup.await_accepted()
+
+        if response and response._sender == id then
             return true
         end
 

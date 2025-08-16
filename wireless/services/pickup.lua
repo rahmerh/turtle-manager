@@ -1,40 +1,47 @@
-local notify = require("wireless._internal.notify")
-local rpc = require("wireless._internal.rpc")
 local core = require("wireless._internal.core")
 
-local errors = require("lib.errors")
+local pickup = {
+    operations = {
+        request = "pickup:request",
+        assign = "pickup:assign",
+        accepted = "pickup:accepted",
+    }
+}
 
-local pickup = {}
-
-function pickup.request(receiver, pickup_position, what)
-    notify.send(receiver, "pickup:request", core.protocols.notify, {
+function pickup.request(receiver, target, what)
+    local data = {
         job_type = "pickup",
-        position = pickup_position,
+        target = target,
         what = what,
-    })
+    }
+    local payload = core.create_payload(pickup.operations.request, data)
+
+    core.send(receiver, payload, core.protocols.pickup)
 end
 
-function pickup.dispatch(receiver, pickup_position, what, job_id, requested_by)
-    local id, _ = rpc.call(
-        receiver,
-        "pickup:dispatch",
-        core.protocols.rpc, {
-            job_type = "pickup",
-            position = pickup_position,
-            what = what,
-            job_id = job_id,
-            requested_by = requested_by
-        })
+function pickup.assign(receiver, target, what, requested_by)
+    local data = {
+        job_type = "pickup",
+        target = target,
+        what = what,
+        requested_by = requested_by
+    }
+    local payload = core.create_payload(pickup.operations.assign, data)
 
-    if not id then
-        return nil, errors.wireless.NO_ACK
-    end
-
-    return true
+    core.send(receiver, payload, core.protocols.pickup)
 end
 
-function pickup.notify_queued(receiver, msg_id)
-    rpc.respond_on(receiver, msg_id, "pickup:dispatch", core.protocols.rpc)
+function pickup.await_accepted()
+    return core.await_response(pickup.operations.accepted, 5)
+end
+
+function pickup.accept(receiver, job_id)
+    local data = {
+        job_id = job_id
+    }
+    local payload = core.create_payload(pickup.operations.accepted, data)
+
+    core.send(receiver, payload, core.protocols.pickup)
 end
 
 return pickup

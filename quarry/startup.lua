@@ -36,40 +36,51 @@ local metadata = {
     boundaries = boundaries
 }
 
-wireless.router.register_handler(wireless.protocols.rpc, "command:pause", function(_, _)
-    job.set_status(job.statuses.paused)
-    movement.pause()
-    printer.print_warning("Received pause command.")
-end)
+-- wireless.router.register_handler(wireless.protocols.rpc, "command:pause", function(_, _)
+--     job.set_status(job.statuses.paused)
+--     movement.pause()
+--     printer.print_warning("Received pause command.")
+-- end)
+--
+-- wireless.router.register_handler(wireless.protocols.rpc, "command:resume", function(_, _)
+--     job.set_status(job.statuses.in_progress)
+--     movement.resume()
+--     printer.print_info("Resuming...")
+-- end)
 
-wireless.router.register_handler(wireless.protocols.rpc, "command:resume", function(_, _)
-    job.set_status(job.statuses.in_progress)
-    movement.resume()
-    printer.print_info("Resuming...")
-end)
+wireless.router.register_handler(
+    wireless.protocols.settings,
+    wireless.settings.operations.update,
+    function(_, m)
+        printer.print_info(("Setting update '%s': %s -> %s"):format(
+            m.data.key,
+            settings[m.data.key],
+            m.data.value))
+        settings[m.data.key] = m.data.value
+    end)
 
-wireless.router.register_handler(wireless.protocols.notify, "settings:update", function(_, m)
-    printer.print_info(("Setting update '%s': %s -> %s"):format(
-        m.data.key,
-        settings[m.data.key],
-        m.data.value))
-    settings[m.data.key] = m.data.value
-end)
+wireless.router.register_handler(
+    wireless.protocols.settings,
+    wireless.settings.operations.overwrite,
+    function(_, m)
+        printer.print_info("Overwriting all settings...")
+        settings = m.data.all_settings
+    end)
 
 local running = true
-wireless.router.register_handler(wireless.protocols.rpc, "command:kill", function(sender, m)
-    movement.pause()
-    job.set_status(job.statuses.offline)
-
-    sleep(1) -- Allow turtle to stop.
-
-    local coordinates = movement.get_current_coordinates()
-
-    wireless.turtle_commands.confirm_kill(sender, m.id, coordinates)
-    running = false
-
-    printer.print_warning("Received kill command.")
-end)
+-- wireless.router.register_handler(wireless.protocols.rpc, "command:kill", function(sender, m)
+--     movement.pause()
+--     job.set_status(job.statuses.offline)
+--
+--     sleep(1) -- Allow turtle to stop.
+--
+--     local coordinates = movement.get_current_coordinates()
+--
+--     wireless.turtle_commands.confirm_kill(sender, m.id, coordinates)
+--     running = false
+--
+--     printer.print_warning("Received kill command.")
+-- end)
 
 local movement_context = {
     dig = false,
@@ -106,7 +117,13 @@ local function kill_switch()
 end
 
 local function main()
-    settings = wireless.registry.announce_at(manager_id, "quarry", metadata)
+    wireless.registry.announce_at(manager_id, "quarry", metadata)
+    local overwrite_msg = wireless.settings.await_settings_overwrite()
+
+    if not overwrite_msg then
+        printer.print_error("Didn't receive settings from manager in time.")
+        return
+    end
 
     local needed_supplies = {}
     if not inventory.is_item_in_slot("minecraft:coal", 1) then
@@ -119,12 +136,13 @@ local function main()
     if next(needed_supplies) ~= nil then
         printer.print_info("Requesting supplies...")
 
-        local supply_turtle_id = wireless.resupply.request(
+        wireless.resupply.request(
             manager_id,
             movement.get_current_coordinates(),
             needed_supplies)
+        local arrived_msg = wireless.resupply.await_arrived()
         inventory.drop_slots(1, 1, "up")
-        wireless.resupply.signal_ready(supply_turtle_id)
+        wireless.resupply.ready(arrived_msg._sender)
         wireless.resupply.await_done()
 
         local coal_slot = inventory.find_item("minecraft:coal")

@@ -1,61 +1,75 @@
-local notify = require("wireless._internal.notify")
-local rpc = require("wireless._internal.rpc")
 local core = require("wireless._internal.core")
 
-local errors = require("lib.errors")
+local resupply = {
+    operations = {
+        request = "resupply:request",
+        assign = "resupply:assign",
+        accepted = "resupply:accepted",
+        arrived = "resupply:arrived",
+        ready = "resupply:ready",
+        done = "resupply:done",
+    }
+}
 
-local resupply = {}
-
-function resupply.request(receiver, turtle_position, desired_items)
-    notify.send(receiver, "resupply:request", core.protocols.notify, {
+function resupply.request(receiver, turtle_position, items)
+    local data = {
         target = turtle_position,
-        desired = desired_items
-    })
+        manifest = items
+    }
+    local payload = core.create_payload(resupply.operations.request, data)
 
-    local timeout = 60 * 60 -- 1 Hour
-    local sender, _ = core.wait_for_response_on_operation("resupply:arrived", timeout)
-
-    return sender
+    core.send(receiver, payload, core.protocols.resupply)
 end
 
-function resupply.dispatch(receiver, turtle_position, desired_items, job_id, requested_by)
-    local id, _ = rpc.call(
-        receiver,
-        "resupply:dispatch",
-        core.protocols.rpc, {
-            target = turtle_position,
-            desired = desired_items,
-            requested_by = requested_by,
-            job_id = job_id,
-        })
-
-    if not id then
-        return nil, errors.wireless.NO_ACK
-    end
-
-    return true
+function resupply.await_arrived()
+    return core.await_response(resupply.operations.arrived, 60 * 60) -- 1 Hour
 end
 
-function resupply.notify_queued(receiver, msg_id)
-    rpc.respond_on(receiver, msg_id, "resupply:dispatch", core.protocols.rpc)
+function resupply.assign(receiver, target, manifest, requested_by)
+    local data = {
+        target = target,
+        manifest = manifest,
+        requested_by = requested_by,
+    }
+    local payload = core.create_payload(resupply.operations.assign, data)
+
+    core.send(receiver, payload, core.protocols.resupply)
 end
 
-function resupply.signal_arrived(receiver)
-    notify.send(receiver, "resupply:arrived", core.protocols.notify)
+function resupply.accept(receiver, job_id)
+    local data = {
+        job_id = job_id
+    }
+    local payload = core.create_payload(resupply.operations.accepted, data)
 
-    core.wait_for_response_on_operation("resupply:ready", 5)
+    core.send(receiver, payload, core.protocols.resupply)
 end
 
-function resupply.signal_ready(receiver)
-    notify.send(receiver, "resupply:ready", core.protocols.notify)
+function resupply.await_accepted()
+    return core.await_response(resupply.operations.accepted, 5)
+end
+
+function resupply.arrived(receiver)
+    local payload = core.create_payload(resupply.operations.arrived)
+    core.send(receiver, payload, core.protocols.resupply)
+end
+
+function resupply.ready(receiver)
+    local payload = core.create_payload(resupply.operations.ready)
+    core.send(receiver, payload, core.protocols.resupply)
+end
+
+function resupply.await_ready()
+    return core.await_response(resupply.operations.ready, 5)
+end
+
+function resupply.done(receiver)
+    local payload = core.create_payload(resupply.operations.done)
+    core.send(receiver, payload, core.protocols.resupply)
 end
 
 function resupply.await_done()
-    core.wait_for_response_on_operation("resupply:done", 5)
-end
-
-function resupply.signal_done(receiver)
-    notify.send(receiver, "resupply:done", core.protocols.notify)
+    return core.await_response(resupply.operations.done, 5)
 end
 
 return resupply

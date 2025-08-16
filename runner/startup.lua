@@ -40,7 +40,6 @@ local movement_context = {
 }
 
 local cancel_token
-local settings
 
 local active_task
 local function report_progress(job_id, new_stage, cancelable)
@@ -75,107 +74,109 @@ local start_heartbeat, _ = wireless.heartbeat.loop(manager_id, 1, function()
     }
 end)
 
-wireless.router.register_handler(wireless.protocols.rpc, "pickup:dispatch", function(sender, m)
-    local task = {
-        job_id = m.data.job_id,
-        target = m.data.position,
-        what = m.data.what,
-        task_type = "pickup",
-        requested_by = m.data.requested_by,
-    }
+wireless.router.register_handler(
+    wireless.protocols.pickup,
+    wireless.pickup.operations.assign,
+    function(sender, m)
+        local task = {
+            job_id = m.id,
+            target = m.data.target,
+            what = m.data.what,
+            task_type = "pickup",
+            requested_by = m.data.requested_by,
+        }
 
-    task_queue:enqueue(task)
+        task_queue:enqueue(task)
 
-    printer.print_info(("[%s] Queued task 'pickup'"):format(m.data.job_id))
-    wireless.pickup.notify_queued(sender, m.id)
-end)
+        wireless.pickup.accept(sender, m.id)
+        printer.print_info(("[%s] Queued task 'pickup'"):format(m.id))
+    end)
 
-wireless.router.register_handler(wireless.protocols.rpc, "resupply:dispatch", function(sender, m)
-    local task = {
-        job_id = m.data.job_id,
-        target = m.data.target,
-        desired = m.data.desired,
-        task_type = "resupply",
-        requested_by = m.data.requested_by,
-    }
+wireless.router.register_handler(
+    wireless.protocols.resupply,
+    wireless.resupply.operations.assign,
+    function(sender, m)
+        local task = {
+            job_id = m.id,
+            task_type = "resupply",
+            target = m.data.target,
+            manifest = m.data.manifest,
+            requested_by = m.data.requested_by,
+        }
 
-    task_queue:enqueue(task)
+        task_queue:enqueue(task)
 
-    printer.print_info(("[%s] Queued task 'resupply'"):format(m.data.job_id))
-    wireless.resupply.notify_queued(sender, m.id)
-end)
+        wireless.resupply.accept(sender, m.id)
+        printer.print_info(("[%s] Queued task 'resupply'"):format(m.id))
+    end)
 
-wireless.router.register_handler(wireless.protocols.rpc, "fluid_fill:dispatch", function(sender, m)
-    local task = {
-        job_id = m.data.job_id,
-        fluid_columns = m.data.fluid_columns,
-        requested_by = m.data.requested_by,
-    }
-
-    task_queue:enqueue(task)
-
-    printer.print_info(("[%s] Queued task 'fluid fill'"):format(m.data.job_id))
-    wireless.fluid_fill.notify_queued(sender, m.id)
-end)
-
-wireless.router.register_handler(wireless.protocols.notify, "command:nudge_task", function(_, m)
-    local index, task = task_queue:find("job_id", m.data.job_id)
-
-    local target = task_queue:get(index + m.data.amount)
-
-    if not index or not task or not target then
-        error(("No item at %d"):format(index))
-    end
-
-    local nudging_active_task = active_task == m.data.job_id or active_task == target.job_id
-    if nudging_active_task and (task.cancelable or target.cancelable) then
-        cancel_token:cancel()
-
-        task_queue:nudge(index, m.data.amount)
-
-        local direction
-        if m.data.amount < 0 then
-            direction = "up"
-        else
-            direction = "down"
-        end
-
-        printer.print_info(("Nudged %s %s"):format(m.data.job_id, direction))
-    elseif active_task ~= m.data.job_id then
-        task_queue:nudge(index, m.data.amount)
-
-        local direction
-        if m.data.amount < 0 then
-            direction = "up"
-        else
-            direction = "down"
-        end
-
-        printer.print_info(("Nudged %s %s"):format(m.data.job_id, direction))
-    end
-end)
-
-wireless.router.register_handler(wireless.protocols.notify, "settings:update", function(_, m)
-    printer.print_info(("Setting update '%s': %s -> %s"):format(
-        m.data.key,
-        settings[m.data.key],
-        m.data.value))
-    settings[m.data.key] = m.data.value
-end)
+-- wireless.router.register_handler(wireless.protocols.rpc, "fluid_fill:dispatch", function(sender, m)
+--     wireless.fluid_fill.notify_queued(sender, m.id)
+--     local task = {
+--         job_id = m.data.job_id,
+--         fluid_columns = m.data.fluid_columns,
+--         requested_by = m.data.requested_by,
+--     }
+--
+--     task_queue:enqueue(task)
+--
+--     printer.print_info(("[%s] Queued task 'fluid fill'"):format(m.data.job_id))
+-- end)
+--
+-- wireless.router.register_handler(wireless.protocols.notify, "command:nudge_task", function(_, m)
+--     local index, task = task_queue:find("job_id", m.data.job_id)
+--
+--     local target = task_queue:get(index + m.data.amount)
+--
+--     if not index or not task or not target then
+--         error(("No item at %d"):format(index))
+--     end
+--
+--     local nudging_active_task = active_task == m.data.job_id or active_task == target.job_id
+--     if nudging_active_task and (task.cancelable or target.cancelable) then
+--         cancel_token:cancel()
+--
+--         task_queue:nudge(index, m.data.amount)
+--
+--         local direction
+--         if m.data.amount < 0 then
+--             direction = "up"
+--         else
+--             direction = "down"
+--         end
+--
+--         printer.print_info(("Nudged %s %s"):format(m.data.job_id, direction))
+--     elseif active_task ~= m.data.job_id then
+--         task_queue:nudge(index, m.data.amount)
+--
+--         local direction
+--         if m.data.amount < 0 then
+--             direction = "up"
+--         else
+--             direction = "down"
+--         end
+--
+--         printer.print_info(("Nudged %s %s"):format(m.data.job_id, direction))
+--     end
+-- end)
 
 local function main()
-    settings = wireless.registry.announce_at(manager_id, "runner")
+    wireless.registry.announce_at(manager_id, "runner")
 
     while true do
         local fuel = inventory.details_from_slot(1)
         if not fuel then
             printer.print_info("Requesting supplies...")
 
-            local desired = { ["minecraft:coal"] = 64 }
+            local supplies = { ["minecraft:coal"] = 64 }
 
-            local supply_turtle_id = wireless.resupply.request(manager_id, movement.get_current_coordinates(), desired)
+            wireless.resupply.request(
+                manager_id,
+                movement.get_current_coordinates(),
+                supplies)
+            local arrived_msg = wireless.resupply.await_arrived()
             inventory.drop_slots(1, 1, "up")
-            wireless.resupply.signal_ready(supply_turtle_id)
+            wireless.resupply.ready(arrived_msg._sender)
             wireless.resupply.await_done()
         elseif fuel.count < 16 then
             printer.print_info("Refueling self...")

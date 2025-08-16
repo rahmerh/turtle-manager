@@ -16,7 +16,11 @@ return function(task, config, movement_context, report_progress)
             task.target.z):format(task.job_id))
 
         report_progress(task.job_id, task_stages.to_supply, true)
+    else
+        printer.print_info(("[%s] Resuming resupply task"):format(task.job_id))
+    end
 
+    if task.stage == task_stages.to_supply then
         local arrived, arrived_err = movement.move_to(
             config.supply_chest_pos.x,
             config.supply_chest_pos.y + 1,
@@ -30,7 +34,7 @@ return function(task, config, movement_context, report_progress)
         turtle.select(2)
 
         -- TODO: Handle if too many items requested
-        for item, amount in pairs(task.desired) do
+        for item, amount in pairs(task.manifest) do
             local filled_slot = inventory.pull_items_from_down(item, amount)
             table.insert(filled_slots, filled_slot)
         end
@@ -43,9 +47,14 @@ return function(task, config, movement_context, report_progress)
     if task.stage == task_stages.to_target then
         movement.move_to(task.target.x, task.target.y + 1, task.target.z, movement_context)
 
-        wireless.resupply.signal_arrived(task.requested_by)
+        wireless.resupply.arrived(task.requested_by)
 
-        report_progress(task.job_id, task_stages.resupplying, false)
+        local ready_message = wireless.resupply.await_ready()
+        if ready_message then
+            report_progress(task.job_id, task_stages.resupplying, false)
+        else
+            report_progress(task.job_id, task_stages.to_unloading, false)
+        end
     end
 
     if task.stage == task_stages.resupplying then
@@ -53,7 +62,7 @@ return function(task, config, movement_context, report_progress)
             inventory.drop_slots(slot, slot, "down")
         end
 
-        wireless.resupply.signal_done(task.requested_by)
+        wireless.resupply.done(task.requested_by)
 
         report_progress(task.job_id, task_stages.to_unloading, false)
     end

@@ -14,14 +14,10 @@ return function(sender, msg, turtle_store)
         local id = dispatch_utils.find_least_queued(runners, sender)
         if not id then break end
 
-        local ok = wireless.resupply.dispatch(
-            id,
-            msg.data.target,
-            msg.data.desired,
-            msg.id,
-            sender)
+        wireless.resupply.assign(id, msg.data.target, msg.data.manifest, sender)
+        local accepted_msg = wireless.resupply.await_accepted()
 
-        if ok then
+        if accepted_msg and accepted_msg._sender == id then
             return true
         end
 

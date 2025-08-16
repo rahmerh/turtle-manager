@@ -42,75 +42,87 @@ settings:register_on_change(function(key, value)
     end
 end)
 
-wireless.router.register_handler(wireless.protocols.telemetry, wireless.heartbeat.operation, function(sender, msg)
-    local turtle = turtle_store:get(sender)
+wireless.router.register_handler(
+    wireless.protocols.telemetry,
+    wireless.heartbeat.operation,
+    function(sender, msg)
+        local turtle = turtle_store:get(sender)
 
-    if not turtle then return false end
+        if not turtle then return false end
 
-    local updated = turtle_store:update(sender, {
-        last_seen = time.epoch_in_seconds(),
-        status = msg.status,
-        metadata = msg.data,
-    })
+        local updated = turtle_store:update(sender, {
+            last_seen = time.epoch_in_seconds(),
+            status = msg.status,
+            metadata = msg.data,
+        })
 
-    if display then
-        display:add_or_update_turtle(sender, updated)
-    end
-
-    return true
-end)
-
-wireless.router.register_handler(wireless.protocols.rpc, "registry:register", function(sender, msg)
-    local data = {
-        role = msg.data.role,
-        metadata = msg.data.metadata
-    }
-
-    turtle_store:upsert(sender, data)
-
-    wireless.registry.respond(sender, msg.id, settings:list())
-
-    printer.print_info("New turtle registered: #" .. sender .. " '" .. data.role .. "'")
-end)
-
-wireless.router.register_handler(wireless.protocols.notify, "pickup:request", function(sender, msg)
-    handlers.dispatch_pickup(sender, msg, turtle_store)
-end)
-
-wireless.router.register_handler(wireless.protocols.notify, "resupply:request", function(sender, msg)
-    handlers.dispatch_resupply(sender, msg, turtle_store)
-end)
-
-wireless.router.register_handler(wireless.protocols.notify, "fluid_fill:report", function(sender, msg)
-    handlers.dispatch_fluid_fill(sender, msg, turtle_store)
-end)
-
-wireless.router.register_handler(wireless.protocols.notify, "job:completed", function(sender, msg)
-    local turtle = handlers.handle_job_completed(sender, msg, turtle_store)
-
-    if msg.job_type == "quarry" then
-        if settings:read(settings.keys.auto_recover_quarries) == true then
-            local pickup_message = {
-                id = sender,
-                operation = "pickup:request",
-                data = {
-                    position = msg.coordinates,
-                    what = "turtle:" .. sender
-                }
-            }
-
-            handlers.dispatch_pickup(os.getComputerID(), pickup_message, turtle_store)
+        if display then
+            display:add_or_update_turtle(sender, updated)
         end
-    end
 
-    if display then
-        if msg.job_type == "quarry" then
-            display:add_or_update_turtle(sender, turtle)
-        elseif msg.job_type == "pickup" and string_util.starts_with(msg.what, "turtle") then
-            display:delete_turtle(turtle)
-        end
-    end
-end)
+        return true
+    end)
+
+wireless.router.register_handler(
+    wireless.protocols.registry,
+    wireless.registry.operations.register,
+    function(sender, msg)
+        local data = {
+            role = msg.data.role,
+            metadata = msg.data.metadata
+        }
+
+        turtle_store:upsert(sender, data)
+
+        wireless.settings.overwrite_settings_on(sender, settings:list())
+
+        printer.print_info("New turtle registered: #" .. sender .. " '" .. data.role .. "'")
+    end)
+
+wireless.router.register_handler(
+    wireless.protocols.pickup,
+    wireless.pickup.operations.request,
+    function(sender, msg)
+        handlers.dispatch_pickup(sender, msg, turtle_store)
+    end)
+
+wireless.router.register_handler(
+    wireless.protocols.resupply,
+    wireless.resupply.operations.request,
+    function(sender, msg)
+        handlers.dispatch_resupply(sender, msg, turtle_store)
+    end)
+
+-- wireless.router.register_handler(wireless.protocols.notify, "fluid_fill:report", function(sender, msg)
+--     handlers.dispatch_fluid_fill(sender, msg, turtle_store)
+-- end)
+--
+-- wireless.router.register_handler(wireless.protocols.notify, "job:completed", function(sender, msg)
+--     local turtle = handlers.handle_job_completed(sender, msg, turtle_store)
+--
+--     if msg.job_type == "quarry" then
+--         if settings:read(settings.keys.auto_recover_quarries) == true then
+--             local pickup_message = {
+--                 id = sender,
+--                 operation = "pickup:request",
+--                 data = {
+--                     position = msg.coordinates,
+--                     what = "turtle:" .. sender
+--                 }
+--             }
+--
+--             handlers.dispatch_pickup(os.getComputerID(), pickup_message, turtle_store)
+--         end
+--     end
+--
+--     if display then
+--         if msg.job_type == "quarry" then
+--             display:add_or_update_turtle(sender, turtle)
+--         elseif msg.job_type == "pickup" and string_util.starts_with(msg.what, "turtle") then
+--             display:delete_turtle(turtle)
+--         end
+--     end
+-- end)
 
 local function mark_stale()
     while true do
