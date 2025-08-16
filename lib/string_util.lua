@@ -1,4 +1,15 @@
+local _private = {}
 local string_util = {}
+
+function _private.base36(n)
+    local t = {}
+    repeat
+        local d = n % 36
+        t[#t + 1] = string.char((d < 10) and (48 + d) or (87 + d))
+        n = math.floor(n / 36)
+    until n == 0
+    return table.concat(t):reverse()
+end
 
 function string_util.key_to_pretty_name(key)
     local _, name = key:match("([^:]+):(.+)")
@@ -25,6 +36,16 @@ function string_util.split_by(str, seperator)
         table.insert(result, part)
     end
     return result
+end
+
+function string_util.generate_id()
+    local salt = math.random(1, 1e9)
+    local now  = os.epoch("utc")
+    return (_private.base36(os.getComputerID()) .. _private.base36(now % 2 ^ 31) .. _private.base36(salt)):sub(1, 10)
+end
+
+function string_util.first_line(s)
+    return (tostring(s):match("^[^\r\n]+")) or tostring(s)
 end
 
 return string_util

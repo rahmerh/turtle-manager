@@ -4,7 +4,7 @@ local heartbeat = {
     operation = "heartbeat:beat"
 }
 
-local function beat(receiver, data)
+function heartbeat.beat(receiver, data)
     local payload = {
         operation = "heartbeat:beat",
         data = data
@@ -17,7 +17,7 @@ function heartbeat.loop(receiver, interval, data_fn)
     local function run()
         while running do
             local payload = data_fn and data_fn() or nil
-            beat(receiver, payload)
+            heartbeat.beat(receiver, payload)
             sleep(interval)
         end
     end

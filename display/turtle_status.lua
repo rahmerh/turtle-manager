@@ -7,13 +7,15 @@ local turtle_status = {
         running = "Running"
     },
     shared = {
-        paused = "Paused"
+        paused = "Paused",
+        offline = "Offline",
     }
 }
 
 local fallback = colours.white
 
 local quarry_status_colours = {
+    Created = colours.green,
     Starting = colours.green,
     Stale = colours.yellow,
     Paused = colours.yellow,

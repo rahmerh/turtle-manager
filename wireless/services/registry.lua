@@ -2,7 +2,8 @@ local core = require("wireless._internal.core")
 
 local registry = {
     operations = {
-        register = "registry:register"
+        register = "registry:register",
+        accepted = "registry:accepted",
     }
 }
 
@@ -17,7 +18,26 @@ function registry.announce_at(manager_id, role, metadata)
     }
     local payload = core.create_payload(registry.operations.register, data)
 
-    core.send(manager_id, payload, core.protocols.registry)
+    local attempts = 5
+
+    for i = 1, attempts do
+        core.send(manager_id, payload, core.protocols.registry)
+
+        local message = core.await_response(registry.operations.accepted, 5)
+
+        if message then
+            break
+        end
+
+        if i < attempts then
+            sleep(1)
+        end
+    end
+end
+
+function registry.accept(receiver)
+    local payload = core.create_payload(registry.operations.accepted)
+    core.send(receiver, payload, core.protocols.registry)
 end
 
 return registry

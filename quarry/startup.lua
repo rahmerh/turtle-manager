@@ -36,17 +36,23 @@ local metadata = {
     boundaries = boundaries
 }
 
--- wireless.router.register_handler(wireless.protocols.rpc, "command:pause", function(_, _)
---     job.set_status(job.statuses.paused)
---     movement.pause()
---     printer.print_warning("Received pause command.")
--- end)
---
--- wireless.router.register_handler(wireless.protocols.rpc, "command:resume", function(_, _)
---     job.set_status(job.statuses.in_progress)
---     movement.resume()
---     printer.print_info("Resuming...")
--- end)
+wireless.router.register_handler(
+    wireless.protocols.turtle_commands,
+    wireless.turtle_commands.operations.pause,
+    function(_, _)
+        job.set_status(job.statuses.paused)
+        movement.pause()
+        printer.print_warning("Received pause command.")
+    end)
+
+wireless.router.register_handler(
+    wireless.protocols.turtle_commands,
+    wireless.turtle_commands.operations.resume,
+    function(_, _)
+        job.set_status(job.statuses.in_progress)
+        movement.resume()
+        printer.print_info("Resuming...")
+    end)
 
 wireless.router.register_handler(
     wireless.protocols.settings,
@@ -67,32 +73,7 @@ wireless.router.register_handler(
         settings = m.data.all_settings
     end)
 
-local running = true
--- wireless.router.register_handler(wireless.protocols.rpc, "command:kill", function(sender, m)
---     movement.pause()
---     job.set_status(job.statuses.offline)
---
---     sleep(1) -- Allow turtle to stop.
---
---     local coordinates = movement.get_current_coordinates()
---
---     wireless.turtle_commands.confirm_kill(sender, m.id, coordinates)
---     running = false
---
---     printer.print_warning("Received kill command.")
--- end)
-
-local movement_context = {
-    dig = false,
-    manager_id = manager_id
-}
-
-local movement_context_with_dig = {
-    dig = true,
-    manager_id = manager_id
-}
-
-local start_heartbeat, _ = wireless.heartbeat.loop(manager_id, 1, function()
+local function create_metadata()
     local stored_fuel_units
     local fuel_slot = inventory.details_from_slot(1)
     if fuel_slot and fuel_slot.name == "minecraft:coal" then
@@ -108,7 +89,35 @@ local start_heartbeat, _ = wireless.heartbeat.loop(manager_id, 1, function()
         current_location = movement.get_current_coordinates(),
         boundaries = boundaries,
     }
-end)
+end
+
+local running = true
+wireless.router.register_handler(
+    wireless.protocols.turtle_commands,
+    wireless.turtle_commands.operations.kill,
+    function(sender, _)
+        movement.pause()
+        job.set_status(job.statuses.offline)
+
+        sleep(1) -- Allow turtle to fully stop.
+
+        wireless.heartbeat.beat(sender, create_metadata())
+        running = false
+
+        printer.print_warning("Received kill command.")
+    end)
+
+local movement_context = {
+    dig = false,
+    manager_id = manager_id
+}
+
+local movement_context_with_dig = {
+    dig = true,
+    manager_id = manager_id
+}
+
+local start_heartbeat, _ = wireless.heartbeat.loop(manager_id, 1, function() return create_metadata() end)
 
 local function kill_switch()
     while running do
@@ -248,16 +257,16 @@ local function main()
             movement_context_with_dig)
     end
 
-    printer.print_success("Quarry done.")
-    job.complete()
-
     movement.move_to(
         boundaries.starting_position.x,
         boundaries.starting_position.y,
         boundaries.starting_position.z,
         movement_context)
 
-    wireless.completed.quarry_done(manager_id, movement.get_current_coordinates())
+    wireless.job.quarry_done(manager_id, movement.get_current_coordinates())
+
+    printer.print_success("Quarry done.")
+    job.complete()
 end
 
 parallel.waitForAny(start_heartbeat, wireless.router.loop, main, kill_switch)

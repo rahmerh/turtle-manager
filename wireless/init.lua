@@ -7,7 +7,7 @@ return {
     registry = require("wireless.services.registry"),
     heartbeat = require("wireless.services.heartbeat"),
     discovery = require("wireless.services.discovery"),
-    completed = require("wireless.services.job-completed"),
+    job = require("wireless.services.job"),
     turtle_commands = require("wireless.services.turtle-command"),
     pickup = require("wireless.services.pickup"),
     resupply = require("wireless.services.resupply"),

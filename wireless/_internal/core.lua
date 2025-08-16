@@ -7,9 +7,10 @@ local core = {
         telemetry = "telemetry",
         registry = "registry",
         settings = "settings",
-        job_status = "job_status",
+        job = "job",
         pickup = "pickup",
         resupply = "resupply",
+        turtle_commands = "turtle_commands",
     },
     _inbox = {},
     _listeners = {}

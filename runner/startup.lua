@@ -122,43 +122,46 @@ wireless.router.register_handler(
 --
 --     printer.print_info(("[%s] Queued task 'fluid fill'"):format(m.data.job_id))
 -- end)
---
--- wireless.router.register_handler(wireless.protocols.notify, "command:nudge_task", function(_, m)
---     local index, task = task_queue:find("job_id", m.data.job_id)
---
---     local target = task_queue:get(index + m.data.amount)
---
---     if not index or not task or not target then
---         error(("No item at %d"):format(index))
---     end
---
---     local nudging_active_task = active_task == m.data.job_id or active_task == target.job_id
---     if nudging_active_task and (task.cancelable or target.cancelable) then
---         cancel_token:cancel()
---
---         task_queue:nudge(index, m.data.amount)
---
---         local direction
---         if m.data.amount < 0 then
---             direction = "up"
---         else
---             direction = "down"
---         end
---
---         printer.print_info(("Nudged %s %s"):format(m.data.job_id, direction))
---     elseif active_task ~= m.data.job_id then
---         task_queue:nudge(index, m.data.amount)
---
---         local direction
---         if m.data.amount < 0 then
---             direction = "up"
---         else
---             direction = "down"
---         end
---
---         printer.print_info(("Nudged %s %s"):format(m.data.job_id, direction))
---     end
--- end)
+
+wireless.router.register_handler(
+    wireless.protocols.turtle_commands,
+    wireless.turtle_commands.operations.nudge_task,
+    function(_, m)
+        local index, task = task_queue:find("job_id", m.data.job_id)
+
+        local target = task_queue:get(index + m.data.amount)
+
+        if not index or not task or not target then
+            error(("No item at %d"):format(index))
+        end
+
+        local nudging_active_task = active_task == m.data.job_id or active_task == target.job_id
+        if nudging_active_task and (task.cancelable or target.cancelable) then
+            cancel_token:cancel()
+
+            task_queue:nudge(index, m.data.amount)
+
+            local direction
+            if m.data.amount < 0 then
+                direction = "up"
+            else
+                direction = "down"
+            end
+
+            printer.print_info(("Nudged %s %s"):format(m.data.job_id, direction))
+        elseif active_task ~= m.data.job_id then
+            task_queue:nudge(index, m.data.amount)
+
+            local direction
+            if m.data.amount < 0 then
+                direction = "up"
+            else
+                direction = "down"
+            end
+
+            printer.print_info(("Nudged %s %s"):format(m.data.job_id, direction))
+        end
+    end)
 
 local function main()
     wireless.registry.announce_at(manager_id, "runner")
@@ -217,7 +220,7 @@ local function main()
             goto continue
         elseif which_completed == 1 then
             if task.task_type == "pickup" then
-                wireless.completed.pickup_done(manager_id, task.what)
+                wireless.job.pickup_done(manager_id, task.what)
             end
 
             -- Unload inventory

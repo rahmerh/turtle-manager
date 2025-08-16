@@ -39,7 +39,7 @@ return function(task, config, movement_context, report_progress)
             table.insert(filled_slots, filled_slot)
         end
 
-        report_progress(task.job_id, task_stages.to_target, true)
+        report_progress(task.job_id, task_stages.to_target, false)
     else
         printer.print_info(("[%s] Resuming resupply task"):format(task.job_id))
     end

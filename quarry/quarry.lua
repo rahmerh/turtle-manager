@@ -126,6 +126,9 @@ function quarry.mine_bedrock_layer(start_x, start_z, width, depth, movement_cont
             miner.mine()
             movement.move_forward(movement_context)
 
+            miner.mine_up()
+            miner.mine_down()
+
             movement.turn_left()
         else
             movement.turn_right()
@@ -134,6 +137,10 @@ function quarry.mine_bedrock_layer(start_x, start_z, width, depth, movement_cont
             end
             miner.mine()
             movement.move_forward(movement_context)
+
+            miner.mine_up()
+            miner.mine_down()
+
             movement.turn_right()
         end
 

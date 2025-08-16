@@ -10,24 +10,15 @@ return function(sender, msg, turtle_store)
         return nil, errors.wireless.NO_AVAILABLE_RUNNERS
     end
 
-    while next(runners) do
-        local id = dispatch_utils.find_least_queued(runners, sender)
-        if not id then break end
+    local id = dispatch_utils.find_least_queued(runners, sender)
 
-        wireless.pickup.assign(
-            id,
-            msg.data.target,
-            msg.data.what,
-            sender)
-
-        local response = wireless.pickup.await_accepted()
-
-        if response and response._sender == id then
-            return true
-        end
-
-        runners[id] = nil
+    if not id then
+        return nil, errors.wireless.NO_AVAILABLE_RUNNERS
     end
 
-    return nil, errors.wireless.COULD_NOT_ASSIGN
+    wireless.pickup.assign(
+        id,
+        msg.data.target,
+        msg.data.what,
+        sender)
 end

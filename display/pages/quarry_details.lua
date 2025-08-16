@@ -101,6 +101,22 @@ function quarry_details_page:new(m, size, page_switcher, task_runner)
         x_offset = 1,
     })
 
+    local kill_button = Button:new(m, {
+            height = 3,
+            width = 13,
+        },
+        "Kill",
+        colours.black,
+        colours.red,
+        function() end)
+
+    local kill_button_id = 5
+    buttons_container:add_element(kill_button_id, kill_button, {
+        respect_padding = true,
+        y_offset = 13,
+        x_offset = 1,
+    })
+
     local information_container_size = {
         width = size.width - buttons_container_size.width,
         height = size.height
@@ -125,9 +141,9 @@ function quarry_details_page:new(m, size, page_switcher, task_runner)
 
     local recover_confirm_lines = {
         "Are you sure?", "",
-        "This will kill the turtle and ",
-        "a runner will be dispatched",
-        "to recover it."
+        "You won't be able to control ",
+        "this turtle remotely anymore, ",
+        "only recover it."
     }
     local confirm = Confirm:new(m, recover_confirm_lines)
 
@@ -172,6 +188,7 @@ function quarry_details_page:new(m, size, page_switcher, task_runner)
         button_elements = {
             pause_button_id = pause_button_id,
             recover_button_id = recover_button_id,
+            kill_button_id = kill_button_id,
         },
         text_elements = {
             status_label_id = status_label_id,
@@ -264,15 +281,25 @@ function quarry_details_page:render(x, y, data)
         quarry_lines)
 
     self.confirm.on_yes = function()
-        self.task_runner:add_task(self.task_runner.tasks.recover, { id = selected_turtle.id })
-        self.page_switcher("quarries")
+        self.task_runner:add_task(self.task_runner.tasks.kill, { id = selected_turtle.id })
     end
+
+    self.buttons_container:update_element(
+        self.button_elements.kill_button_id,
+        "on_click",
+        function()
+            self.confirm:open(selected_turtle.id)
+        end)
 
     if ts.is_turtle_active(selected_turtle.metadata.status) then
         self.buttons_container:update_element(
             self.button_elements.pause_button_id,
             "text",
             "Pause")
+        self.buttons_container:update_element(
+            self.button_elements.pause_button_id,
+            "button_colour",
+            colours.lightBlue)
 
         self.buttons_container:update_element(
             self.button_elements.pause_button_id,
@@ -281,12 +308,9 @@ function quarry_details_page:render(x, y, data)
                 self.task_runner:add_task(self.task_runner.tasks.pause, { id = selected_turtle.id })
             end)
 
-        self.buttons_container:update_element(
-            self.button_elements.recover_button_id,
-            "on_click",
-            function()
-                self.confirm:open(selected_turtle.id)
-            end)
+        self.buttons_container:update_element(self.button_elements.pause_button_id, "disabled", false)
+        self.buttons_container:update_element(self.button_elements.kill_button_id, "disabled", false)
+        self.buttons_container:update_element(self.button_elements.recover_button_id, "disabled", true)
     elseif ts.is_paused(selected_turtle.metadata.status) then
         self.buttons_container:update_element(
             self.button_elements.pause_button_id,
@@ -304,32 +328,22 @@ function quarry_details_page:render(x, y, data)
                 self.task_runner:add_task(self.task_runner.tasks.resume, { id = selected_turtle.id })
             end)
 
-        self.buttons_container:update_element(
-            self.button_elements.recover_button_id,
-            "on_click",
-            function()
-                self.task_runner:add_task(self.task_runner.tasks.recover, {
-                    id = selected_turtle.id,
-                    offline_turtle = selected_turtle
-                })
-
-                self.page_switcher("quarries")
-            end)
-    else -- Turtle is offline
-        self.buttons_container:update_element(
-            self.button_elements.pause_button_id,
-            "disabled",
-            true)
+        self.buttons_container:update_element(self.button_elements.pause_button_id, "disabled", false)
+        self.buttons_container:update_element(self.button_elements.kill_button_id, "disabled", false)
+        self.buttons_container:update_element(self.button_elements.recover_button_id, "disabled", true)
+    else -- Turtle is offline or completed.
+        self.buttons_container:update_element(self.button_elements.pause_button_id, "disabled", true)
+        self.buttons_container:update_element(self.button_elements.kill_button_id, "disabled", true)
+        self.buttons_container:update_element(self.button_elements.recover_button_id, "disabled", false)
 
         self.buttons_container:update_element(
             self.button_elements.recover_button_id,
             "on_click",
             function()
                 self.task_runner:add_task(self.task_runner.tasks.recover, {
+                    offline_turtle = selected_turtle,
                     id = selected_turtle.id,
-                    offline_turtle = selected_turtle
                 })
-
                 self.page_switcher("quarries")
             end)
     end

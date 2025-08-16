@@ -9,6 +9,7 @@ local task_runner   = {
     tasks = {
         pause = "pause",
         resume = "resume",
+        kill = "kill",
         recover = "recover",
         nudge_task = "nudge_task",
     },
@@ -18,26 +19,28 @@ task_runner.__index = task_runner
 function task_runner:new(notifier)
     local handlers = {
         pause = function(data)
-            local ok, err = wireless.turtle_commands.pause_turtle(data.id)
-            if not ok then error(err or "pause failed") end
+            wireless.turtle_commands.pause_turtle(data.id)
             return true
         end,
         resume = function(data)
-            local ok, err = wireless.turtle_commands.resume_turtle(data.id)
-            if not ok then error(err or "resume failed") end
+            wireless.turtle_commands.resume_turtle(data.id)
+            return true
+        end,
+        kill = function(data)
+            wireless.turtle_commands.kill_turtle(data.id)
             return true
         end,
         recover = function(data)
-            local coordinates
-            if data.offline_turtle then
-                coordinates = data.offline_turtle.metadata.current_location
-            else
-                coordinates = wireless.turtle_commands.kill_turtle(data.id)
+            if not data.offline_turtle then
+                error("Can't recover an active turtle.")
             end
 
             local manager_id = wireless.discovery.find("manager")
 
-            wireless.pickup.request(manager_id, coordinates, "turtle:" .. data.id)
+            wireless.pickup.request(
+                manager_id,
+                data.offline_turtle.metadata.current_location,
+                "turtle:" .. data.id)
             notifier:add_notification(("Recovering turtle #%d..."):format(data.id), 10)
 
             return true

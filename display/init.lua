@@ -11,10 +11,12 @@ local Notifier = require("display.notifier")
 
 local errors = require("lib.errors")
 local printer = require("lib.printer")
+local string_util = require("lib.string_util")
 
 local Display = {
     turtles = {},
-    debug = false
+    session_id = string_util.generate_id(),
+    debug = false,
 }
 Display.__index = Display
 
@@ -24,24 +26,17 @@ end
 
 local function log_error(tag, message)
     fs.makeDir("logs")
-
-    local timestamp = textutils.formatTime(os.epoch("utc") / 1000, true)
-    local filename = ("logs/error_%s_%d.log"):format(
-        timestamp:gsub("[: ]", "-"),
-        math.random(1000, 9999)
-    )
-
-    local file = fs.open(filename, "w")
-    if file then
-        file.writeLine(("[%s] %s"):format(tag, message))
-        file.close()
+    local f = fs.open(("logs/error_%s.log"):format(Display.session_id), "a")
+    if f then
+        f.writeLine(("[%s] [%s] %s"):format(textutils.formatTime(os.epoch("utc") / 1000, true), tag, tostring(message)))
+        f.close()
     end
 end
 
 local function guard(tag, fn)
     local ok, err = xpcall(fn, traceback)
     if not ok then
-        printer.print_error(("[%s] An error occured, see logs/"):format(tag))
+        printer.print_error(("[%s] %s (session %s)"):format(tag, string_util.first_line(err), Display.session_id))
         log_error(tag, err)
         return false, err
     end

@@ -12,7 +12,6 @@ local handlers = {
     dispatch_pickup = require("handlers.dispatch_pickup"),
     dispatch_resupply = require("handlers.dispatch_resupply"),
     dispatch_fluid_fill = require("handlers.dispatch_fluid_fill"),
-    handle_job_completed = require("handlers.handle_job_completed"),
 }
 
 local turtle_store = TurtleStore.new()
@@ -60,6 +59,8 @@ wireless.router.register_handler(
             display:add_or_update_turtle(sender, updated)
         end
 
+        wireless.registry.accept(sender)
+
         return true
     end)
 
@@ -97,32 +98,33 @@ wireless.router.register_handler(
 --     handlers.dispatch_fluid_fill(sender, msg, turtle_store)
 -- end)
 --
--- wireless.router.register_handler(wireless.protocols.notify, "job:completed", function(sender, msg)
---     local turtle = handlers.handle_job_completed(sender, msg, turtle_store)
---
---     if msg.job_type == "quarry" then
---         if settings:read(settings.keys.auto_recover_quarries) == true then
---             local pickup_message = {
---                 id = sender,
---                 operation = "pickup:request",
---                 data = {
---                     position = msg.coordinates,
---                     what = "turtle:" .. sender
---                 }
---             }
---
---             handlers.dispatch_pickup(os.getComputerID(), pickup_message, turtle_store)
---         end
---     end
---
---     if display then
---         if msg.job_type == "quarry" then
---             display:add_or_update_turtle(sender, turtle)
---         elseif msg.job_type == "pickup" and string_util.starts_with(msg.what, "turtle") then
---             display:delete_turtle(turtle)
---         end
---     end
--- end)
+wireless.router.register_handler(
+    wireless.protocols.job,
+    wireless.job.operations.job_completed,
+    function(sender, msg)
+        if msg.data.job_type == "quarry" then
+            local updated = turtle_store:update(sender, {
+                ["metadata.status"] = "Completed",
+                ["metadata.current_location"] = msg.data.coordinates,
+            })
+
+            if settings:read(settings.keys.auto_recover_quarries) == true then
+                wireless.pickup.request(os.getComputerID(), msg.data.coordinates, "turtle:" .. sender)
+            end
+
+            if display then
+                display:add_or_update_turtle(sender, updated)
+            end
+        elseif msg.data.job_type == "pickup" and string_util.starts_with(msg.data.what, "turtle") then
+            local id = string_util.split_by(msg.data.what, ":")[2]
+
+            turtle_store:delete(tonumber(id))
+
+            if display then
+                display:delete_turtle(tonumber(id))
+            end
+        end
+    end)
 
 local function mark_stale()
     while true do
