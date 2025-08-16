@@ -1,3 +1,5 @@
+local list = require("lib.list")
+
 local FluidTracker = {}
 FluidTracker.__index = FluidTracker
 
@@ -27,6 +29,10 @@ function FluidTracker:add(coordinates)
     self._coordinates[key] = coordinates
 
     save(self)
+end
+
+function FluidTracker:any()
+    return list.map_len(self._coordinates) > 0
 end
 
 function FluidTracker:drain()

@@ -10,6 +10,7 @@ local core = {
         job = "job",
         pickup = "pickup",
         resupply = "resupply",
+        fluid_fill = "fluid_fill",
         turtle_commands = "turtle_commands",
     },
     _inbox = {},

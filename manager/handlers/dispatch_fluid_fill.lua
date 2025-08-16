@@ -10,18 +10,11 @@ return function(sender, msg, turtle_store)
         return nil, errors.wireless.NO_AVAILABLE_RUNNERS
     end
 
-    while next(runners) do
-        local id = dispatch_utils.find_least_queued(runners, sender)
-        if not id then break end
+    local id = dispatch_utils.find_least_queued(runners, sender)
 
-        local ok = wireless.fluid_fill.dispatch(id, msg.fluid_columns)
-
-        if ok then
-            return true
-        end
-
-        runners[id] = nil
+    if not id then
+        return nil, errors.wireless.NO_AVAILABLE_RUNNERS
     end
 
-    return nil, errors.wireless.COULD_NOT_ASSIGN
+    wireless.fluid_fill.assign(id, msg.data.fluid_columns, sender)
 end

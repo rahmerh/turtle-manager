@@ -94,10 +94,13 @@ wireless.router.register_handler(
         handlers.dispatch_resupply(sender, msg, turtle_store)
     end)
 
--- wireless.router.register_handler(wireless.protocols.notify, "fluid_fill:report", function(sender, msg)
---     handlers.dispatch_fluid_fill(sender, msg, turtle_store)
--- end)
---
+wireless.router.register_handler(
+    wireless.protocols.fluid_fill,
+    wireless.fluid_fill.operations.report,
+    function(sender, msg)
+        handlers.dispatch_fluid_fill(sender, msg, turtle_store)
+    end)
+
 wireless.router.register_handler(
     wireless.protocols.job,
     wireless.job.operations.job_completed,

@@ -110,18 +110,22 @@ wireless.router.register_handler(
         printer.print_info(("[%s] Queued task 'resupply'"):format(m.id))
     end)
 
--- wireless.router.register_handler(wireless.protocols.rpc, "fluid_fill:dispatch", function(sender, m)
---     wireless.fluid_fill.notify_queued(sender, m.id)
---     local task = {
---         job_id = m.data.job_id,
---         fluid_columns = m.data.fluid_columns,
---         requested_by = m.data.requested_by,
---     }
---
---     task_queue:enqueue(task)
---
---     printer.print_info(("[%s] Queued task 'fluid fill'"):format(m.data.job_id))
--- end)
+wireless.router.register_handler(
+    wireless.protocols.fluid_fill,
+    wireless.fluid_fill.operations.assign,
+    function(sender, m)
+        local task = {
+            job_id = m.id,
+            task_type = "fluid_fill",
+            fluid_columns = m.data.fluid_columns,
+            requested_by = m.data.requested_by,
+        }
+
+        task_queue:enqueue(task)
+
+        wireless.fluid_fill.accept(sender, m.id)
+        printer.print_info(("[%s] Queued task 'fluid fill'"):format(m.id))
+    end)
 
 wireless.router.register_handler(
     wireless.protocols.turtle_commands,

@@ -232,9 +232,12 @@ function runner_details_page:render(x, y, data)
             else
                 table.insert(lines, ("Requested by: #%d"):format(task.requested_by))
             end
-            table.insert(lines, ("Target: %d %d %d"):format(task.target.x,
-                task.target.y,
-                task.target.z))
+
+            if task.target then
+                table.insert(lines, ("Target: %d %d %d"):format(task.target.x,
+                    task.target.y,
+                    task.target.z))
+            end
 
             local item_block_info = {
                 job_id = task.job_id,

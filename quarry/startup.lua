@@ -194,7 +194,7 @@ local function main()
 
     job.set_status(job.statuses.in_progress)
     while job.current_layer() > 0 do
-        local _, fluid_columns = quarry.mine_layer(
+        quarry.mine_layer(
             job.current_layer(),
             boundaries,
             job.current_row(),
@@ -202,8 +202,8 @@ local function main()
             manager_id,
             fluid_tracker)
 
-        if track_fluids then
-            wireless.fluid_fill.report(manager_id, fluid_columns)
+        if track_fluids and fluid_tracker:any() then
+            wireless.fluid_fill.report(manager_id, fluid_tracker:drain())
         end
 
         job.next_layer()

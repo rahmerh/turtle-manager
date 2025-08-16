@@ -54,7 +54,9 @@ function list.convert_map_to_array(map, key_field_name)
     end
 
     for key, value in pairs(map) do
-        value[key_field_name] = key
+        if key_field_name then
+            value[key_field_name] = key
+        end
 
         table.insert(result, value)
     end
@@ -73,7 +75,7 @@ end
 
 function list.map_len(map)
     local count = 0
-    for _ in pairs(map) do
+    for _, _ in pairs(map) do
         count = count + 1
     end
     return count

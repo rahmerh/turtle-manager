@@ -202,8 +202,7 @@ function quarry.mine_layer(layer, boundaries, start_from_row, on_row_done, manag
         movement.turn_to_direction(face)
 
         if fluid_tracker then
-            local fluid_detected = scanner.is_fluid("up") or
-                scanner.is_fluid("down")
+            local fluid_detected = scanner.is_fluid("up") or scanner.is_fluid("down")
 
             if fluid_detected then
                 fluid_tracker:add(movement.get_current_coordinates())
@@ -214,10 +213,10 @@ function quarry.mine_layer(layer, boundaries, start_from_row, on_row_done, manag
         for _ = 1, length do
             local ok, err = miner.mine()
 
-            local fluid_detected
-            if fluid_tracker then
-                fluid_detected = scanner.is_fluid("forward")
-            end
+            -- if fluid_tracker then
+            --     print("forward")
+            --     fluid_detected = scanner.is_fluid("forward")
+            -- end
 
             if not ok and err then
                 printer.print_error(err); return false, err
@@ -226,7 +225,8 @@ function quarry.mine_layer(layer, boundaries, start_from_row, on_row_done, manag
             movement.move_forward(movement_context)
             miner.mine_up(); miner.mine_down()
 
-            if fluid_tracker and not fluid_detected then
+            local fluid_detected
+            if fluid_tracker then
                 fluid_detected = scanner.is_fluid("up") or scanner.is_fluid("down")
             end
 
@@ -243,11 +243,7 @@ function quarry.mine_layer(layer, boundaries, start_from_row, on_row_done, manag
         on_row_done()
     end
 
-    if fluid_tracker then
-        return true, fluid_tracker:drain()
-    else
-        return true
-    end
+    return true
 end
 
 return quarry

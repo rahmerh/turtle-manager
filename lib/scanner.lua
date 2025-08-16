@@ -1,4 +1,5 @@
 local errors = require("lib.errors")
+local list = require("lib.list")
 
 local scanner = {}
 
@@ -53,11 +54,11 @@ function scanner.is_fluid(direction)
         return nil, errors.INVALID_DIRECTION
     end
 
-    if not ok then
-        return false
-    else
-        return fluids[info.name] ~= nil
+    if ok then
+        return list.contains(fluids, info.name)
     end
+
+    return false
 end
 
 return scanner
